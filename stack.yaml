@@ -4,7 +4,6 @@ extra-package-dbs: []
 
 packages:
 - '.'
-- /Users/rune/IdeaProjects/bitcoin-payment-channel
 - location:
     git: https://github.com/haskoin/haskoin.git
     commit: 3929cc64ff2ae2c1714720b00d7205b6451708c6
@@ -13,6 +12,7 @@ packages:
   extra-dep: true
 
 extra-deps:
+- bitcoin-payment-channel-0.1.1.0
 - murmur3-1.0.1
 - pbkdf-1.1.1.1
 - secp256k1-0.4.5
