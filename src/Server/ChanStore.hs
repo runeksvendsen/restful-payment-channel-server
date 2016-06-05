@@ -1,0 +1,70 @@
+module Server.ChanStore where
+
+import           DiskStore
+import           Data.Bitcoin.PaymentChannel.Types
+import           Data.Bitcoin.PaymentChannel.Util (deserEither)
+
+import           Data.Hashable (Hashable(..))
+import qualified Network.Haskoin.Transaction as HT
+import qualified Network.Haskoin.Crypto as HC
+import qualified Data.ByteString.Lazy as BL
+import qualified Data.Binary as Bin
+import qualified Data.Binary.Put as Put
+
+-- |Holds state for open payment channel
+data ChanState = ReadyForPayment {
+    csState :: ReceiverPaymentChannel }
+
+instance ToFileName HT.TxHash
+instance ToFileName HC.Address
+
+instance Hashable HT.TxHash where
+    hashWithSalt salt txid = hashWithSalt salt (serialize txid)
+
+instance Hashable HC.Address where
+    hashWithSalt salt addr = hashWithSalt salt (serialize addr)
+
+instance Serializable HT.TxHash where
+    serialize   = BL.toStrict . Bin.encode
+    deserialize = deserEither
+
+instance Serializable HC.Address where
+    serialize   = HC.addrToBase58
+    deserialize bs = maybe
+        (Left "couldn't deserialize Address")
+        Right
+        (HC.base58ToAddr bs)
+
+instance Serializable PaymentChannelState where
+    serialize   = BL.toStrict . Bin.encode
+    deserialize = deserEither
+
+instance Serializable ChanState where
+    serialize   = BL.toStrict . Bin.encode
+    deserialize = deserEither
+
+instance Bin.Binary ChanState where
+    put (ReadyForPayment s) =
+        Bin.putWord8 0x02 >>
+        Bin.put s
+
+    get = Bin.getWord8 >>=
+        (\byte -> case byte of
+            0x02    -> ReadyForPayment   <$> Bin.get
+            n       -> fail $ "ChanState parser: unknown start byte: " ++ show n)
+
+type ChannelMap = DiskMap HT.TxHash ChanState
+-- type InitChannelMap  = DiskMap HC.Address InitState
+
+newChanMap :: IO ChannelMap
+newChanMap = newDiskMap
+
+-- newInitMap :: IO InitChannelMap
+-- newInitMap = newDiskMap
+
+diskSyncThread ::
+    (ToFileName k, Serializable v) =>
+    DiskMap k v
+    -> Int -- ^Sync interval in seconds
+    -> IO ()
+diskSyncThread m i = putStrLn "Started disk sync thread." >> mapDiskSyncThread m (i * round 1e6)
