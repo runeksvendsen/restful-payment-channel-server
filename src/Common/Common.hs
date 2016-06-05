@@ -43,6 +43,7 @@ import Data.String.Conversions (cs)
 import Text.Printf (printf)
 import qualified Data.Binary as Bin
 
+hOSTNAME="paychan.runeks.me"
 
 ----
 -- |Types that can be encoded to fit in a URI path

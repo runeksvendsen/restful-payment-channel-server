@@ -80,7 +80,7 @@ mkFundingInfo recvPK sendPK lockTime  =
     FundingInfo
         recvPK
         (getFundingAddress' sendPK recvPK lockTime)
-        (cs $ channelOpenURL "localhost:8000" sendPK lockTime)
+        (cs $ channelOpenURL hOSTNAME sendPK lockTime)
         openPrice
         minConf
 
@@ -164,7 +164,7 @@ channelOpenHandler (prvKeyServ,pubKeyServ)
     --New channel creation--
 
     --Send success response--
-    modifyResponse $ setHeader "Location" (cs $ activeChannelURL "localhost:8000" txId idx)
+    modifyResponse $ setHeader "Location" (cs $ activeChannelURL hOSTNAME txId idx)
     modifyResponse $ setResponseStatus 201 (C.pack "Channel ready")
     writeJSON . toJSON $ PaymentResult {
         paymentResultchannel_value_left = channelValueLeft recvChanState,

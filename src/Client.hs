@@ -65,7 +65,7 @@ main = do
 httpGETFundingInfo :: HC.PubKey -> BitcoinLockTime -> IO FundingInfo
 httpGETFundingInfo sendPK expTime =
     failOnError =<<
-        httpGETParseJSON (fundingInfoURL "localhost:8000" sendPK expTime)
+        httpGETParseJSON (fundingInfoURL hOSTNAME sendPK expTime)
 
 createChannel :: HC.PubKey -> BitcoinLockTime -> FundingInfo -> IO (URI,SenderPaymentChannel)
 createChannel sendPK expTime (FundingInfo recvPK fundAddrSrv chanCreateURI openPrice minConf) = do
