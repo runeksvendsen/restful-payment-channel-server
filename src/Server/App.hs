@@ -24,6 +24,7 @@ import qualified Data.ByteString.Char8 as B
 import           Data.Maybe
 import           Snap
 import           Snap.CORS
+import           Snap.Util.FileServe (serveDirectory)
 
 
 -- dataDir = fmap (++ "/resources") getDataDir
@@ -50,14 +51,15 @@ appInit = makeSnaplet "PayChanServer" "Payment channel REST interface" Nothing $
             , ("/channels/:funding_txid/:funding_vout"
                 ,   method PUT    channelPaymentHandler -- ?(change_address)
                 <|> method DELETE channelDeleteHandler
+                <|> method OPTIONS applyCORS') -- CORS hack
 
-
-            -- Hack
-                <|> method OPTIONS applyCORS')
+            , ("/"
+                , serveDirectory "dist")
+            -- CORS Hack
             , ("/channels/new" -- ?client_pubkey&exp_time&change_address
                 ,   method OPTIONS   applyCORS')
-
               ]
+
     wrapCORS
     return $ App chanOpenMap
 
