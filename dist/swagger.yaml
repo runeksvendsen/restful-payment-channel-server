@@ -4,7 +4,7 @@ info:
   version: "0.1.0"
   title: RESTful Bitcoin payment channel protocol
   description: |
-    A Bitcoin payment channel enables instant, secure transfer of bitcoins from one party to another. The intended use is consumer-to-merchant payments, allowing a consumer to make many small payments to a merchant -- with whom the consumer has an open payment channel -- while only paying the Bitcoin transaction fee once, when the channel is settled.
+    A Bitcoin payment channel enables instant, secure transfer of bitcoins from one party to another. The intended use is consumer-to-merchant payments, allowing a consumer to make many small payments to a merchant - with whom the consumer has an open payment channel - while only paying the Bitcoin transaction fee once, when the channel is closed.
     
     The payment server speaking this protocol is the recipient of value, operating on behalf of a content delivery server who receives value from a customer/client.
   
@@ -14,6 +14,13 @@ host: paychan.runeks.me #Bitcoin testnet server
 # basePath: /v1
 schemes:
   - https
+
+# tags:
+# - name: "paychan"
+#  description: "Open, pay over and close Bitcoin payment channels"
+#  externalDocs:
+#    description: "Server source code"
+#    url: "https://github.com/runeksvendsen/restful-payment-channel-server"
 
 paths:
   /fundingInfo:
