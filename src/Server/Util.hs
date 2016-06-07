@@ -50,14 +50,26 @@ import Data.EitherR (fmapL)
 import Data.String.Conversions (cs)
 
 --- TYPES ---
+type Vout = Integer
+
 data ChanOpenConfig = OpenConfig
     ChannelMap TxInfo HC.PubKey HC.Address BitcoinLockTime Payment
 
 data ChanPayConfig = PayConfig
-    ChannelMap HT.TxHash Integer (Maybe HC.Address) Payment
+    ChannelMap HT.TxHash Vout (Maybe HC.Address) Payment
 
-data OpenChanPath = OpenChanPath
-    HC.PubKey BitcoinLockTime HC.PubKey HT.TxHash
+data ChanSettleConfig = SettleConfig {
+    confPrivKey     :: HC.PrvKey,
+    confRecvAddr    :: HC.Address,
+    confTxFee       :: BitcoinAmount,
+
+    serverChanMap   :: ChannelMap,
+
+    chanHash        :: HT.TxHash,
+    chanVout        :: Vout,
+    chanPayment     :: Payment
+    }
+
 --- TYPES ---
 
 fundingAddrFromParams sendPK = getFundingAddress' sendPK pubKeyServer

@@ -5,10 +5,10 @@ module Server.App where
 
 -- import Paths_bitcoin_payment_channel_example (getDataDir)
 import Server.Util (getPathArg, getQueryArg, getOptionalQueryArg,
-                    ChanOpenConfig(..), ChanPayConfig(..),
+                    ChanOpenConfig(..), ChanPayConfig(..), ChanSettleConfig(..),
                     bodyJSONGetPayment,
                     txInfoFromAddr, guardIsConfirmed, fundingAddrFromParams)
-import Server.Config (pubKeyServer, prvKeyServer)
+import Server.Config (pubKeyServer, prvKeyServer,fundsDestAddr,settlementTxFee)
 import Server.Handlers -- (mkFundingInfo, writeFundingInfoResp, channelOpenHandler)
 
 import           Server.ChanStore (ChannelMap,
@@ -49,21 +49,21 @@ appInit = makeSnaplet "PayChanServer" "Payment channel REST interface" Nothing $
                 ,   method POST   newChannelHandler)
 
             , ("/channels/:funding_txid/:funding_vout"
-                ,   method PUT    channelPaymentHandler -- ?(change_address)
-                <|> method DELETE channelDeleteHandler
-                <|> method OPTIONS applyCORS') -- CORS hack
+                ,   method PUT    paymentHandler -- ?(change_address)
+                <|> method DELETE settlementHandler
+                <|> method OPTIONS applyCORS') -- CORS
 
             , ("/"
                 , serveDirectory "dist")
-            -- CORS Hack
+
+            -- CORS
             , ("/channels/new" -- ?client_pubkey&exp_time&change_address
                 ,   method OPTIONS   applyCORS')
               ]
-
     wrapCORS
     return $ App chanOpenMap
 
--- fundingInfoHandler :: MonadSnap m => m ()
+
 fundingInfoHandler :: Handler App App ()
 fundingInfoHandler =
     logFundingInfo >>
@@ -72,7 +72,6 @@ fundingInfoHandler =
     getQueryArg "exp_time"
         >>= writeFundingInfoResp
 
--- ChannelMap TxInfo HC.PubKey HC.Address BitcoinLockTime Payment
 newChannelHandler :: Handler App App ()
 newChannelHandler = applyCORS' >>
     OpenConfig <$>
@@ -84,8 +83,8 @@ newChannelHandler = applyCORS' >>
         bodyJSONGetPayment
     >>= channelOpenHandler (prvKeyServer,pubKeyServer)
 
-channelPaymentHandler :: Handler App App ()
-channelPaymentHandler = applyCORS' >>
+paymentHandler :: Handler App App ()
+paymentHandler = applyCORS' >>
     PayConfig <$>
         use channelStateMap <*>
         getPathArg "funding_txid" <*>
@@ -94,11 +93,16 @@ channelPaymentHandler = applyCORS' >>
         bodyJSONGetPayment
     >>= chanPay
 
+settlementHandler :: Handler App App ()
+settlementHandler = applyCORS' >>
+    SettleConfig
+        prvKeyServer
+        fundsDestAddr
+        settlementTxFee <$>
+        use channelStateMap <*>
+        getPathArg "funding_txid" <*>
+        getPathArg "funding_vout" <*>
+        bodyJSONGetPayment
+    >>= chanSettle
 
-channelDeleteHandler :: Handler App App ()
-channelDeleteHandler = error "STUB"
-
-
-
----server config---
 

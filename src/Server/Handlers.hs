@@ -7,9 +7,12 @@ import           Prelude hiding (userError)
 import           Common.Common
 import           Common.Types
 
-import           Server.Util (writeJSON, ChanOpenConfig(..),ChanPayConfig(..),userError,errorWithDescription, fundingAddrFromParams,getQueryArg,txInfoFromAddr, guardIsConfirmed)
+import           Server.Util (writeJSON, ChanOpenConfig(..),ChanPayConfig(..),
+                              ChanSettleConfig(..),userError,internalError,
+                              errorWithDescription, fundingAddrFromParams,
+                              getQueryArg,txInfoFromAddr, guardIsConfirmed)
 import           BlockchainAPI (TxInfo(..), OutInfo(..), fundingOutInfoFromTxId, txConfs, toFundingTxInfo)
-
+import           Bitcoind (bitcoindNetworkSumbitTx)
 import           Server.ChanStore (ChannelMap, ChanState(..))
 import           DiskStore (addItem, getItem, updateStoredItem)
 
@@ -95,6 +98,28 @@ logFundingInfo  = do
 
 --- /fundingInfo ---
 
+
+----Settlement----
+chanSettle :: MonadSnap m => ChanSettleConfig -> m ()
+chanSettle (SettleConfig privKey recvAddr txFee chanMap hash vout payment) = do
+    liftIO . putStrLn $ printf
+        "Processing settlement request for channel %s/%d: "
+            (cs $ HT.txHashToHex hash :: String) vout ++ show payment
+
+    chanState <- getChannelStateOr404 chanMap hash
+
+    let eitherTx = getSettlementBitcoinTx
+            chanState (`HC.signMsg` privKey) recvAddr txFee
+    tx <- case eitherTx of
+        Left e -> internalError $ show e
+        Right tx -> return tx
+
+    eitherTxId <- liftIO $ bitcoindNetworkSumbitTx tx
+    txid <- case eitherTxId of
+        Left e -> internalError e
+        Right txid -> return txid
+    modifyResponse $ setResponseStatus 200 (C.pack "Channel closed")
+---
 
 
 ----Payment----

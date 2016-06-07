@@ -44,7 +44,10 @@ Executable Server
     binary,
     hashable,
     string-conversions,
-    errors
+    errors,
+    hexstring,
+    http-client,
+    bitcoin-api, bitcoin-tx
 
   other-modules: Server.App,
                  BlockchainAPI,

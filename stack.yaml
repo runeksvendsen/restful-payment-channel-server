@@ -17,6 +17,7 @@ flags:
         openssl: true
 
 extra-deps:
+#- bitcoin
 - snap-server-0.9.5.1
 - bitcoin-payment-channel-0.1.1.0
 - murmur3-1.0.1
