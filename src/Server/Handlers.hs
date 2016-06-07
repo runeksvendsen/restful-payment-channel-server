@@ -67,7 +67,7 @@ applyCORS' :: MonadSnap m => m ()
 applyCORS' = do
     modifyResponse $ setHeader "Access-Control-Allow-Origin"    "*"
     modifyResponse $ setHeader "Access-Control-Allow-Methods"   "GET,POST,PUT,DELETE"
-    modifyResponse $ setHeader "Access-Control-Allow-Headers"   "Origin,Accept,Content-Type"
+    modifyResponse $ setHeader "Access-Control-Allow-Headers"   "Origin,Accept,Content-Type,Payment-Payload"
     modifyResponse $ setHeader "Access-Control-Expose-Headers"  "Location"
 
 --- /fundingInfo ---
