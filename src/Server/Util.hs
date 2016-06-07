@@ -136,7 +136,7 @@ headerGetPayment = do
     either
         (userError . ("failed to decode payment payload: " ++))
         return
-        (pathParamDecode pBS)
+        (eitherDecode $ cs pBS)
 
 bodyJSONGetPayment :: MonadSnap m => m Payment
 bodyJSONGetPayment =
