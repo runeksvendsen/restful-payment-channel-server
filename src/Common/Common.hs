@@ -102,7 +102,7 @@ instance PathParamDecode Integer where
 
 ----URLs----
 channelRootURL :: String -> String
-channelRootURL host = "http://" ++ host -- ++ "/v1"
+channelRootURL host = "https://" ++ host -- ++ "/v1"
 
 fundingInfoURL :: String -> HC.PubKey -> BitcoinLockTime ->  String
 fundingInfoURL host sendPK expTime =
@@ -119,7 +119,7 @@ channelOpenURL host sendPK expTime =
             (cs $ pathParamEncode sendPK :: String)
             (toWord32 expTime)
 
--- http://localhost/channels/f583e0b.../1
+-- https://localhost/channels/f583e0b.../1
 activeChannelURL :: String -> HT.TxHash -> Integer -> String
 activeChannelURL host txid vout =
     channelRootURL host ++ "/channels/" ++

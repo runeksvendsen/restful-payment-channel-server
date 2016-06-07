@@ -101,7 +101,7 @@ txIDFromAddr fundAddr = fmap (parseMaybe parseTxID) (getAddrJSON fundAddr)
 getAddrJSON :: String -> IO Value
 getAddrJSON fundingAddr =
     fmap (^. responseBody) $ asJSON =<<
-    get ("http://tbtc.blockr.io/api/v1/address/info/" ++ fundingAddr)
+    get ("https://tbtc.blockr.io/api/v1/address/info/" ++ fundingAddr)
 
 parseTxID :: Value -> Parser TxHash
 parseTxID (Object v) =
@@ -113,7 +113,7 @@ parseTxID v = fail $ "expected JSON Object from address query, got: " ++ show v
 getTxJSON :: TxHash -> IO Value
 getTxJSON txId =
     fmap (^. responseBody) $ asJSON =<<
-    get ("http://tbtc.blockr.io/api/v1/tx/info/" ++ hashToStr txId)
+    get ("https://tbtc.blockr.io/api/v1/tx/info/" ++ hashToStr txId)
 
 parseFundingOutput :: String -> Value -> Parser OutInfo
 parseFundingOutput fundAddr txJSON =
@@ -145,7 +145,7 @@ getFundingOutput fundAddr oiList =
 
 
 
--- curl http://tbtc.blockr.io/api/v1/address/info/2NCTirSGjFM8T7hUow3AcfyFaw1N1APnYuP?confirmations=10 | jq
+-- curl https://tbtc.blockr.io/api/v1/address/info/2NCTirSGjFM8T7hUow3AcfyFaw1N1APnYuP?confirmations=10 | jq
 -- {
 --   "status": "success",
 --   "data": {
@@ -176,7 +176,7 @@ getFundingOutput fundAddr oiList =
 --   "message": ""
 -- }
 
--- curl http://tbtc.blockr.io/api/v1/tx/info/411aeb3bba69e99065f7d763642e8e8c2607d4839af4520a4c73d3fdf8008222 | jq
+-- curl https://tbtc.blockr.io/api/v1/tx/info/411aeb3bba69e99065f7d763642e8e8c2607d4839af4520a4c73d3fdf8008222 | jq
 -- {
 --   "status": "success",
 --   "data": {
