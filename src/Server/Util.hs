@@ -17,6 +17,7 @@ import           Control.Applicative
 import           Control.Concurrent (forkIO)
 import           Control.Monad.State (gets)
 import           Snap.Core
+import           Snap.Core (getHeader)
 -- import           Snap.Util.FileServe
 import           Snap.Http.Server
 -- import           Snap.Extras.JSON (reqBoundedJSON, writeJSON)
@@ -48,6 +49,7 @@ import Data.Text as T
 import Text.Printf (printf)
 import Data.EitherR (fmapL)
 import Data.String.Conversions (cs)
+import Data.CaseInsensitive (CI, original)
 
 --- TYPES ---
 type Vout = Integer
@@ -123,6 +125,18 @@ getOptionalQueryArg bs = do
 
 --- Read parameters with built-in error handling
 
+getHeaderOrFail :: MonadSnap m => CI BS.ByteString -> m BS.ByteString
+getHeaderOrFail h = do
+    r <- getRequest
+    maybe (userError $ cs (original h) ++ " header not present") return (getHeader h r)
+
+headerGetPayment :: MonadSnap m => m Payment
+headerGetPayment = do
+    pBS <- getHeaderOrFail "Payment-Payload"
+    either
+        (userError . ("failed to decode payment payload: " ++))
+        return
+        (pathParamDecode pBS)
 
 bodyJSONGetPayment :: MonadSnap m => m Payment
 bodyJSONGetPayment =
@@ -140,9 +154,10 @@ errorWithDescription :: MonadSnap m => Int -> String -> m a
 errorWithDescription code errStr = do
     modifyResponse $ setResponseStatus 400 (C.pack errStr)
     finishWith =<< getResponse
-
 ---ERROR---
 
+
+---JSON BODY RESPONSE---
 decodeJSON :: (MonadSnap m, FromJSON a) => BS.ByteString -> m a
 decodeJSON bs =
     either
@@ -157,6 +172,7 @@ writeJSON :: (MonadSnap m, ToJSON a) => a -> m ()
 writeJSON json = do
     modifyResponse $ setContentType "application/json"
     writeLBS $ encode json
+---JSON BODY RESPONSE---
 
 
 ----External IP----

@@ -6,7 +6,7 @@ module Server.App where
 -- import Paths_bitcoin_payment_channel_example (getDataDir)
 import Server.Util (getPathArg, getQueryArg, getOptionalQueryArg,
                     ChanOpenConfig(..), ChanPayConfig(..), ChanSettleConfig(..),
-                    bodyJSONGetPayment,
+                    headerGetPayment,
                     txInfoFromAddr, guardIsConfirmed, fundingAddrFromParams)
 import Server.Config (pubKeyServer, prvKeyServer,fundsDestAddr,settlementTxFee)
 import Server.Handlers -- (mkFundingInfo, writeFundingInfoResp, channelOpenHandler)
@@ -80,7 +80,7 @@ newChannelHandler = applyCORS' >>
         getQueryArg "client_pubkey" <*>
         getQueryArg "change_address" <*>
         getQueryArg "exp_time" <*>
-        bodyJSONGetPayment
+        headerGetPayment
     >>= channelOpenHandler (prvKeyServer,pubKeyServer)
 
 paymentHandler :: Handler App App ()
@@ -90,7 +90,7 @@ paymentHandler = applyCORS' >>
         getPathArg "funding_txid" <*>
         getPathArg "funding_vout" <*>
         getOptionalQueryArg "change_address" <*>
-        bodyJSONGetPayment
+        headerGetPayment
     >>= chanPay
 
 settlementHandler :: Handler App App ()
@@ -102,7 +102,7 @@ settlementHandler = applyCORS' >>
         use channelStateMap <*>
         getPathArg "funding_txid" <*>
         getPathArg "funding_vout" <*>
-        bodyJSONGetPayment
+        headerGetPayment
     >>= chanSettle
 
 

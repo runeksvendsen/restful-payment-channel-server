@@ -2,22 +2,12 @@ flags: {}
 
 extra-package-dbs: []
 
-packages:
-- '.'
-- location:
-    git: https://github.com/haskoin/haskoin.git
-    commit: 3929cc64ff2ae2c1714720b00d7205b6451708c6
-  subdirs:
-  - haskoin-core
-  extra-dep: true
-
-
 flags:
     snap-server:
         openssl: true
 
 extra-deps:
-#- bitcoin
+- haskoin-core-0.3.0
 - snap-server-0.9.5.1
 - bitcoin-payment-channel-0.1.1.0
 - murmur3-1.0.1

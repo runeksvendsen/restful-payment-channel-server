@@ -28,6 +28,7 @@ Executable Server
     snap,
     snap-cors,
     bitcoin-payment-channel   >= 0.1.1.0 && < 0.2,
+    haskoin-core              >= 0.3.0 && < 1.0.0,
     transformers,
     haskoin-core,
     aeson,
@@ -47,7 +48,9 @@ Executable Server
     errors,
     hexstring,
     http-client,
-    bitcoin-api, bitcoin-tx
+
+    bitcoin-api, bitcoin-tx,
+    case-insensitive
 
   other-modules: Server.App,
                  BlockchainAPI,
