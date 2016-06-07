@@ -8,8 +8,8 @@ info:
     
     The payment server speaking this protocol is the recipient of value, operating on behalf of a content delivery server who receives value from a customer/client. The content delivery server passes requests supplied by the client (payer) to the payment server, and delivers content to the client dependent on the response from the payment server. 
     
-    * Open source server implementation: https://github.com/runeksvendsen/restful-payment-channel-server
-    * Open source client library: (under development)
+    * Server implementation: https://github.com/runeksvendsen/restful-payment-channel-server
+    * Client library: (under development)
     
 host: paychan.runeks.me #Bitcoin testnet server
 # basePath: /v1
