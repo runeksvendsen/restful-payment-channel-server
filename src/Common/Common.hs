@@ -43,8 +43,8 @@ import Data.String.Conversions (cs)
 import Text.Printf (printf)
 import qualified Data.Binary as Bin
 
-hOSTNAME="paychan.runeks.me"
-
+-- hOSTNAME="paychan.runeks.me"
+hOSTNAME="localhost:8000"
 ----
 -- |Types that can be encoded to fit in a URI path
 class PathParamEncode a where
@@ -102,7 +102,7 @@ instance PathParamDecode Integer where
 
 ----URLs----
 channelRootURL :: String -> String
-channelRootURL host = "https://" ++ host -- ++ "/v1"
+channelRootURL host = "http://" ++ host -- ++ "/v1"
 
 fundingInfoURL :: String -> HC.PubKey -> BitcoinLockTime ->  String
 fundingInfoURL host sendPK expTime =

@@ -1,8 +1,12 @@
+{-# LANGUAGE  OverloadedStrings #-}
+
 {-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# OPTIONS_GHC -fno-warn-unused-binds -fno-warn-unused-imports #-}
 
+
 module Common.Types (
+    ChannelStatus(..),
     ChanOpenResult (..),
     FundingInfo (..),
     PaymentWrapper (..),
@@ -14,14 +18,14 @@ import qualified Data.Bitcoin.PaymentChannel.Types as PayChan (Payment)
 
 import Data.List (stripPrefix)
 import Data.Maybe (fromMaybe)
-import Data.Aeson (Value, FromJSON(..), ToJSON(..), genericToJSON, genericParseJSON)
+import Data.Aeson (Value(..), FromJSON(..), ToJSON(..), genericToJSON, genericParseJSON)
 import Data.Aeson.Types (Options(..), defaultOptions)
 import Data.Text (Text)
 import qualified Data.Text as T
 import GHC.Generics (Generic)
 import Data.Function ((&))
 import qualified Network.Haskoin.Crypto as HC
-
+import Data.String.Conversions (cs)
 
 -- |
 data ChanOpenResult = ChanOpenResult
@@ -58,9 +62,22 @@ instance FromJSON PaymentWrapper where
 instance ToJSON PaymentWrapper where
   toJSON     = genericToJSON     (removeFieldLabelPrefix False "payment")
 
+-- | Custom
+data ChannelStatus = ChannelOpen | ChannelClosed deriving (Show, Eq)
+instance FromJSON ChannelStatus where
+  parseJSON (String s) = case s of
+    "open" -> return ChannelOpen
+    "closed" -> return ChannelClosed
+    e       -> fail $ "invalid channel status: " ++ cs e
+instance ToJSON ChannelStatus where
+  toJSON ChannelOpen = String "open"
+  toJSON ChannelClosed = String "closed"
+
+
 -- |
 data PaymentResult = PaymentResult
-    { paymentResultchannel_value_left :: BitcoinAmount -- ^ Remaining channel value. This is the amount that the client/sender would receive if the channel was closed now.
+    { paymentResultchannel_status     :: ChannelStatus
+    ,  paymentResultchannel_value_left :: BitcoinAmount -- ^ Remaining channel value. This is the amount that the client/sender would receive if the channel was closed now.
     , paymentResultvalue_received :: BitcoinAmount -- ^ Value of the payment that was just received. This is the additional value assigned to the receiver/server with this payment.
     } deriving (Show, Eq, Generic)
 

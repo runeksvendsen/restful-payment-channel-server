@@ -2,6 +2,9 @@ flags: {}
 
 extra-package-dbs: []
 
+packages:
+- /Users/rune/IdeaProjects/bitcoin-payment-channel
+
 flags:
     snap-server:
         openssl: true
@@ -9,7 +12,7 @@ flags:
 extra-deps:
 - haskoin-core-0.3.0
 - snap-server-0.9.5.1
-- bitcoin-payment-channel-0.1.1.0
+# - bitcoin-payment-channel-0.1.1.0
 - murmur3-1.0.1
 - pbkdf-1.1.1.1
 - secp256k1-0.4.5

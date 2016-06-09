@@ -133,10 +133,10 @@ getHeaderOrFail h = do
 headerGetPayment :: MonadSnap m => m Payment
 headerGetPayment = do
     pBS <- getHeaderOrFail "Payment-Payload"
-    either
-        (userError . ("failed to decode payment payload: " ++))
-        return
-        (eitherDecode $ cs pBS)
+    liftIO . print $ pBS
+    case fromJSON . String . cs $ pBS of
+        Error e -> userError $ "failed to decode payment payload: " ++ e
+        Success p -> return p
 
 bodyJSONGetPayment :: MonadSnap m => m Payment
 bodyJSONGetPayment =

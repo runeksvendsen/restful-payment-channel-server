@@ -101,7 +101,7 @@ txIDFromAddr fundAddr = fmap (parseMaybe parseTxID) (getAddrJSON fundAddr)
 getAddrJSON :: String -> IO Value
 getAddrJSON fundingAddr =
     fmap (^. responseBody) $ asJSON =<<
-    get ("https://tbtc.blockr.io/api/v1/address/info/" ++ fundingAddr)
+    get ("http://tbtc.blockr.io/api/v1/address/info/" ++ fundingAddr)
 
 parseTxID :: Value -> Parser TxHash
 parseTxID (Object v) =
@@ -113,7 +113,7 @@ parseTxID v = fail $ "expected JSON Object from address query, got: " ++ show v
 getTxJSON :: TxHash -> IO Value
 getTxJSON txId =
     fmap (^. responseBody) $ asJSON =<<
-    get ("https://tbtc.blockr.io/api/v1/tx/info/" ++ hashToStr txId)
+    get ("http://tbtc.blockr.io/api/v1/tx/info/" ++ hashToStr txId)
 
 parseFundingOutput :: String -> Value -> Parser OutInfo
 parseFundingOutput fundAddr txJSON =

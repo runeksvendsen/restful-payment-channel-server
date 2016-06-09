@@ -27,7 +27,7 @@ import           Snap.Http.Server
 -- import           Snap.Extras.JSON (reqBoundedJSON, writeJSON)
 
 import           Data.Bitcoin.PaymentChannel
-import           Data.Bitcoin.PaymentChannel.Types (ReceiverPaymentChannel, ChannelParameters(..), PayChanError(..)
+import           Data.Bitcoin.PaymentChannel.Types (ReceiverPaymentChannel, PaymentChannel(..), ChannelParameters(..), PayChanError(..)
                                                     ,getChannelState, BitcoinAmount, valueToMe,
                                                     channelValueLeft)
 import           Data.Bitcoin.PaymentChannel.Util (getFundingAddress, setSenderChangeAddress,
@@ -139,10 +139,16 @@ chanPay (PayConfig chanMap hash vout maybeNewAddr payment) = do
         Left BadSignature -> userError "Bad payment signature"
 
     liftIO $ updateStoredItem chanMap hash (ReadyForPayment newChanState)
+
+    let chanStatus = if channelIsExhausted newChanState then ChannelClosed else ChannelOpen
+
     writeJSON . toJSON $ PaymentResult {
+            paymentResultchannel_status = chanStatus,
             paymentResultchannel_value_left = channelValueLeft newChanState,
             paymentResultvalue_received = valReceived
         }
+
+-- closeChannelIfExhausted :: ReceiverPaymentChannel ->
 
 getChannelStateOr404 :: MonadSnap m => ChannelMap -> HT.TxHash -> m ReceiverPaymentChannel
 getChannelStateOr404 chanMap hash =
@@ -192,6 +198,7 @@ channelOpenHandler (prvKeyServ,pubKeyServ)
     modifyResponse $ setHeader "Location" (cs $ activeChannelURL hOSTNAME txId idx)
     modifyResponse $ setResponseStatus 201 (C.pack "Channel ready")
     writeJSON . toJSON $ PaymentResult {
+        paymentResultchannel_status = ChannelOpen, --TODO: check if initial channel payment exhausts channel
         paymentResultchannel_value_left = channelValueLeft recvChanState,
         paymentResultvalue_received = valueToMe recvChanState
     }

@@ -19,5 +19,5 @@ fundsDestAddr :: HC.Address
 fundsDestAddr = "mmA2XECa7bVERzQKkyy1pNBQ3PC4HnxTC5"
 
 settlementTxFee :: BitcoinAmount
-settlementTxFee = 100000
+settlementTxFee = 10000 -- 0.0001 BTC
 
