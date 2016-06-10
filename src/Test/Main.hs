@@ -13,14 +13,16 @@ import Control.Monad (unless)
 
 data Config = Config
   { endpoint :: T.Text
+--   , num_payments :: Int
   , testnet :: Bool }
 
 sample :: Parser Config
 sample = Config . cs
-  <$> strOption
-      ( long "endpoint"
-     <> metavar "ENDPOINT"
-     <> help "Server endpoint, eg. \"https://pay.example.com\" or \"http://localhost:8000\"" )
+    <$> strOption
+        ( long "endpoint"
+        <> metavar "ENDPOINT"
+        <> help "Server endpoint, eg. \"https://pay.example.com\" or \"http://localhost:8000\"" )
+
   <*> switch
       ( long "testnet"
      <> help "Generate data for Bitcoin testnet3" )

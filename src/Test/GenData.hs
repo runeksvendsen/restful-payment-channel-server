@@ -25,7 +25,7 @@ import Server.Config (pubKeyServer, fundsDestAddr, openPrice)
 import BlockchainAPI.Types (TxInfo(..), OutInfo(..))
 
 mockChangeAddress = fundsDestAddr
-nUM_PAYMENTS = 10 :: Int
+nUM_PAYMENTS = 100000 :: Int
 cHAN_DURATION = 3600 * 24 * 7 :: Integer
 
 
