@@ -21,3 +21,6 @@ fundsDestAddr = "mmA2XECa7bVERzQKkyy1pNBQ3PC4HnxTC5"
 settlementTxFee :: BitcoinAmount
 settlementTxFee = 10000 -- 0.0001 BTC
 
+openPrice = 1000 :: BitcoinAmount
+minConf = 1 :: Int
+minChannelDuration = 12 * 3600 :: Integer

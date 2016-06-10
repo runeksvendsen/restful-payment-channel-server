@@ -9,7 +9,7 @@ module Common.Common where
 import           Common.Types
 
 import           Data.Bitcoin.PaymentChannel
-import           Data.Bitcoin.PaymentChannel.Types (Payment, ChannelParameters(..))
+import           Data.Bitcoin.PaymentChannel.Types (Payment, ChannelParameters(..), b64Encode)
 
 
 import           Control.Monad (mzero)
@@ -62,6 +62,12 @@ instance PathParamEncode BitcoinLockTime where
 instance PathParamEncode Integer where
     pathParamEncode = cs . show
 
+instance PathParamEncode HC.Address where
+    pathParamEncode = HC.addrToBase58
+
+instance PathParamEncode Payment where
+    pathParamEncode = b64Encode
+
 ----
 
 ----
@@ -91,12 +97,20 @@ instance PathParamDecode HC.Address where
 
 instance PathParamDecode Payment where
     pathParamDecode bs =
-        decodeHex bs >>=
-        fmapL ("failed to decode payment: " ++) . HU.decodeToEither
+        case fromJSON . String . cs $ bs of
+            Error e -> Left $ "failed to decode payment: " ++ e
+            Success p -> Right p
 
 instance PathParamDecode Integer where
     pathParamDecode bs = maybe
         (Left "failed to decode funding tx vout") Right (decode . cs $ bs)
+
+instance PathParamDecode Bool where
+    pathParamDecode bs =
+        case bs of
+            "true" -> Right True
+            "false" -> Right False
+            _       -> Left "boolean must be either \"true\" or \"false\""
 ----
 
 
@@ -111,20 +125,48 @@ fundingInfoURL host sendPK expTime =
         (cs $ pathParamEncode sendPK :: String)
         (toWord32 expTime)
 
--- /channels/new" -- ?client_pubkey&exp_time&change_address
+-- /channels/new" -- ?client_pubkey&exp_time
 channelOpenURL :: String -> HC.PubKey -> BitcoinLockTime -> String
 channelOpenURL host sendPK expTime =
-    channelRootURL host ++ "/channels/new" ++
-        printf "?client_pubkey=%s&exp_time=%d"
-            (cs $ pathParamEncode sendPK :: String)
-            (toWord32 expTime)
+    channelRootURL host ++ channelOpenPath sendPK expTime
+
+channelOpenPath :: HC.PubKey -> BitcoinLockTime -> String
+channelOpenPath sendPK expTime = "/channels/new" ++
+    printf "?client_pubkey=%s&exp_time=%s"
+        (cs $ pathParamEncode sendPK :: String)
+        (cs $ pathParamEncode expTime :: String)
+
+mkOpenQueryParams :: HC.Address -> Payment -> String
+mkOpenQueryParams chgAddr payment =
+    printf "&change_address=%s&payment=%s"
+        (cs $ pathParamEncode chgAddr :: String)
+        (cs $ pathParamEncode payment :: String)
+
+mkOpenPath :: HC.PubKey -> BitcoinLockTime -> HC.Address -> Payment -> String
+mkOpenPath sendPK expTime chgAddr payment =
+    channelOpenPath sendPK expTime ++ mkOpenQueryParams chgAddr payment
 
 -- https://localhost/channels/f583e0b.../1
 activeChannelURL :: String -> HT.TxHash -> Integer -> String
 activeChannelURL host txid vout =
-    channelRootURL host ++ "/channels/" ++
-        cs (pathParamEncode txid) ++ "/" ++
-        cs (pathParamEncode vout)
+    channelRootURL host ++ activeChannelPath txid vout
+
+activeChannelPath :: HT.TxHash -> Integer -> String
+activeChannelPath txid vout  = "/channels/" ++
+    cs (pathParamEncode txid) ++ "/" ++
+    cs (pathParamEncode vout)
+
+-- ?payment=AAf8s...(&change_address=2Nuz3s...)
+mkPaymentQueryParams :: Payment -> Maybe HC.Address -> String
+mkPaymentQueryParams payment maybeAddr =
+    printf "?payment=%s"
+        (cs $ pathParamEncode payment :: String) ++
+    maybe "" (\addr -> "&change_address=" ++ (cs . pathParamEncode $ addr)) maybeAddr
+
+mkPaymentPath :: HT.TxHash -> Integer -> Maybe HC.Address -> Payment -> String
+mkPaymentPath txid vout maybeAddr payment  =
+    activeChannelPath txid vout ++ mkPaymentQueryParams payment maybeAddr
+
 ----URLs-----
 
 

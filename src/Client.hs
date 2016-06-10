@@ -4,7 +4,8 @@ module Client where
 
 import Common.Common
 import Common.Types (FundingInfo(..), ChanOpenResult(..))
-import BlockchainAPI (waitGetFundingInfo, TxInfo(..), toFundingTxInfo)
+import BlockchainAPI.Impl.BlockrIo (waitGetFundingInfo)
+import BlockchainAPI.Types (TxInfo(..), toFundingTxInfo)
 
 import qualified Data.Bitcoin.PaymentChannel as PayChan (channelWithInitialPaymentOf, sendPayment)
 import           Data.Bitcoin.PaymentChannel.Types (SenderPaymentChannel, ChannelParameters(..), Payment, BitcoinLockTime)

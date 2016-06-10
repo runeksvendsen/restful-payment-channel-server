@@ -4,14 +4,19 @@ module Server.Handlers where
 
 import           Prelude hiding (userError)
 
+import           Server.Config (pubKeyServer, fundsDestAddr, openPrice, minConf)
+
 import           Common.Common
 import           Common.Types
 
 import           Server.Util (writeJSON, ChanOpenConfig(..),ChanPayConfig(..),
                               ChanSettleConfig(..),userError,internalError,
                               errorWithDescription, fundingAddrFromParams,
-                              getQueryArg,txInfoFromAddr, guardIsConfirmed)
-import           BlockchainAPI (TxInfo(..), OutInfo(..), fundingOutInfoFromTxId, txConfs, toFundingTxInfo)
+                              getQueryArg,getOptionalQueryArg,
+                              txInfoFromAddr, guardIsConfirmed)
+import           BlockchainAPI.Impl.BlockrIo (txIDFromAddr, fundingOutInfoFromTxId)
+import           BlockchainAPI.Types (txConfs, toFundingTxInfo,
+                                TxInfo(..), OutInfo(..))
 import           Bitcoind (bitcoindNetworkSumbitTx)
 import           Server.ChanStore (ChannelMap, ChanState(..))
 import           DiskStore (addItem, getItem, updateStoredItem)
@@ -55,13 +60,9 @@ import Data.Text as T
 import Text.Printf (printf)
 import Data.EitherR (fmapL)
 import Data.String.Conversions (cs)
+import Test.GenData (deriveMockFundingInfo, convertMockFundingInfo)
 -- import Data.S (toString)
 
----server config---
-openPrice = 1000 :: BitcoinAmount
-minConf = 1 :: Int
-minChannelDuration = 12 * 3600 :: Integer
----server config---
 
 applyCORS' :: MonadSnap m => m ()
 applyCORS' = do
@@ -127,28 +128,90 @@ chanSettle (SettleConfig privKey recvAddr txFee chanMap hash vout payment) = do
 chanPay :: MonadSnap m => ChanPayConfig -> m ()
 chanPay (PayConfig chanMap hash vout maybeNewAddr payment) = do
     liftIO . putStrLn $ printf
-        "Processing payment request for channel %s/%d: "
+        "Processing payment for channel %s/%d: "
             (cs $ HT.txHashToHex hash :: String) vout ++ show payment
 
     existingChanState <- maybeUpdateChangeAddress maybeNewAddr =<<
             getChannelStateOr404 chanMap hash
-
-    (valReceived,newChanState) <- case recvPayment existingChanState payment of
-        Right (amount,state) -> return (amount,state)
-        Left BadPayment -> userError "Bad payment amount"
-        Left BadSignature -> userError "Bad payment signature"
+    (valRecvd,newChanState) <- either
+            (userError . show)
+            return
+            (recvPayment existingChanState payment)
 
     liftIO $ updateStoredItem chanMap hash (ReadyForPayment newChanState)
 
-    let chanStatus = if channelIsExhausted newChanState then ChannelClosed else ChannelOpen
+    sendPaymentResultResponse (valRecvd,newChanState)
 
-    writeJSON . toJSON $ PaymentResult {
+----Payment----
+
+
+--- POST /channels/ ---
+channelOpenHandler :: MonadSnap m =>
+    HC.PubKey --TODO: move to config
+    -> ChanOpenConfig
+    -> m ()
+channelOpenHandler pubKeyServ
+    (OpenConfig chanMap txInfo@(TxInfo txId _ (OutInfo _ chanVal idx)) sendPK sendChgAddr lockTime payment) = do
+    liftIO . putStrLn $ "Processing channel open request... " ++
+        show (sendPK, lockTime, txInfo, payment)
+
+    --New channel creation--
+    let eitherChanState = channelFromInitialPayment
+            (CChannelParameters sendPK pubKeyServ lockTime)
+            (toFundingTxInfo txInfo) sendChgAddr payment
+
+    (valRecvd,recvChanState) <- either (userError . show) return eitherChanState
+    --New channel creation--
+
+    liftIO $ addItem chanMap txId (ReadyForPayment recvChanState)
+
+    modifyResponse $ setHeader "Location" (cs $ activeChannelURL hOSTNAME txId idx)
+    modifyResponse $ setResponseStatus 201 (C.pack "Channel ready")
+
+    sendPaymentResultResponse (valRecvd,recvChanState)
+
+    liftIO (putStrLn $ "Created new payment channel state: " ++ show recvChanState)
+
+sendPaymentResultResponse :: MonadSnap m => (BitcoinAmount, ReceiverPaymentChannel) -> m ()
+sendPaymentResultResponse (valRecvd,recvChanState) =
+    let chanStatus =
+            if channelIsExhausted recvChanState then
+                ChannelClosed else
+                ChannelOpen
+    in
+        writeJSON . toJSON $ PaymentResult {
             paymentResultchannel_status = chanStatus,
-            paymentResultchannel_value_left = channelValueLeft newChanState,
-            paymentResultvalue_received = valReceived
+            paymentResultchannel_value_left = channelValueLeft recvChanState,
+            paymentResultvalue_received = valRecvd
         }
 
--- closeChannelIfExhausted :: ReceiverPaymentChannel ->
+testOr_blockchainGetFundingInfo :: MonadSnap m => m TxInfo
+testOr_blockchainGetFundingInfo = do
+    maybeArg <- getOptionalQueryArg "test"
+    case maybeArg :: Maybe Bool of
+        Just True -> test_GetDerivedFundingInfo
+        _         -> blockchainGetFundingInfo
+
+blockchainGetFundingInfo :: MonadSnap m => m TxInfo
+blockchainGetFundingInfo =
+    fundingAddrFromParams <$>
+        getQueryArg "client_pubkey" <*>
+        getQueryArg "exp_time"
+    >>= txInfoFromAddr >>= guardIsConfirmed (fromIntegral minConf)
+
+-- | Deterministically derives a mock TxInfo from ChannelParameters,
+-- which matches that of the test data generated by Test.GenData.
+test_GetDerivedFundingInfo :: MonadSnap m => m TxInfo
+test_GetDerivedFundingInfo = do
+    cp <- flip CChannelParameters pubKeyServer <$>
+            getQueryArg "client_pubkey" <*>
+            getQueryArg "exp_time"
+    return $ convertMockFundingInfo . deriveMockFundingInfo $ cp
+
+
+--- POST /channels/ ---
+
+
 
 getChannelStateOr404 :: MonadSnap m => ChannelMap -> HT.TxHash -> m ReceiverPaymentChannel
 getChannelStateOr404 chanMap hash =
@@ -166,54 +229,3 @@ maybeUpdateChangeAddress maybeAddr state =
         where updateAddressAndLog addr = do
                 liftIO . putStrLn $ "Updating client change address to " ++ toString addr
                 return $ setSenderChangeAddress state addr
-
-----Payment----
-
-
-
-
---- POST /channels/ ---
-channelOpenHandler :: MonadSnap m =>
-    (HC.PrvKey,HC.PubKey) --TODO: move to config
-    -> ChanOpenConfig
-    -> m ()
-channelOpenHandler (prvKeyServ,pubKeyServ)
-    (OpenConfig chanMap txInfo@(TxInfo txId _ (OutInfo _ chanVal idx)) sendPK sendChgAddr lockTime payment) = do
-    liftIO . putStrLn $ "Processing channel open request... " ++
-        show (sendPK, lockTime, txInfo, payment)
-
-    --New channel creation--
-    let eitherChanState = channelFromInitialPayment
-            (CChannelParameters sendPK pubKeyServ lockTime)
-            (toFundingTxInfo txInfo) sendChgAddr payment
-
-    recvChanState <- case eitherChanState of
-            Right s -> return s
-            Left BadPayment -> userError "Bad payment amount"
-            Left BadSignature -> userError "Bad payment signature"
-    liftIO $ addItem chanMap txId (ReadyForPayment recvChanState)
-    --New channel creation--
-
-    --Send success response--
-    modifyResponse $ setHeader "Location" (cs $ activeChannelURL hOSTNAME txId idx)
-    modifyResponse $ setResponseStatus 201 (C.pack "Channel ready")
-    writeJSON . toJSON $ PaymentResult {
-        paymentResultchannel_status = ChannelOpen, --TODO: check if initial channel payment exhausts channel
-        paymentResultchannel_value_left = channelValueLeft recvChanState,
-        paymentResultvalue_received = valueToMe recvChanState
-    }
-    --Send success response--
-
-    liftIO (putStrLn "Created new payment channel state: ")
-    liftIO (print recvChanState)
-
-
-blockchainGetFundingInfo :: MonadSnap m => m TxInfo
-blockchainGetFundingInfo =
-    fundingAddrFromParams <$>
-        getQueryArg "client_pubkey" <*>
-        getQueryArg "exp_time"
-    >>= txInfoFromAddr >>= guardIsConfirmed (fromIntegral minConf)
---- POST /channels/ ---
-
-

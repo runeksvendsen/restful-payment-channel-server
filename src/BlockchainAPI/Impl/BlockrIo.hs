@@ -1,9 +1,9 @@
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE DoAndIfThenElse #-}
 
-module BlockchainAPI where
+module BlockchainAPI.Impl.BlockrIo where
 
-
+import BlockchainAPI.Types (OutInfo(..), TxInfo(..))
 import Common.Common (parseBTCAmount, parseJSONInt, hashToStr)
 
 import           Control.Concurrent (threadDelay)
@@ -19,23 +19,6 @@ import           Network.Haskoin.Transaction  (TxHash)
 import           Text.Printf        (printf)
 import qualified Data.Text as T
 
-import           Data.Bitcoin.PaymentChannel.Types (FundingTxInfo(..))
-
-toFundingTxInfo :: TxInfo -> FundingTxInfo
-toFundingTxInfo (TxInfo txId _ (OutInfo _ chanVal idx)) =
-    CFundingTxInfo txId (fromIntegral idx) (fromIntegral chanVal)
-
-data OutInfo = OutInfo {
-    outAddress  ::  T.Text,
-    outAmount   ::  Integer,
-    outIndex    ::  Integer
-} deriving Show
-
-data TxInfo = TxInfo {
-    txId        ::  TxHash,
-    txConfs     ::  Integer,
-    txOutInfo   ::  OutInfo
-} deriving Show
 
 instance FromJSON OutInfo where
     parseJSON (Object v) =

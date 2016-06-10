@@ -4,8 +4,9 @@ module Server.Util where
 
 import           Common.Common
 import           Common.Types
--- import           Common.Types.Payment ((..))
-import           BlockchainAPI (txIDFromAddr, fundingOutInfoFromTxId, txConfs, toFundingTxInfo,
+
+import           BlockchainAPI.Impl.BlockrIo (txIDFromAddr, fundingOutInfoFromTxId)
+import           BlockchainAPI.Types (txConfs, toFundingTxInfo,
                                 TxInfo(..), OutInfo(..))
 import           Server.Config (pubKeyServer)
 import           Server.ChanStore (ChannelMap, ChanState(..))
@@ -100,19 +101,22 @@ guardIsConfirmed minConf txInfo@(TxInfo txId txConfs (OutInfo _ _ idx)) =
 
 
 --- Read parameters with built-in error handling
-failOnError :: MonadSnap m => Either String a -> m a
-failOnError = either userError return
+failOnError :: MonadSnap m => String -> Either String a -> m a
+failOnError msg = either (userError . (msg ++)) return
 
 failOnNothingWith :: MonadSnap m => String -> Maybe a -> m a
 failOnNothingWith s = maybe (userError s) return
 
+handleQueryDecodeFail :: MonadSnap m => BS.ByteString -> Either String a -> m a
+handleQueryDecodeFail bs = failOnError ("failed to decode query arg \"" ++ cs bs ++ "\": ")
+
 getPathArg :: (MonadSnap m, PathParamDecode a) => BS.ByteString -> m a
-getPathArg bs = failOnError . pathParamDecode =<<
+getPathArg bs = failOnError (cs bs ++ ": failed to decode path arg: ") . pathParamDecode =<<
     failOnNothingWith ("Missing " ++ C.unpack bs ++ " path parameter") =<<
         getParam bs
 
 getQueryArg :: (MonadSnap m, PathParamDecode a) => BS.ByteString -> m a
-getQueryArg bs = failOnError . pathParamDecode =<<
+getQueryArg bs = handleQueryDecodeFail bs . pathParamDecode =<<
     failOnNothingWith ("Missing " ++ C.unpack bs ++ " query parameter") =<<
         getQueryParam bs
 
@@ -121,7 +125,7 @@ getOptionalQueryArg bs = do
     maybeParam <- getQueryParam bs
     case maybeParam of
         Nothing -> return Nothing
-        Just pBS -> fmap Just . failOnError . pathParamDecode $ pBS
+        Just pBS -> fmap Just . handleQueryDecodeFail bs . pathParamDecode $ pBS
 
 --- Read parameters with built-in error handling
 
@@ -133,7 +137,6 @@ getHeaderOrFail h = do
 headerGetPayment :: MonadSnap m => m Payment
 headerGetPayment = do
     pBS <- getHeaderOrFail "Payment-Payload"
-    liftIO . print $ pBS
     case fromJSON . String . cs $ pBS of
         Error e -> userError $ "failed to decode payment payload: " ++ e
         Success p -> return p

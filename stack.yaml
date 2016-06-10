@@ -3,6 +3,7 @@ flags: {}
 extra-package-dbs: []
 
 packages:
+- '.'
 - /Users/rune/IdeaProjects/bitcoin-payment-channel
 
 flags:

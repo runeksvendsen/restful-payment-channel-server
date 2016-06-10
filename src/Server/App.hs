@@ -76,12 +76,12 @@ newChannelHandler :: Handler App App ()
 newChannelHandler = applyCORS' >>
     OpenConfig <$>
         use channelStateMap <*>
-        blockchainGetFundingInfo <*>
+        testOr_blockchainGetFundingInfo <*>
         getQueryArg "client_pubkey" <*>
         getQueryArg "change_address" <*>
         getQueryArg "exp_time" <*>
-        headerGetPayment
-    >>= channelOpenHandler (prvKeyServer,pubKeyServer)
+        getQueryArg "payment"
+    >>= channelOpenHandler pubKeyServer
 
 paymentHandler :: Handler App App ()
 paymentHandler = applyCORS' >>
@@ -90,7 +90,7 @@ paymentHandler = applyCORS' >>
         getPathArg "funding_txid" <*>
         getPathArg "funding_vout" <*>
         getOptionalQueryArg "change_address" <*>
-        headerGetPayment
+        getQueryArg "payment"
     >>= chanPay
 
 settlementHandler :: Handler App App ()
@@ -102,7 +102,7 @@ settlementHandler = applyCORS' >>
         use channelStateMap <*>
         getPathArg "funding_txid" <*>
         getPathArg "funding_vout" <*>
-        headerGetPayment
+        getQueryArg "payment"
     >>= chanSettle
 
 
