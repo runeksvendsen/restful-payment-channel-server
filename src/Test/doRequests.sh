@@ -6,7 +6,7 @@
 jq -r '.payment_urls[]' |\
 while read URL
 do
-  echo curl -v -X PUT -d "" "$URL"
+  curl -v -X PUT -d "" "$URL"
 done
 
 
