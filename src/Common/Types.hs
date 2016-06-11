@@ -42,7 +42,6 @@ instance ToJSON ChanOpenResult where
 data FundingInfo = FundingInfo
     { fundingInfoserver_pubkey :: HC.PubKey -- ^ Server public key (33-byte, hex-encoded, compressed Secp256k1 pubkey)
     , fundingInfofunding_address :: HC.Address -- ^ Payment channel funding address. Send bitcoins to this address to fund a new channel.
-    , fundingInfochannel_open_uri :: Text -- ^ The URI which must be POSTed to in order to open a new payment channel. See <<_createpaymentchannel,createPCHTeeest>>.
     , fundingInfoopen_price :: BitcoinAmount -- ^ Price (in satoshis) for opening a channel with the given {exp_time}. This amount is paid in the initial channel payment when creating a new channel. May be zero, in which case a payment of zero value is transferred, ensuring that the channel can be closed at any time.
     , fundingInfofunding_tx_min_conf :: Int -- ^ Minimum confirmation count that the funding transaction must have before proceeding with opening a new channel.
     } deriving (Show, Eq, Generic)

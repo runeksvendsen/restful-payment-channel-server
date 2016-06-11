@@ -68,25 +68,27 @@ applyCORS' :: MonadSnap m => m ()
 applyCORS' = do
     modifyResponse $ setHeader "Access-Control-Allow-Origin"    "*"
     modifyResponse $ setHeader "Access-Control-Allow-Methods"   "GET,POST,PUT,DELETE"
-    modifyResponse $ setHeader "Access-Control-Allow-Headers"   "Origin,Accept,Content-Type,Payment-Payload"
+    modifyResponse $ setHeader "Access-Control-Allow-Headers"   "Origin,Accept,Content-Type"
     modifyResponse $ setHeader "Access-Control-Expose-Headers"  "Location"
 
 --- /fundingInfo ---
-writeFundingInfoResp :: MonadSnap m => FundingInfo -> m ()
-writeFundingInfoResp fi@(FundingInfo _ _ uri _ _) = do
+type URL = String
+
+writeFundingInfoResp :: MonadSnap m => (FundingInfo,URL) -> m ()
+writeFundingInfoResp (fi, url) = do
     applyCORS'
-    modifyResponse $ setHeader "Location" (cs uri)
+    modifyResponse $ setHeader "Location" (cs url)
     writeJSON . toJSON $ fi
     writeBS "\n"
 
-mkFundingInfo :: HC.PubKey -> HC.PubKey -> BitcoinLockTime -> FundingInfo
+mkFundingInfo :: HC.PubKey -> HC.PubKey -> BitcoinLockTime -> (FundingInfo,URL)
 mkFundingInfo recvPK sendPK lockTime  =
-    FundingInfo
+    (FundingInfo
         recvPK
         (getFundingAddress' sendPK recvPK lockTime)
-        (cs $ channelOpenURL hOSTNAME sendPK lockTime)
         openPrice
-        minConf
+        minConf,
+    cs $ channelOpenURL hOSTNAME sendPK lockTime)
 
 logFundingInfo :: MonadSnap m => m ()
 logFundingInfo  = do
