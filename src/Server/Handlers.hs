@@ -127,9 +127,9 @@ chanSettle (SettleConfig privKey recvAddr txFee chanMap hash vout payment) = do
 
 chanPay :: MonadSnap m => ChanPayConfig -> m ()
 chanPay (PayConfig chanMap hash vout maybeNewAddr payment) = do
-    liftIO . putStrLn $ printf
-        "Processing payment for channel %s/%d: "
-            (cs $ HT.txHashToHex hash :: String) vout ++ show payment
+--     liftIO . putStrLn $ printf
+--         "Processing payment for channel %s/%d: "
+--             (cs $ HT.txHashToHex hash :: String) vout ++ show payment
 
     existingChanState <- maybeUpdateChangeAddress maybeNewAddr =<<
             getChannelStateOr404 chanMap hash
@@ -140,6 +140,7 @@ chanPay (PayConfig chanMap hash vout maybeNewAddr payment) = do
 
     liftIO $ updateStoredItem chanMap hash (ReadyForPayment newChanState)
 
+    modifyResponse $ setResponseStatus 200 (C.pack "Payment accepted")
     sendPaymentResultResponse (valRecvd,newChanState)
 
 ----Payment----
@@ -179,11 +180,14 @@ sendPaymentResultResponse (valRecvd,recvChanState) =
                 ChannelClosed else
                 ChannelOpen
     in
-        writeJSON . toJSON $ PaymentResult {
-            paymentResultchannel_status = chanStatus,
-            paymentResultchannel_value_left = channelValueLeft recvChanState,
-            paymentResultvalue_received = valRecvd
-        }
+        do
+            unless (chanStatus == ChannelOpen) $ --TODO: auto-settle
+                modifyResponse $ setResponseStatus 202 (C.pack "Payment accepted. Channel closed.")
+            writeJSON . toJSON $ PaymentResult {
+                paymentResultchannel_status = chanStatus,
+                paymentResultchannel_value_left = channelValueLeft recvChanState,
+                paymentResultvalue_received = valRecvd
+            }
 
 testOr_blockchainGetFundingInfo :: MonadSnap m => m TxInfo
 testOr_blockchainGetFundingInfo = do

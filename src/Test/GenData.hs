@@ -13,7 +13,9 @@ import qualified Network.Haskoin.Crypto as HC
 import qualified Network.Haskoin.Constants as HCC
 import qualified Data.Binary as Bin
 import qualified Data.ByteString as BS
-import           Data.Aeson         (object, ToJSON, toJSON, (.=), encode)
+import           Data.Aeson         (object, ToJSON, toJSON, (.=), encode,
+                                     Value(Object), parseJSON, FromJSON, (.:))
+import Control.Monad (mzero)
 import Data.Maybe (isJust, fromJust)
 import Data.Word (Word32)
 import Data.String.Conversions (cs)
@@ -25,23 +27,19 @@ import Server.Config (pubKeyServer, fundsDestAddr, openPrice)
 import BlockchainAPI.Types (TxInfo(..), OutInfo(..))
 
 mockChangeAddress = fundsDestAddr
-nUM_PAYMENTS = 100000 :: Int
+nUM_PAYMENTS = 10 :: Int
 cHAN_DURATION = 3600 * 24 * 7 :: Integer
 
 
 
 
-main = do
-    HCC.switchToTestnet3
-    genData ""
-
-genData endpoint = do
+genData endpoint numPayments = do
     privSeed <- getEntropy 32
     prvKey <- case fmap HC.makePrvKey (secKey privSeed) of
             Nothing -> fail "couldn't derive secret key from seed"
             Just k -> return k
     expTime <- fmap round getPOSIXTime
-    let sess = genChannelSession endpoint nUM_PAYMENTS prvKey pubKeyServer
+    let sess = genChannelSession endpoint numPayments prvKey pubKeyServer
             (parseBitcoinLocktime $ fromIntegral $ expTime + cHAN_DURATION)
 
     BS.putStr (cs . encode . toJSON . getSessionData $ sess)
@@ -80,6 +78,11 @@ data PaySessionData = PaySessionData {
 instance ToJSON PaySessionData where
     toJSON (PaySessionData oURL pURLs) =
         object [ "open_url" .= oURL, "payment_urls" .= pURLs ]
+
+instance FromJSON PaySessionData where
+    parseJSON (Object v) = PaySessionData <$>
+                v .: "open_url" <*> v .: "payment_urls"
+    parseJSON _ = mzero
 
 
 getSessionData :: ChannelSession -> PaySessionData
