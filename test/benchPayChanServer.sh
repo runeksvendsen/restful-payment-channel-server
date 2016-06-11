@@ -1,7 +1,7 @@
 #!/bin/bash
 
 if [ -z "$2" ]; then
-	echo "Usage: $0 <num_payments> <num_threads>"
+	echo "Usage: $0 <num_payments_per_thread> <num_threads>"
 	echo "Example: "
 	echo "$0 10000 32"
 	exit 1
