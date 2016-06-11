@@ -13,7 +13,7 @@ Cabal-version:       >=1.2
 data-files:
   resources/devel.cfg
 
-Executable Server
+Executable PayChanServer
   hs-source-dirs: src
   main-is: Server/Main.hs
   ghc-options: -O2 -threaded -with-rtsopts=-N   -main-is Server.Main

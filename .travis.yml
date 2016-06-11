@@ -15,7 +15,7 @@ deploy:
   provider: releases
   api_key:
     secure: pzc6NzPITNbBgFxWvFRxeRiKO3HI+Bbs6HGLYYP8LOLaXbjGZGu+p9zvxi/eR4ZIeVw5ze+OE8zMowNOTHuzt9HJVR5kgE9fxf/OEUrfAEumYCHRXil2znGhSSzrgfcvN0RU6Ex78ViTIxqBy1UNbZnp2YjNQ7dAsePb0kGo8w/clHsjrMYJtMcSHnAp/LJD8gj/QUCcMa/1ycLZd9cTuByhdZkPBynqBC/ZSyq/gj4YXP4ryDuNadnHo1YIsHCnH854jGfziSmhZOzQlU1X1fTYAsL4i4rYePvdxxgTv7FxCNe+AeJLDXOkEJuIhhHxyxpmtasle5GB47dCocm1Z+7C4xbLBamy+tJ7O336dHbvEHuS6NFE+IIGYvra1nZhe96+clSJu917LoNiFsNMI5um0OKfzC9r9ppL7zb2vFijVtfNlJYLqfSX8moI0pKYlhYhFTK2gkDZFRYFEvd8QOn7is3yHAjKm1HLcTTkY3FAHNpsRx/HF4PfVDPHpxJo+B2+GOGVEqxxTPclUEdfuLR4+Qo7/bllPTl3sZH73Gh8cYvOQc7LskmC+nEJkpJU4JtnfTBmwUUzrNlrDLf6tYR22X513ZWaAs9IjQBTV5jMxsn/YumzOGDZeOMz/Z6OZc5aqOu8euyDusYJu4RQLKqenhinvpp8LZmiRbB6r74=
-  file: ".stack-work/install/x86_64-osx/lts-5.2/7.10.3/bin/Server to /Users/rune/.local/bin/Server"
+  file: ".stack-work/install/x86_64-osx/lts-5.2/7.10.3/bin/PayChanServer"
   skip_cleanup: true
   on:
     tags: true
