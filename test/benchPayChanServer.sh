@@ -17,3 +17,5 @@ for PID in $PIDS; do
 	wait $PID
 done
 
+NUMPAYMENTS=$(echo "$1 * $2" | bc -l)
+echo "Done. Executed $NUMPAYMENTS payments."
