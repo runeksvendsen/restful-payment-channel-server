@@ -90,6 +90,8 @@ paths:
           description: Payment received
           schema:
             $ref: "#/definitions/PaymentResult"
+        299:
+          description: Payment received, channel closed. If there is no value left to send over the channel, the server closes it and responds with this status code.
         400:
           description: Invalid input (see header for error description)
         404:
@@ -107,7 +109,7 @@ paths:
       produces:
         - application/json
       responses:
-        200:
+        299:
           description: Channel closed, funds settled. The settling transaction has been published to the Bitcoin network.
         400:
           description: Invalid input (see header for error description)
