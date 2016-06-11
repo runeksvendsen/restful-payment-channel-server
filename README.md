@@ -3,6 +3,8 @@
 
 ---
 
+[![Build Status](https://api.travis-ci.org/runeksvendsen/restful-payment-channel-server.svg)](https://travis-ci.org/runeksvendsen/restful-payment-channel-server)
+
 #### Status
 Under development (but working)
 
