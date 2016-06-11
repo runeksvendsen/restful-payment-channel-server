@@ -4,7 +4,7 @@
 ---
 
 #### Status
-Under development
+Under development (but working)
 
 #### TODO
 * Auto-settlement
