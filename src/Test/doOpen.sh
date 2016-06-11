@@ -2,10 +2,12 @@
 
 set -e
 
-INPUT=`cat`
-OPENURL=$(echo "$INPUT" | jq -r '.open_url')
+#INPUT=`cat`
+#OPENURL=$(echo "$INPUT" | jq -r '.open_url')
 
-curl -X POST -d "" "$OPENURL"
+OPENURL=$(jq -r '.open_url')
 
-echo "$INPUT"
+curl --silent -X POST -d "" "$OPENURL"
+
+#echo "$INPUT"
 
