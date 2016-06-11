@@ -61,11 +61,11 @@ install:
  - echo "$(ghc --version) [$(ghc --print-project-git-commit-id 2> /dev/null || echo '?')]"
  - case "$BUILD" in
      stack)
-       stack install;
-       RELTAG="$(basename $(stack path --programs))";
-       BINDIR="/home/travis/.local/bin";
-       BINNAME="PayChanServer";
-       cp "$BINDIR/$BINNAME" "./$BINNAME-$RELTAG";;
+       stack install;;
+#       RELTAG="$(basename $(stack path --programs))";
+#       BINDIR="/home/travis/.local/bin";
+#       BINNAME="PayChanServer";
+#       cp "$BINDIR/$BINNAME" "./$BINNAME-$RELTAG";;
      cabal)
        cabal --version;
        travis_retry cabal update;
