@@ -51,6 +51,7 @@ import Text.Printf (printf)
 import Data.EitherR (fmapL)
 import Data.String.Conversions (cs)
 import Data.CaseInsensitive (CI, original)
+import Data.Aeson.Encode.Pretty (encodePretty)
 
 --- TYPES ---
 type Vout = Integer
@@ -174,7 +175,7 @@ reqBoundedJSON n = fmap eitherDecode (readRequestBody n)
 writeJSON :: (MonadSnap m, ToJSON a) => a -> m ()
 writeJSON json = do
     modifyResponse $ setContentType "application/json"
-    writeLBS $ encode json
+    writeLBS $ encodePretty json
     writeBS "\n"
 
 ---JSON BODY RESPONSE---

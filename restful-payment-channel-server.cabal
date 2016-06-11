@@ -50,7 +50,8 @@ Executable PayChanServer
     http-client,
 
     bitcoin-api, bitcoin-tx,
-    case-insensitive
+    case-insensitive,
+    aeson-pretty
 
   other-modules: Server.App,
                  BlockchainAPI.Impl.BlockrIo,
