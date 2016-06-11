@@ -69,7 +69,7 @@ httpGETFundingInfo sendPK expTime =
         httpGETParseJSON (fundingInfoURL hOSTNAME sendPK expTime)
 
 createChannel :: HC.PubKey -> BitcoinLockTime -> FundingInfo -> IO (URI,SenderPaymentChannel)
-createChannel sendPK expTime (FundingInfo recvPK fundAddrSrv chanCreateURI openPrice minConf) = do
+createChannel sendPK expTime (FundingInfo recvPK fundAddrSrv openPrice minConf) = do
     let fundAddr = getFundingAddress' sendPK recvPK expTime
     unless (fundAddr == fundAddrSrv) $
         fail "BUG: server's calculated funding address and ours don't match"
@@ -82,6 +82,7 @@ createChannel sendPK expTime (FundingInfo recvPK fundAddrSrv chanCreateURI openP
     let (payment,chanState) = PayChan.channelWithInitialPaymentOf chanParams
             (toFundingTxInfo txInfo) (`HC.signMsg` prvKeyClient) (HC.pubKeyAddr sendPK) openPrice
 
+    let chanCreateURI = cs $ channelOpenURL hOSTNAME sendPK expTime
     openRes <- failOnError =<< httpPOSTParseJSON chanCreateURI (toJSON payment)
     let newChanURI = chanOpenResultchannel_uri openRes
     return (newChanURI,chanState)
