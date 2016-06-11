@@ -1,0 +1,108 @@
+# Here, we test with both stack and cabal. The reasons to test with cabal are
+# twofold:
+#
+# 1. We want to ensure that the bootstrapping case works
+#
+# 2. Building with stack would be too easy a test, since it guarantees us a
+# sane build environment. In CI, we want to make our life more difficult, so we
+# use cabal without any Stackage snapshots.
+#
+language: c
+sudo: false
+
+cache:
+    directories:
+        - $HOME/.ghc
+        - $HOME/.cabal
+        - $HOME/.stack
+
+matrix:
+  include:
+    - env: BUILD=cabal CABALVER=1.18 GHCVER=7.8.4
+      compiler: ": #GHC 7.8.4"
+      addons: {apt: {packages: [cabal-install-1.18,ghc-7.8.4], sources: [hvr-ghc]}}
+
+    - env: BUILD=cabal CABALVER=1.22 GHCVER=7.10.1
+      compiler: ": #GHC 7.10.1"
+      addons: {apt: {packages: [cabal-install-1.22,ghc-7.10.1], sources: [hvr-ghc]}}
+
+    - env: BUILD=cabal CABALVER=1.22 GHCVER=7.10.2
+      compiler: ": #GHC 7.10.2"
+      addons: {apt: {packages: [cabal-install-1.22,ghc-7.10.2], sources: [hvr-ghc]}}
+
+    - env: BUILD=cabal CABALVER=1.22 GHCVER=7.10.3
+      compiler: ": #GHC 7.10.3"
+      addons: {apt: {packages: [cabal-install-1.22,ghc-7.10.3], sources: [hvr-ghc]}}
+
+    - env: BUILD=stack GHCVER=7.8.4 STACK_YAML=stack-7.8.yaml
+      compiler: ": #stack 7.8.4"
+      addons: {apt: {packages: [cabal-install-head,ghc-7.8.4], sources: [hvr-ghc]}}
+
+    - env: BUILD=stack GHCVER=7.10.3 STACK_YAML=stack.yaml
+      compiler: ": #stack 7.10.3"
+      addons: {apt: {packages: [cabal-install-head,ghc-7.10.3], sources: [hvr-ghc]}}
+
+    - env: BUILD=stack GHCVER=head STACK_YAML=stack-8.0.yaml
+      compiler: ": #stack 8.0"
+      addons: {apt: {packages: [cabal-install-head,ghc-head], sources: [hvr-ghc]}}
+
+    - env: BUILD=cabal CABALVER=head GHCVER=head
+      compiler: ": #GHC head"
+      addons: {apt: {packages: [cabal-install-head,ghc-head], sources: [hvr-ghc]}}
+
+    - env: BUILD=stack STACK_YAML=stack.yaml
+      compiler: ": #stack 7.10.3 osx"
+      os: osx
+
+  allow_failures:
+    - env: BUILD=cabal CABALVER=head GHCVER=head
+
+    # This fails to build because the most recent release of stack does not have
+    # the fix to #1570 (but HEAD does)
+    - env: BUILD=stack GHCVER=head STACK_YAML=stack-8.0.yaml
+
+# Note: the distinction between `before_install` and `install` is not important.
+# - in before_install we install build tools
+# - in install we install (haskell) dependencies
+before_install:
+ - unset CC
+ - case "$BUILD" in
+     stack)
+       export PATH=$HOME/.local/bin:/opt/ghc/$GHCVER/bin:$PATH;;
+     cabal)
+       export PATH=$HOME/.cabal/bin:/opt/ghc/$GHCVER/bin:/opt/cabal/$CABALVER/bin:$PATH;;
+   esac
+ - ./.travis-setup.sh
+
+install:
+ - echo "$(ghc --version) [$(ghc --print-project-git-commit-id 2> /dev/null || echo '?')]"
+ - case "$BUILD" in
+     stack)
+       stack --no-terminal test --only-dependencies;;
+     cabal)
+       cabal --version;
+       travis_retry cabal update;
+       rm -f $(stack path --dist-dir)/stack-*.tar.gz;
+       stack sdist --pvp-bounds=both;
+       tar xf $(stack path --dist-dir)/stack-*.tar.gz --wildcards --strip-components=1 '*/stack.cabal';
+       cabal install --only-dependencies --enable-tests --enable-benchmarks --force-reinstalls --ghc-options=-O0;;
+   esac
+
+script:
+ - case "$BUILD" in
+     stack)
+       stack --no-terminal test --haddock --no-haddock-deps;;
+     cabal)
+       cabal configure --enable-tests --enable-benchmarks -v2 --ghc-options="-O0 -Werror";
+       cabal build;
+       cabal test;
+       cabal check;
+       cabal sdist;
+       cabal copy;
+       cd test/integration;
+       true stack setup;
+       true stack test;
+       cd ../..;
+       SRC_TGZ=$(cabal info . | awk '{print $2;exit}').tar.gz &&
+       (cd dist && cabal install --force-reinstalls "$SRC_TGZ");;
+   esac
