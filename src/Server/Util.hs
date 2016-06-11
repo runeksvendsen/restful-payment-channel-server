@@ -175,6 +175,8 @@ writeJSON :: (MonadSnap m, ToJSON a) => a -> m ()
 writeJSON json = do
     modifyResponse $ setContentType "application/json"
     writeLBS $ encode json
+    writeBS "\n"
+
 ---JSON BODY RESPONSE---
 
 
