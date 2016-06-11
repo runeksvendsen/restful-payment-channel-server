@@ -2,9 +2,13 @@ flags: {}
 
 extra-package-dbs: []
 
+
 packages:
 - '.'
-- /Users/rune/IdeaProjects/bitcoin-payment-channel
+- location:
+    git: https://github.com/runeksvendsen/bitcoin-payment-channel.git
+    commit: b331444fca40e5c1ccbd88fab74f31efb7e20f7a
+  extra-dep: true
 
 flags:
     snap-server:
