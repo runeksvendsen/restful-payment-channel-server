@@ -11,18 +11,18 @@
 language: c
 sudo: false
 
-deploy:
-  provider: releases
-  api_key:
-    secure: pzc6NzPITNbBgFxWvFRxeRiKO3HI+Bbs6HGLYYP8LOLaXbjGZGu+p9zvxi/eR4ZIeVw5ze+OE8zMowNOTHuzt9HJVR5kgE9fxf/OEUrfAEumYCHRXil2znGhSSzrgfcvN0RU6Ex78ViTIxqBy1UNbZnp2YjNQ7dAsePb0kGo8w/clHsjrMYJtMcSHnAp/LJD8gj/QUCcMa/1ycLZd9cTuByhdZkPBynqBC/ZSyq/gj4YXP4ryDuNadnHo1YIsHCnH854jGfziSmhZOzQlU1X1fTYAsL4i4rYePvdxxgTv7FxCNe+AeJLDXOkEJuIhhHxyxpmtasle5GB47dCocm1Z+7C4xbLBamy+tJ7O336dHbvEHuS6NFE+IIGYvra1nZhe96+clSJu917LoNiFsNMI5um0OKfzC9r9ppL7zb2vFijVtfNlJYLqfSX8moI0pKYlhYhFTK2gkDZFRYFEvd8QOn7is3yHAjKm1HLcTTkY3FAHNpsRx/HF4PfVDPHpxJo+B2+GOGVEqxxTPclUEdfuLR4+Qo7/bllPTl3sZH73Gh8cYvOQc7LskmC+nEJkpJU4JtnfTBmwUUzrNlrDLf6tYR22X513ZWaAs9IjQBTV5jMxsn/YumzOGDZeOMz/Z6OZc5aqOu8euyDusYJu4RQLKqenhinvpp8LZmiRbB6r74=
-  file:
-    - "PayChanServer-x86_64-linux"
-    - "PayChanServer-x86_64-osx"
-  skip_cleanup: true
-  on:
-    tags: true
-    repo: runeksvendsen/restful-payment-channel-server
-  overwrite: true
+#deploy:
+#  provider: releases
+#  api_key:
+#    secure: pzc6NzPITNbBgFxWvFRxeRiKO3HI+Bbs6HGLYYP8LOLaXbjGZGu+p9zvxi/eR4ZIeVw5ze+OE8zMowNOTHuzt9HJVR5kgE9fxf/OEUrfAEumYCHRXil2znGhSSzrgfcvN0RU6Ex78ViTIxqBy1UNbZnp2YjNQ7dAsePb0kGo8w/clHsjrMYJtMcSHnAp/LJD8gj/QUCcMa/1ycLZd9cTuByhdZkPBynqBC/ZSyq/gj4YXP4ryDuNadnHo1YIsHCnH854jGfziSmhZOzQlU1X1fTYAsL4i4rYePvdxxgTv7FxCNe+AeJLDXOkEJuIhhHxyxpmtasle5GB47dCocm1Z+7C4xbLBamy+tJ7O336dHbvEHuS6NFE+IIGYvra1nZhe96+clSJu917LoNiFsNMI5um0OKfzC9r9ppL7zb2vFijVtfNlJYLqfSX8moI0pKYlhYhFTK2gkDZFRYFEvd8QOn7is3yHAjKm1HLcTTkY3FAHNpsRx/HF4PfVDPHpxJo+B2+GOGVEqxxTPclUEdfuLR4+Qo7/bllPTl3sZH73Gh8cYvOQc7LskmC+nEJkpJU4JtnfTBmwUUzrNlrDLf6tYR22X513ZWaAs9IjQBTV5jMxsn/YumzOGDZeOMz/Z6OZc5aqOu8euyDusYJu4RQLKqenhinvpp8LZmiRbB6r74=
+#  file:
+#    - "PayChanServer-x86_64-linux"
+#    - "PayChanServer-x86_64-osx"
+#  skip_cleanup: true
+#  on:
+#    tags: true
+#    repo: runeksvendsen/restful-payment-channel-server
+#  overwrite: true
 
 cache:
     directories:
@@ -41,8 +41,8 @@ matrix:
       compiler: ": #stack 7.10.3 osx"
       os: osx
 
-  allow_failures:
-    - env: BUILD=cabal CABALVER=head GHCVER=head
+#  allow_failures:
+#    - env: BUILD=cabal CABALVER=head GHCVER=head
 
 # Note: the distinction between `before_install` and `install` is not important.
 # - in before_install we install build tools

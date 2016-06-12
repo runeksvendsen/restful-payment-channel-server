@@ -218,7 +218,13 @@ test_GetDerivedFundingInfo = do
 
 --- POST /channels/ ---
 
-
+confirmChannelDoesntExist :: MonadSnap m => ChannelMap -> HT.TxHash -> m ()
+confirmChannelDoesntExist chanMap hash =
+    liftIO (getItem chanMap hash) >>=
+    maybe
+        (return ())
+        (const $ errorWithDescription 409 "Channel already exists")
+-- cs $ channelOpenURL hOSTNAME sendPK lockTime
 
 getChannelStateOr404 :: MonadSnap m => ChannelMap -> HT.TxHash -> m ReceiverPaymentChannel
 getChannelStateOr404 chanMap hash =
