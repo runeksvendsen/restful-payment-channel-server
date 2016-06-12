@@ -180,6 +180,8 @@ definitions:
         description: Minimum confirmation count that the funding transaction must have before proceeding with opening a new channel.
         type: integer
         format: int32
+        minimum: 0
+        example: 6
       settlement_period_hours:
         description: The server reserves the right to close the payment channel this many hours before the specified expiration date. The server hasn't received any actual value until it publishes a payment transaction to the Bitcoin network, so it needs a window of time in which the client can no longer send payments over the channel, and yet the channel refund transaction hasn't become valid. 
         type: integer
