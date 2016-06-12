@@ -95,7 +95,7 @@ paths:
           schema:
             $ref: "#/definitions/PaymentResult"
         299:
-          description: Payment received, channel closed. If there is no value left to send over the channel, the server closes it and responds with this status code.
+          description: Payment received, channel closed. The payment has been received but there is no value left to send over the channel, so it has been closed.
         400:
           description: Invalid input (see header for error description)
         404:
