@@ -8,6 +8,9 @@
 #### Status
 Under development. Should work as intended, more or less, but there are several bugs and unhandled corner cases that I'm aware of, and probably some that I haven't found yet.
 
+#### Test server
+https://paychan.runeks.me (also hosts documentation on the root path). Runs on Bitcoin testnet3.
+
 #### TODO
 * Auto-settlement
 * OutPoint as key in chanMap
