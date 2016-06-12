@@ -4,7 +4,7 @@ module Test.GenData where
 
 import Common.Common    (mkOpenPath, mkPaymentPath)
 import           Data.Bitcoin.PaymentChannel (channelWithInitialPaymentOf, sendPayment)
-import           Data.Bitcoin.PaymentChannel.Util (BitcoinLockTime(..), parseBitcoinLocktime,
+import           Data.Bitcoin.PaymentChannel.Util (BitcoinLockTime(..), toWord32, parseBitcoinLocktime,
                                                    getFundingAddress)
 import           Data.Bitcoin.PaymentChannel.Types
     (Payment, ChannelParameters(..), FundingTxInfo(..))
@@ -99,10 +99,6 @@ getSessionData (ChannelSession endPoint cp fundAddr initPay payList) =
 
 
 
-
-
-
-
 convertMockFundingInfo :: FundingTxInfo -> TxInfo
 convertMockFundingInfo (CFundingTxInfo txid vout val)  =
     TxInfo txid 27 (OutInfo "" (fromIntegral val) (fromIntegral vout))
@@ -110,13 +106,7 @@ convertMockFundingInfo (CFundingTxInfo txid vout val)  =
 deriveMockFundingInfo :: ChannelParameters -> FundingTxInfo
 deriveMockFundingInfo (CChannelParameters sendPK recvPK expTime) =
     CFundingTxInfo
-        (HT.TxHash . fromJust . HC.bsToHash256 $ BS.take 32 $ cs . Bin.encode $ sendPK)
-        1
+        (HT.TxHash $ HC.hash256 $ cs . Bin.encode $ sendPK)
+        (toWord32 expTime `mod` 7)
         12345678900000
 
-
-f = HC.makePrvKey
-
--- function createPaymentSignature(clientKeyPair,
---  fundingTxId, fundingVout,
--- redeemScript, changeAddress, changeAmount)
