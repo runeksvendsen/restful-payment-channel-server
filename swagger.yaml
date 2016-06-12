@@ -1,7 +1,7 @@
 swagger: '2.0'
 
 info:
-  version: "0.1.0"
+  version: "0.2.0"
   title: RESTful Bitcoin payment channel protocol
   description: |
     A Bitcoin payment channel enables instant, secure transfer of bitcoins from one party to another. The intended use is consumer-to-merchant payments, allowing a consumer to make many small payments to a merchant - with whom the consumer has an open payment channel - while only paying the Bitcoin transaction fee once, when the channel is closed.
@@ -9,7 +9,7 @@ info:
     The payment server speaking this protocol is the recipient of value, operating on behalf of a content delivery server who receives value from a customer/client. The content delivery server passes requests supplied by the client (payer) to the payment server, and delivers content to the client dependent on the response from the payment server. 
     
     * Server implementation: https://github.com/runeksvendsen/restful-payment-channel-server
-    * Client library: https://github.com/runeksvendsen/paychanjs-client
+    * Client library: (under development)
     
 host: paychan.runeks.me #Bitcoin testnet server
 # basePath: /v1
@@ -26,6 +26,8 @@ paths:
         The client will first calculate the funding address, confirm that it matches the server's, then pay to the funding address, and wait until the funding transaction has the server-specified number of confirmations ("funding_tx_min_conf").
         
         After this, the client will create a new payment of value equal to the server-specified channel open price ("open_price"), and POST this to the channel-open URL in order to open the channel.
+        
+        Test URL: https://paychan.runeks.me/fundingInfo?client_pubkey=02d320b6da0190089ed63667cf497d9c1e949be05b6f991832ae9397eb34a66e65&exp_time=1466288456
       operationId: getFundingInfo
       parameters:
         - $ref: "#/parameters/clientPubKeyParam"
@@ -42,7 +44,9 @@ paths:
     post:
       summary: Create a new payment channel
       description: |
-        After publishing the Bitcoin transaction which pays to the channel funding address, and waiting for the specified number of confirmations, the client will POST a payment paying the server's specified channel open price to the channel open URL, which is the URL returned by "GET /fundingInfo" plus the 'change_address' parameter.
+        After publishing the funding Bitcoin transaction, and waiting for the specified number of confirmations, the client will POST a payment, paying the server's specified channel open price, to the channel open URL.
+        
+        Test URL: https://paychan.runeks.me/channels/new?client_pubkey=02d320b6da0190089ed63667cf497d9c1e949be05b6f991832ae9397eb34a66e65&exp_time=1466288456&change_address=mmA2XECa7bVERzQKkyy1pNBQ3PC4HnxTC5&payment=OCfOczoLAAAwRQIhAOzfueLz55pXhrqWAjC4UZ72j17ZCrkudg8dNVlkgUtLAiB3nMc4Gs7535IXOq3Jf6ohkchvynieckFmwCSbBwBjW4M=&test=true
       operationId: createPaymentChannel
       parameters:
         - $ref: "#/parameters/clientPubKeyParam"
@@ -70,7 +74,7 @@ paths:
   /channels/{funding_txid}/{funding_vout}:
     put:
       summary: Make payment over an existing payment channel
-      description: 'Example URL: http://pay.example.com/channels/03f09ea732f45662e5fffc7abe5b06a20eb9256d412922c1b991d9973a90df7f/1?payment=LifOczoLAAAwRQIhAIMntZNRxUItokzOlMnD3rrZ4g_Ue5dPqgfyChD1eImnAiBW1kI9o1GMesJfhGMfWSVyhB-gKiSKRM1GKa6SHd5Iq4M='
+      description: 'Test URL: https://paychan.runeks.me/channels/c3d4e98323f071f37e42cb0cf0486b166d4227ed91513236aa55d7768d762e11/3?payment=LifOczoLAAAwRQIhAOZ3g2uVLbEwY_j0HDs8bxMW_m6dcTphJ9jzSQgAHrtuAiA0ElapVhwIvURKtw5AzwEkwuZYxpqLWcayAlMSLOfE-YM='
       operationId: payPaymentChannel
       consumes:
         - application/json
@@ -98,7 +102,7 @@ paths:
           description: No such payment channel
     delete:
       summary: Delete an existing payment channel
-      description: 'Example URL: http://pay.example.com/channels/03f09ea732f45662e5fffc7abe5b06a20eb9256d412922c1b991d9973a90df7f/1?payment=LifOczoLAAAwRQIhAIMntZNRxUItokzOlMnD3rrZ4g_Ue5dPqgfyChD1eImnAiBW1kI9o1GMesJfhGMfWSVyhB-gKiSKRM1GKa6SHd5Iq4M='
+      description: 'Test URL (same as PUT URL): https://paychan.runeks.me/channels/c3d4e98323f071f37e42cb0cf0486b166d4227ed91513236aa55d7768d762e11/3?payment=LifOczoLAAAwRQIhAOZ3g2uVLbEwY_j0HDs8bxMW_m6dcTphJ9jzSQgAHrtuAiA0ElapVhwIvURKtw5AzwEkwuZYxpqLWcayAlMSLOfE-YM='
       operationId: deletePaymentChannel
       parameters:
         - $ref: "#/parameters/fundingTxIdParam"
@@ -120,7 +124,7 @@ parameters:
     paymentParam:
       name: payment
       in: query
-      description: Opaque payment data, base64-encoded (see client library for specification)
+      description: Payment data, base64-encoded (see client library for specification)
       required: true
       type: string
     clientPubKeyParam:
@@ -153,23 +157,19 @@ definitions:
     type: object
     required:
       - server_pubkey
-      - funding_address
-      - channel_open_uri
+      - funding_address_copy
       - open_price
       - funding_tx_min_conf
+      - settlement_period_hours
     properties:
       server_pubkey:
         description: Server/value receiver public key. Hex-encoded, compressed Secp256k1 pubkey, 33 bytes.
         type: string
         example: 029b5549e8cac42d27051956925d8176408b2183ba357850f58320ad5876b9c13f"
-      funding_address:
-        description: Payment channel funding address. Send bitcoins to this address to fund a new channel.
+      funding_address_copy:
+        description: Server's calculated channel funding address. The client will confirm that its own calculated funding address matches this one, before paying to it.
         type: string
         example: 2NCTirSGjFM8T7hUow3AcfyFaw1N1APnYuP
-      channel_open_uri:
-        description: The URL which must be POSTed to in order to open a new payment channel. See <<_createpaymentchannel,here>>.
-        type: string
-        format: uri
       open_price:
         description: Price (in satoshis) for opening a channel with the given {exp_time}. This amount is paid in the initial channel payment when creating a new channel. May be zero, in which case a payment of zero value is transferred, ensuring that the channel can be closed at any time.
         type: integer
@@ -179,10 +179,12 @@ definitions:
       funding_tx_min_conf:
         description: Minimum confirmation count that the funding transaction must have before proceeding with opening a new channel.
         type: integer
-        format: int32 
-#  Payment:
-#    description: Opaque payment data, base64-encoded (see client library for specification)
-#    type: string
+        format: int32
+      settlement_period_hours:
+        description: The server reserves the right to close the payment channel this many hours before the specified expiration date. The server hasn't received any actual value until it publishes a payment transaction to the Bitcoin network, so it needs a window of time in which the client can no longer send payments over the channel, and yet the channel refund transaction hasn't become valid. 
+        type: integer
+        minimum: 0
+        example: 12
   PaymentResult:
     type: object
     required:
