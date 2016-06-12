@@ -165,7 +165,7 @@ definitions:
       server_pubkey:
         description: Server/value receiver public key. Hex-encoded, compressed Secp256k1 pubkey, 33 bytes.
         type: string
-        example: 029b5549e8cac42d27051956925d8176408b2183ba357850f58320ad5876b9c13f"
+        example: 029b5549e8cac42d27051956925d8176408b2183ba357850f58320ad5876b9c13f
       funding_address_copy:
         description: Server's calculated channel funding address. The client will confirm that its own calculated funding address matches this one, before paying to it.
         type: string
