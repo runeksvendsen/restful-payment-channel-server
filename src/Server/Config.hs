@@ -24,3 +24,4 @@ settlementTxFee = 10000 -- 0.0001 BTC
 openPrice = 1000 :: BitcoinAmount
 minConf = 1 :: Int
 minChannelDuration = 12 * 3600 :: Integer
+settlementPeriodHours = 6 :: Int

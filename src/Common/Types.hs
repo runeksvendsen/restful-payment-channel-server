@@ -44,6 +44,7 @@ data FundingInfo = FundingInfo
     , fundingInfofunding_address_copy :: HC.Address -- ^ Payment channel funding address. Send bitcoins to this address to fund a new channel.
     , fundingInfoopen_price :: BitcoinAmount -- ^ Price (in satoshis) for opening a channel with the given {exp_time}. This amount is paid in the initial channel payment when creating a new channel. May be zero, in which case a payment of zero value is transferred, ensuring that the channel can be closed at any time.
     , fundingInfofunding_tx_min_conf :: Int -- ^ Minimum confirmation count that the funding transaction must have before proceeding with opening a new channel.
+    , fundingInfosettlement_period_hours :: Int -- ^
     } deriving (Show, Eq, Generic)
 
 instance FromJSON FundingInfo where

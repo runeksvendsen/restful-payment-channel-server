@@ -4,7 +4,7 @@ module Server.Handlers where
 
 import           Prelude hiding (userError)
 
-import           Server.Config (pubKeyServer, fundsDestAddr, openPrice, minConf)
+import           Server.Config (pubKeyServer, fundsDestAddr, openPrice, minConf, settlementPeriodHours)
 
 import           Common.Common
 import           Common.Types
@@ -87,7 +87,8 @@ mkFundingInfo recvPK sendPK lockTime  =
         recvPK
         (getFundingAddress' sendPK recvPK lockTime)
         openPrice
-        minConf,
+        minConf
+        settlementPeriodHours,
     cs $ channelOpenURL hOSTNAME sendPK lockTime)
 
 logFundingInfo :: MonadSnap m => m ()
