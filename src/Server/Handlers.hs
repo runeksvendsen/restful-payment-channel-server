@@ -61,7 +61,7 @@ import Text.Printf (printf)
 import Data.EitherR (fmapL)
 import Data.String.Conversions (cs)
 import Test.GenData (deriveMockFundingInfo, convertMockFundingInfo)
--- import Data.S (toString)
+import Data.EitherR (fmapL)
 
 
 applyCORS' :: MonadSnap m => m ()
@@ -158,6 +158,8 @@ channelOpenHandler pubKeyServ
     (OpenConfig chanMap txInfo@(TxInfo txId _ (OutInfo _ chanVal idx)) sendPK sendChgAddr lockTime payment) = do
     liftIO . putStrLn $ "Processing channel open request... " ++
         show (sendPK, lockTime, txInfo, payment)
+
+    confirmChannelDoesntExist chanMap txId
 
     --New channel creation--
     let eitherChanState = channelFromInitialPayment
