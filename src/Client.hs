@@ -40,6 +40,10 @@ import Debug.Trace
 
 type URI = T.Text
 
+---- NOTE: Not compatible with server as of now.
+---- Use javascript client implementation:
+---- https://github.com/runeksvendsen/paychanjs-client
+
 pubKeyClient = HC.derivePubKey prvKeyClient
 prvKeyClient = HC.makePrvKey $ fromJust $ Secp.secKey $ fromHexString
     "aa519d456af73955295a161e096c10610b98d3d21404380edc4fa378dc58c1d7"

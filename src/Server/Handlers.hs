@@ -149,7 +149,7 @@ chanPay (PayConfig chanMap hash vout maybeNewAddr payment) = do
 ----Payment----
 
 
---- POST /channels/ ---
+--- POST /channels/ ----
 channelOpenHandler :: MonadSnap m =>
     HC.PubKey --TODO: move to config
     -> ChanOpenConfig
