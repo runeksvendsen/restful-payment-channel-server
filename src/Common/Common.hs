@@ -89,16 +89,16 @@ instance PathParamDecode HT.TxHash where
 
 instance PathParamDecode BitcoinLockTime where
     pathParamDecode bs = maybe
-        (Left "failed to decode expiration time") Right (decode . cs $ bs)
+        (Left "expiration time parse failure") Right (decode . cs $ bs)
 
 instance PathParamDecode HC.Address where
     pathParamDecode bs = maybe
-        (Left $ "failed to decode Bitcoin address: " ++ show bs) Right (HC.base58ToAddr bs)
+        (Left $ "Bitcoin address parse failure: " ++ show bs) Right (HC.base58ToAddr bs)
 
 instance PathParamDecode Payment where
     pathParamDecode bs =
         case fromJSON . String . cs $ bs of
-            Error e -> Left $ "failed to decode payment: " ++ e
+            Error e -> Left $ "payment parse failure: " ++ e
             Success p -> Right p
 
 instance PathParamDecode Integer where
