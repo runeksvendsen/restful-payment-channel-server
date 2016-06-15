@@ -5,8 +5,8 @@
 
 [![Build Status](https://api.travis-ci.org/runeksvendsen/restful-payment-channel-server.svg)](https://travis-ci.org/runeksvendsen/restful-payment-channel-server)
 
-#### Status
-Under development. Should work as intended, more or less, but there are several bugs and unhandled corner cases that I'm aware of, and probably some that I haven't found yet.
+#### Stability
+Experimental. Should work as intended, more or less, but there are several bugs and unhandled corner cases that I'm aware of, and probably some that I haven't found yet.
 
 #### Documentation
 Visit [test server](https://paychan.runeks.me).
