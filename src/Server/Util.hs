@@ -156,7 +156,7 @@ internalError = errorWithDescription 500
 
 errorWithDescription :: MonadSnap m => Int -> String -> m a
 errorWithDescription code errStr = do
-    modifyResponse $ setResponseStatus 400 (C.pack errStr)
+    modifyResponse $ setResponseStatus code (C.pack errStr)
     finishWith =<< getResponse
 ---ERROR---
 

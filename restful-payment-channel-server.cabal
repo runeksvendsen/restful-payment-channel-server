@@ -31,7 +31,7 @@ Executable PayChanServer
     haskoin-core              >= 0.3.0 && < 1.0.0,
     transformers,
     haskoin-core,
-    aeson,
+    aeson, vector,
     JsonGrammar, stack-prism,
     secp256k1,
     base16-bytestring,

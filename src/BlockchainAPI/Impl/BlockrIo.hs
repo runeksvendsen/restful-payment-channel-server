@@ -3,8 +3,8 @@
 
 module BlockchainAPI.Impl.BlockrIo where
 
-import BlockchainAPI.Types (OutInfo(..), TxInfo(..))
-import Common.Common (parseBTCAmount, parseJSONInt, hashToStr)
+import BlockchainAPI.Types (OutInfo(..), TxInfo(..), parseBTCAmount)
+import Common.Common (parseJSONInt, hashToStr)
 
 import           Control.Concurrent (threadDelay)
 import           Control.Monad      (mzero, unless)

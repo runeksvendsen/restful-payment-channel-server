@@ -282,8 +282,6 @@ fromHexString hexStr =
 hashToStr :: HT.TxHash -> String
 hashToStr = C.unpack . HT.txHashToHex
 
-parseBTCAmount = withScientific "bitcoin amount" $
-    parseJSONInt . (* 1e8)
 
 prettyShow :: Value -> String
 prettyShow = C.unpack . toStrict . encodePretty
