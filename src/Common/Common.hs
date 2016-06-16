@@ -84,8 +84,8 @@ instance PathParamDecode HC.PubKey where
 
 instance PathParamDecode HT.TxHash where
     pathParamDecode bs =
-        decodeHex bs >>=
-        fmapL ("failed to decode transaction hash: " ++) . HU.decodeToEither
+        maybe (Left $ "failed to decode transaction hash: " ++ cs bs)
+            Right (HT.hexToTxHash bs)
 
 instance PathParamDecode BitcoinLockTime where
     pathParamDecode bs = maybe
