@@ -82,6 +82,13 @@ updateStoredItem m k v = do
         Nothing -> return False
         Just _ ->  updateItem m k v >> return True
 
+deleteStoredItem :: (ToFileName k, Serializable v) => DiskMap k v -> k -> IO ItemExists
+deleteStoredItem m k = do
+    maybeItem <- getItem m k
+    case maybeItem of
+        Nothing -> markForDeletion k m >> return False
+        Just _ ->  markForDeletion k m >> return True
+
 -- ------======000000======-------- --
 
 
@@ -255,6 +262,12 @@ mapAndGetItem h f m =
                 Map.delete h m >> Map.insert (f item) h m >> return (Just $ f item)
             Nothing -> return Nothing
 
+-- | Retrieve map item and simultaneously mark the retrieved item for disk deletion
+markForDeletion :: ToFileName k => k -> DiskMap k v -> IO (Maybe (MapItem v))
+markForDeletion h =
+    mapAndGetItem h
+        (\i@Item {} -> i { deleteFromDisk = True })
+
 
 
 -----create/remove interface
@@ -269,7 +282,6 @@ updateItem m k v = atomically $ do
 removeChannel :: ToFileName k => k -> DiskMap k v -> IO ()
 removeChannel k m = atomically $ Map.delete k m
 -----create/remove interface
-
 
 
 

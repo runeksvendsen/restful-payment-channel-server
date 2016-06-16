@@ -20,7 +20,7 @@ import           BlockchainAPI.Types (txConfs, toFundingTxInfo,
                                 TxInfo(..), OutInfo(..))
 import           Bitcoind (bitcoindNetworkSumbitTx)
 import           Server.ChanStore (ChannelMap, ChanState(..))
-import           DiskStore (addItem, getItem, updateStoredItem)
+import           DiskStore (addItem, getItem, updateStoredItem, deleteStoredItem)
 
 import           Control.Monad.IO.Class (liftIO)
 import           Control.Monad (mzero, forM, unless, when)
@@ -123,6 +123,9 @@ chanSettle (SettleConfig privKey recvAddr txFee chanMap hash vout payment) = do
     txid <- case eitherTxId of
         Left e -> internalError e
         Right txid -> return txid
+
+    liftIO $ deleteStoredItem chanMap hash
+
     modifyResponse $ setResponseStatus 202
         (C.pack $ "Channel closed. Settlement tx txid: " ++ cs (HT.txHashToHex txid))
 ---
