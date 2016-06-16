@@ -23,7 +23,7 @@ import           Server.ChanStore (ChannelMap, ChanState(..))
 import           DiskStore (addItem, getItem, updateStoredItem)
 
 import           Control.Monad.IO.Class (liftIO)
-import           Control.Monad (mzero, forM, unless)
+import           Control.Monad (mzero, forM, unless, when)
 import           Control.Applicative
 import           Control.Concurrent (forkIO)
 import           Control.Monad.State (gets)
@@ -168,7 +168,7 @@ channelOpenHandler pubKeyServ
     modifyResponse $ setResponseStatus 201 (C.pack "Channel ready")
     --New channel creation--
 
-    unless (not $ channelIsExhausted recvChanState) $
+    when (not $ channelIsExhausted recvChanState) $
         modifyResponse $ setHeader "Location" (cs $ activeChannelURL hOSTNAME txId idx)
 
     writePaymentResult (valRecvd,recvChanState)
