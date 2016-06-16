@@ -8,7 +8,7 @@ info:
     
     The payment server speaking this protocol is the recipient of value, operating on behalf of a content delivery server who receives value from a customer/client. The content delivery server passes requests supplied by the client (payer) to the payment server, and delivers content to the client dependent on the response from the payment server. 
     
-    * Server implementation: https://github.com/runeksvendsen/restful-payment-channel-server
+    * Server implementation: https://github.com/runeksvendsen/restful-payment-channel-server (this s
     * Client library: https://github.com/runeksvendsen/paychanjs-client
     
 host: paychan.runeks.me #Bitcoin testnet server
@@ -38,7 +38,7 @@ paths:
           schema:
             $ref: "#/definitions/FundingInfo"
         400:
-          description: Invalid input (see header for error description)
+          description: Invalid input (see status message for error description)
   
   /channels/new:
     post:
@@ -68,8 +68,19 @@ paths:
               description: "URL of the newly opened channel"
               type: string
               format: uri
+        202:
+          description: Channel created, but initial payment exhausted channel so it has been closed (should be rare).
+          schema:
+            $ref: "#/definitions/PaymentResult"
+        409:
+          description: Channel already exists
+          headers:
+            Location:
+                description: "URL of the already-open channel"
+                type: string
+                format: uri
         400:
-          description: Invalid input (see header for error description)
+          description: Invalid input (see status message for error description)
           
   /channels/{funding_txid}/{funding_vout}:
     put:
@@ -94,10 +105,10 @@ paths:
           description: Payment received
           schema:
             $ref: "#/definitions/PaymentResult"
-        299:
+        202:
           description: Payment received, channel closed. The payment has been received, but there is no value left to send over the channel so it has been closed.
         400:
-          description: Invalid input (see header for error description)
+          description: Invalid input (see status message for error description)
         404:
           description: No such payment channel
     delete:
@@ -113,10 +124,10 @@ paths:
       produces:
         - application/json
       responses:
-        299:
+        202:
           description: Channel closed, funds settled. The settling transaction has been published to the Bitcoin network.
         400:
-          description: Invalid input (see header for error description)
+          description: Invalid input (see status message for error description)
         404:
           description: No such payment channel
 
