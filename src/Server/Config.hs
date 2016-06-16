@@ -18,10 +18,12 @@ prvKeyServer = HC.makePrvKey $ fromJust $ Secp.secKey $ fromHexString
 fundsDestAddr :: HC.Address
 fundsDestAddr = "mmA2XECa7bVERzQKkyy1pNBQ3PC4HnxTC5"
 
+-- settlement tx b86014b07c49425b6011c267e35bb261c07781933f472a6f83541ba0b656d4c8 313 bytes
 settlementTxFee :: BitcoinAmount
-settlementTxFee = 10000 -- 0.0001 BTC
+settlementTxFee = 15650 -- 50 satoshi/byte
 
-openPrice = 1000 :: BitcoinAmount
+
+openPrice = settlementTxFee + 1000 :: BitcoinAmount
 minConf = 0 :: Int
 minChannelDuration = 12 * 3600 :: Integer
 settlementPeriodHours = 6 :: Int

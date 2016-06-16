@@ -10,7 +10,7 @@ import Server.Util (getPathArg, getQueryArg, getOptionalQueryArg,
                     ChanOpenConfig(..), ChanPayConfig(..), ChanSettleConfig(..),
                     headerGetPayment,
                     txInfoFromAddr, guardIsConfirmed, fundingAddrFromParams)
-import Server.Config (pubKeyServer, prvKeyServer,fundsDestAddr,settlementTxFee)
+import Server.Config (pubKeyServer, prvKeyServer, openPrice, fundsDestAddr, settlementTxFee)
 import Server.Handlers -- (mkFundingInfo, writeFundingInfoResp, channelOpenHandler)
 
 import           Server.ChanStore (ChannelMap,
@@ -77,14 +77,14 @@ fundingInfoHandler =
 
 newChannelHandler :: Handler App App (BitcoinAmount, ReceiverPaymentChannel)
 newChannelHandler = applyCORS' >>
-    OpenConfig <$>
+    OpenConfig openPrice pubKeyServer <$>
         use channelStateMap <*>
         testOr_blockchainGetFundingInfo <*>
         getQueryArg "client_pubkey" <*>
         getQueryArg "change_address" <*>
         getQueryArg "exp_time" <*>
         getQueryArg "payment"
-    >>= channelOpenHandler pubKeyServer
+    >>= channelOpenHandler
 
 paymentHandler :: Handler App App (BitcoinAmount, ReceiverPaymentChannel)
 paymentHandler = applyCORS' >>

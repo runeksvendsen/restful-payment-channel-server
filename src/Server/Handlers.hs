@@ -149,24 +149,26 @@ chanPay (PayConfig chanMap hash vout maybeNewAddr payment) = do
 
 --- POST /channels/ ----
 channelOpenHandler :: MonadSnap m =>
-    HC.PubKey --TODO: move to config
-    -> ChanOpenConfig
+    ChanOpenConfig
     -> m (BitcoinAmount, ReceiverPaymentChannel)
-channelOpenHandler pubKeyServ
-    (OpenConfig chanMap txInfo@(TxInfo txId _ (OutInfo _ chanVal idx)) sendPK sendChgAddr lockTime payment) = do
+channelOpenHandler
+    (OpenConfig openPrice pubKeyServ chanMap txInfo@(TxInfo txId _ (OutInfo _ chanVal idx)) sendPK sendChgAddr lockTime payment) = do
     liftIO . putStrLn $ "Processing channel open request... " ++
         show (sendPK, lockTime, txInfo, payment)
 
     confirmChannelDoesntExistOrAbort chanMap txId idx
 
-    --New channel creation--
     (valRecvd,recvChanState) <- either (userError . show) return $
         channelFromInitialPayment
             (CChannelParameters sendPK pubKeyServ lockTime)
             (toFundingTxInfo txInfo) sendChgAddr payment
+
+    when (valRecvd < openPrice) $
+        userError $ "Initial payment short. Channel open price is " ++
+            show openPrice ++ ", received " ++ show valRecvd ++ "."
+
     liftIO $ addItem chanMap txId (ReadyForPayment recvChanState)
     modifyResponse $ setResponseStatus 201 (C.pack "Channel ready")
-    --New channel creation--
 
     unless (channelIsExhausted recvChanState) $
         modifyResponse $ setHeader "Location" (cs $ activeChannelURL hOSTNAME txId idx)

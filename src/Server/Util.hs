@@ -57,7 +57,8 @@ import Data.Aeson.Encode.Pretty (encodePretty)
 type Vout = Integer
 
 data ChanOpenConfig = OpenConfig
-    ChannelMap TxInfo HC.PubKey HC.Address BitcoinLockTime Payment
+    BitcoinAmount HC.PubKey ChannelMap TxInfo HC.PubKey HC.Address BitcoinLockTime Payment
+--    open_price  server_pk                   client_pk
 
 data ChanPayConfig = PayConfig
     ChannelMap HT.TxHash Vout (Maybe HC.Address) Payment
