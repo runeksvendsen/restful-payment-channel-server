@@ -19,7 +19,7 @@ import           Control.Lens ((^.))
 chainSoAddressInfo :: T.Text -> IO (JsendResult TxInfo)
 chainSoAddressInfo addr =
     fmap (^. responseBody) $ asJSON =<<
-    get ("https://chain.so/api/v2/get_tx_received/BTCTEST/" ++ cs addr)
+    get ("https://chain.so/api/v2/get_tx_unspent/BTCTEST/" ++ cs addr)
 
 toEither :: Show a => JsendResult a -> Either String (Maybe a)
 toEither (Success maybeA) = Right maybeA
@@ -56,6 +56,7 @@ instance FromJSON TxInfo where
 
 -- https://chain.so/api/v2/get_tx_received/BTCTEST/2MygyE51oGVLxzXenxa6chzgdYBtSGkiy7m
 {-
+
 {
   "status" : "success",
   "data" : {
@@ -74,4 +75,7 @@ instance FromJSON TxInfo where
     ]
   }
 }
+
 -}
+
+
