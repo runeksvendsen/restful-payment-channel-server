@@ -123,18 +123,14 @@ chanSettle (SettleConfig privKey recvAddr txFee chanMap hash vout payment) = do
     txid <- case eitherTxId of
         Left e -> internalError e
         Right txid -> return txid
-    modifyResponse $ setResponseStatus 200 (C.pack "Channel closed")
+    modifyResponse $ setResponseStatus 202 (C.pack "Channel closed")
 ---
 
 
 ----Payment----
 
-chanPay :: MonadSnap m => ChanPayConfig -> m ()
+chanPay :: MonadSnap m => ChanPayConfig -> m (BitcoinAmount, ReceiverPaymentChannel)
 chanPay (PayConfig chanMap hash vout maybeNewAddr payment) = do
---     liftIO . putStrLn $ printf
---         "Processing payment for channel %s/%d: "
---             (cs $ HT.txHashToHex hash :: String) vout ++ show payment
-
     existingChanState <- maybeUpdateChangeAddress maybeNewAddr =<<
             getChannelStateOr404 chanMap hash
     (valRecvd,newChanState) <- either
@@ -145,7 +141,8 @@ chanPay (PayConfig chanMap hash vout maybeNewAddr payment) = do
     liftIO $ updateStoredItem chanMap hash (ReadyForPayment newChanState)
 
     modifyResponse $ setResponseStatus 200 (C.pack "Payment accepted")
-    sendPaymentResultResponse (valRecvd,newChanState)
+    writePaymentResult (valRecvd,newChanState)
+    return (valRecvd,newChanState)
 
 ----Payment----
 
@@ -154,7 +151,7 @@ chanPay (PayConfig chanMap hash vout maybeNewAddr payment) = do
 channelOpenHandler :: MonadSnap m =>
     HC.PubKey --TODO: move to config
     -> ChanOpenConfig
-    -> m ()
+    -> m (BitcoinAmount, ReceiverPaymentChannel)
 channelOpenHandler pubKeyServ
     (OpenConfig chanMap txInfo@(TxInfo txId _ (OutInfo _ chanVal idx)) sendPK sendChgAddr lockTime payment) = do
     liftIO . putStrLn $ "Processing channel open request... " ++
@@ -163,34 +160,40 @@ channelOpenHandler pubKeyServ
     confirmChannelDoesntExistOrAbort chanMap txId idx
 
     --New channel creation--
-    let eitherChanState = channelFromInitialPayment
+    (valRecvd,recvChanState) <- either (userError . show) return $
+        channelFromInitialPayment
             (CChannelParameters sendPK pubKeyServ lockTime)
             (toFundingTxInfo txInfo) sendChgAddr payment
-
-    (valRecvd,recvChanState) <- either (userError . show) return eitherChanState
+    liftIO $ addItem chanMap txId (ReadyForPayment recvChanState)
+    modifyResponse $ setResponseStatus 201 (C.pack "Channel ready")
     --New channel creation--
 
-    liftIO $ addItem chanMap txId (ReadyForPayment recvChanState)
-    modifyResponse $ setHeader "Location" (cs $ activeChannelURL hOSTNAME txId idx)
-    modifyResponse $ setResponseStatus 201 (C.pack "Channel ready")
-    sendPaymentResultResponse (valRecvd,recvChanState)
-    liftIO (putStrLn $ "Created new payment channel state: " ++ show recvChanState)
+    unless (not $ channelIsExhausted recvChanState) $
+        modifyResponse $ setHeader "Location" (cs $ activeChannelURL hOSTNAME txId idx)
 
-sendPaymentResultResponse :: MonadSnap m => (BitcoinAmount, ReceiverPaymentChannel) -> m ()
-sendPaymentResultResponse (valRecvd,recvChanState) =
+    writePaymentResult (valRecvd,recvChanState)
+    return (valRecvd,recvChanState)
+
+
+exitIfChannelStillOpen :: MonadSnap m => ChannelStatus -> m ()
+exitIfChannelStillOpen ChannelOpen = finishWith =<< getResponse
+exitIfChannelStillOpen ChannelClosed = return ()
+
+
+writePaymentResult :: MonadSnap m => (BitcoinAmount, ReceiverPaymentChannel) -> m ChannelStatus
+writePaymentResult (valRecvd,recvChanState) =
     let chanStatus =
             if channelIsExhausted recvChanState then
                 ChannelClosed else
                 ChannelOpen
     in
         do
-            unless (chanStatus == ChannelOpen) $ --TODO: auto-settle
-                modifyResponse $ setResponseStatus 202 (C.pack "Payment accepted. Channel closed.")
             writeJSON . toJSON $ PaymentResult {
                 paymentResultchannel_status = chanStatus,
                 paymentResultchannel_value_left = channelValueLeft recvChanState,
                 paymentResultvalue_received = valRecvd
             }
+            return chanStatus
 
 testOr_blockchainGetFundingInfo :: MonadSnap m => m TxInfo
 testOr_blockchainGetFundingInfo = do

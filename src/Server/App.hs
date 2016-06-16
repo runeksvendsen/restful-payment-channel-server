@@ -3,6 +3,8 @@
 
 module Server.App where
 
+import           Data.Bitcoin.PaymentChannel.Types (PaymentChannel(channelIsExhausted),
+                                                    ReceiverPaymentChannel, BitcoinAmount)
 -- import Paths_bitcoin_payment_channel_example (getDataDir)
 import Server.Util (getPathArg, getQueryArg, getOptionalQueryArg,
                     ChanOpenConfig(..), ChanPayConfig(..), ChanSettleConfig(..),
@@ -42,27 +44,28 @@ appInit = makeSnaplet "PayChanServer" "Payment channel REST interface" Nothing $
     chanOpenMap <- liftIO newChanMap
     liftIO . forkIO $ diskSyncThread chanOpenMap 5
     addRoutes [
-              ("/fundingInfo" -- ?client_pubkey&exp_time
-                ,   method GET    fundingInfoHandler)
+          ("/fundingInfo" -- ?client_pubkey&exp_time
+            ,   method GET    fundingInfoHandler)
 
-            , ("/channels/new" -- ?client_pubkey&exp_time&change_address
-                ,   method POST   newChannelHandler)
+        , ("/channels/new" -- ?client_pubkey&exp_time&change_address
+            ,   method POST (newChannelHandler >>= writePaymentResult >>=
+                                exitIfChannelStillOpen >> settlementHandler))
 
-            , ("/channels/:funding_txid/:funding_vout"
-                ,   method PUT    paymentHandler -- ?(change_address)
-                <|> method DELETE settlementHandler
-                <|> method OPTIONS applyCORS') -- CORS
+        , ("/channels/:funding_txid/:funding_vout"
+            ,   method PUT    (paymentHandler >>= writePaymentResult >>=
+                                exitIfChannelStillOpen >> settlementHandler)
+            <|> method DELETE settlementHandler
+            <|> method OPTIONS applyCORS') -- CORS
 
-            , ("/"
-                , serveDirectory "dist")
+        , ("/"
+            , serveDirectory "dist")
 
-            -- CORS
-            , ("/channels/new" -- ?client_pubkey&exp_time&change_address
-                ,   method OPTIONS   applyCORS')
+        -- CORS
+        , ("/channels/new" -- ?client_pubkey&exp_time&change_address
+            ,   method OPTIONS   applyCORS')
               ]
     wrapCORS
     return $ App chanOpenMap
-
 
 fundingInfoHandler :: Handler App App ()
 fundingInfoHandler =
@@ -72,7 +75,7 @@ fundingInfoHandler =
     getQueryArg "exp_time"
         >>= writeFundingInfoResp
 
-newChannelHandler :: Handler App App ()
+newChannelHandler :: Handler App App (BitcoinAmount, ReceiverPaymentChannel)
 newChannelHandler = applyCORS' >>
     OpenConfig <$>
         use channelStateMap <*>
@@ -83,7 +86,7 @@ newChannelHandler = applyCORS' >>
         getQueryArg "payment"
     >>= channelOpenHandler pubKeyServer
 
-paymentHandler :: Handler App App ()
+paymentHandler :: Handler App App (BitcoinAmount, ReceiverPaymentChannel)
 paymentHandler = applyCORS' >>
     PayConfig <$>
         use channelStateMap <*>
