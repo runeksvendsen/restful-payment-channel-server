@@ -54,7 +54,7 @@ instance PathParamEncode HC.PubKey where
     pathParamEncode = HU.encodeHex . cs . Bin.encode
 
 instance PathParamEncode HT.TxHash where
-    pathParamEncode = HU.encodeHex . cs . Bin.encode
+    pathParamEncode = HT.txHashToHex
 
 instance PathParamEncode BitcoinLockTime where
     pathParamEncode = cs . encode

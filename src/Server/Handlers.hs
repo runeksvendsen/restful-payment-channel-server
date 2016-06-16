@@ -123,7 +123,8 @@ chanSettle (SettleConfig privKey recvAddr txFee chanMap hash vout payment) = do
     txid <- case eitherTxId of
         Left e -> internalError e
         Right txid -> return txid
-    modifyResponse $ setResponseStatus 202 (C.pack "Channel closed")
+    modifyResponse $ setResponseStatus 202
+        (C.pack $ "Channel closed. Settlement tx txid: " ++ cs (HT.txHashToHex txid))
 ---
 
 
