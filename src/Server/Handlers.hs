@@ -141,7 +141,6 @@ chanPay (PayConfig chanMap hash vout maybeNewAddr payment) = do
     liftIO $ updateStoredItem chanMap hash (ReadyForPayment newChanState)
 
     modifyResponse $ setResponseStatus 200 (C.pack "Payment accepted")
-    writePaymentResult (valRecvd,newChanState)
     return (valRecvd,newChanState)
 
 ----Payment----
@@ -168,10 +167,9 @@ channelOpenHandler pubKeyServ
     modifyResponse $ setResponseStatus 201 (C.pack "Channel ready")
     --New channel creation--
 
-    when (not $ channelIsExhausted recvChanState) $
+    unless (channelIsExhausted recvChanState) $
         modifyResponse $ setHeader "Location" (cs $ activeChannelURL hOSTNAME txId idx)
 
-    writePaymentResult (valRecvd,recvChanState)
     return (valRecvd,recvChanState)
 
 
