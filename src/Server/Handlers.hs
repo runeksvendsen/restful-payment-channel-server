@@ -120,6 +120,13 @@ chanSettle (SettleConfig privKey recvAddr txFee _) (StdConfig chanMap hash vout 
 
     chanState <- getChannelStateOr404 chanMap hash
 
+    -- verify payment is the most recent payment received
+    case recvPayment chanState payment of
+        Left e -> userError "Invalid payment. Please provide most recent channel payment."
+        Right (val, _) -> unless (val == 0) $
+                userError "Invalid payment. Cannot send value in delete request."
+
+
     let eitherTx = getSettlementBitcoinTx
             chanState (`HC.signMsg` privKey) recvAddr txFee
     tx <- case eitherTx of
