@@ -43,7 +43,7 @@ appInit = makeSnaplet "PayChanServer" "Payment channel REST interface" Nothing $
     settleConfig@(SettleConfig _ _ settleFee _) <- SettleConfig <$>
             liftIO (require cfg "settlement.privKeySeed") <*>
             liftIO (require cfg "settlement.fundsDestinationAddress") <*>
-            fmap calcSettlementFeeSPB (liftIO (require cfg "settlement.txFeeSatoshisPerByte")) <*>
+            fmap calcSettlementFeeSPB (liftIO (require cfg "settlement.txFeeSatoshiPerByte")) <*>
             liftIO (require cfg "settlement.settlementPeriodHours")
 
     (OpenConfig minConf basePrice addSettleFee) <- OpenConfig <$>
