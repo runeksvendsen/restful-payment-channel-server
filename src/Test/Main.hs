@@ -29,9 +29,9 @@ sample = Config
         <> metavar "ENDPOINT"
         <> help "Server endpoint, eg. \"https://pay.example.com\" or \"http://localhost:8000\"" )
     <*> strOption
-        ( long "endpoint"
-        <> metavar "ENDPOINT"
-        <> help "Server endpoint, eg. \"https://pay.example.com\" or \"http://localhost:8000\"" )
+        ( long "pubkey"
+        <> metavar "PUBKEY"
+        <> help "Server pubkey, hex-encoded 33 byte compressed pubkey" )
     <*> option (str >>= parseInt64)
       ( long "pay-count"
           <> metavar "PAYCOUNT"

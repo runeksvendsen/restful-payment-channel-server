@@ -65,7 +65,7 @@ genChannelSession endPoint numPayments privClient pubServer expTime =
         cp = CChannelParameters (HC.derivePubKey privClient) pubServer expTime
         fundInfo = deriveMockFundingInfo cp
         (initPay,initState) = channelWithInitialPaymentOf cp fundInfo
-                (`HC.signMsg` privClient) mockChangeAddress 1000
+                (`HC.signMsg` privClient) mockChangeAddress 100000
         payStateList = tail $ iterate iterateFunc (initPay,initState)
         payList = map fst payStateList
     in
