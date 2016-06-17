@@ -10,10 +10,8 @@ Category:            Web
 Build-type:          Simple
 Cabal-version:       >= 1.2
 
-main-is:
-  Server/Main.hs
-data-files:
-  devel.cfg
+--data-files:
+--  devel.cfg
 
 Executable PayChanServer
   hs-source-dirs: src
