@@ -2,7 +2,7 @@
 
 module Test.GenData where
 
-import Common.Common    (mkOpenPath, mkPaymentPath)
+import Common.Common    (mkOpenPath, mkPaymentPath, pathParamDecode)
 import           Data.Bitcoin.PaymentChannel (channelWithInitialPaymentOf, sendPayment)
 import           Data.Bitcoin.PaymentChannel.Util (BitcoinLockTime(..), toWord32, parseBitcoinLocktime,
                                                    getFundingAddress)
@@ -23,17 +23,19 @@ import qualified Data.Text as T
 import System.Entropy (getEntropy)
 import Crypto.Secp256k1 (secKey)
 import Data.Time.Clock.POSIX (getPOSIXTime)
-import Server.Config (pubKeyServer, fundsDestAddr, openPrice)
+-- import Server.Config (pubKeyServer, fundsDestAddr, openPrice)
 import BlockchainAPI.Types (TxInfo(..), OutInfo(..))
 
-mockChangeAddress = fundsDestAddr
+mockChangeAddress = "mmA2XECa7bVERzQKkyy1pNBQ3PC4HnxTC5"
 nUM_PAYMENTS = 100 :: Int
 cHAN_DURATION = 3600 * 24 * 7 :: Integer
 
 
 
-
-genData endpoint numPayments = do
+genData :: T.Text -> Int -> String -> IO ()
+genData endpoint numPayments pubKeyServerStr = do
+    pubKeyServer <- either (const $ fail "failed to parse server pubkey") return
+        (pathParamDecode $ cs pubKeyServerStr)
     privSeed <- getEntropy 32
     prvKey <- case fmap HC.makePrvKey (secKey privSeed) of
             Nothing -> fail "couldn't derive secret key from seed"

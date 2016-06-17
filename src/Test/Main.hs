@@ -17,29 +17,34 @@ import Data.Maybe (listToMaybe)
 
 
 data Config = Config
-  { endpoint :: T.Text
+  { endpoint :: String
+  , serverPubKey :: String
   , num_payments :: Int64
   , testnet :: Bool }
 
 sample :: Parser Config
-sample = Config . cs
+sample = Config
     <$> strOption
         ( long "endpoint"
         <> metavar "ENDPOINT"
         <> help "Server endpoint, eg. \"https://pay.example.com\" or \"http://localhost:8000\"" )
-  <*> option (str >>= parseInt64)
+    <*> strOption
+        ( long "endpoint"
+        <> metavar "ENDPOINT"
+        <> help "Server endpoint, eg. \"https://pay.example.com\" or \"http://localhost:8000\"" )
+    <*> option (str >>= parseInt64)
       ( long "pay-count"
           <> metavar "PAYCOUNT"
           <> help "Number of payments to generate" )
-  <*> switch
+    <*> switch
       ( long "testnet"
      <> help "Generate data for Bitcoin testnet3" )
 
 runGen :: Config -> IO ()
-runGen (Config endpoint numPayments onTestnet) = do
+runGen (Config endpoint pubKey numPayments onTestnet) = do
     unless (not onTestnet)
         HCC.switchToTestnet3
-    genData endpoint (fromIntegral numPayments)
+    genData (cs endpoint) (fromIntegral numPayments) pubKey
 
 
 main :: IO ()

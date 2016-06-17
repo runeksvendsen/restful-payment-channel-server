@@ -8,10 +8,10 @@ Maintainer:          runesvend@gmail.com
 Stability:           Experimental
 Category:            Web
 Build-type:          Simple
-Cabal-version:       >=1.2
+Cabal-version:       >= 1.2
 
 data-files:
-  resources/devel.cfg
+  devel.cfg
 
 Executable PayChanServer
   hs-source-dirs: src
@@ -51,7 +51,8 @@ Executable PayChanServer
 
     bitcoin-api, bitcoin-tx,
     case-insensitive,
-    aeson-pretty
+    aeson-pretty,
+    configurator
 
   other-modules: Server.App,
                  BlockchainAPI.Impl.BlockrIo,

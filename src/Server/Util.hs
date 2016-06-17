@@ -8,7 +8,6 @@ import           Common.Types
 import           BlockchainAPI.Impl.BlockrIo (txIDFromAddr, fundingOutInfoFromTxId)
 import           BlockchainAPI.Types (txConfs, toFundingTxInfo,
                                 TxInfo(..), OutInfo(..))
-import           Server.Config (pubKeyServer)
 import           Server.ChanStore (ChannelMap, ChanState(..))
 import           DiskStore (addItem, getItem)
 
@@ -56,28 +55,31 @@ import Data.Aeson.Encode.Pretty (encodePretty)
 --- TYPES ---
 type Vout = Integer
 
-data ChanOpenConfig = OpenConfig
+data ChanOpenConfig = ChanOpenConfig
     BitcoinAmount HC.PubKey ChannelMap TxInfo HC.PubKey HC.Address BitcoinLockTime Payment
 --    open_price  server_pk                   client_pk
 
 data ChanPayConfig = PayConfig
     ChannelMap HT.TxHash Vout (Maybe HC.Address) Payment
 
-data ChanSettleConfig = SettleConfig {
-    confPrivKey     :: HC.PrvKey,
-    confRecvAddr    :: HC.Address,
-    confTxFee       :: BitcoinAmount,
 
+
+
+data StdConfig = StdConfig {
     serverChanMap   :: ChannelMap,
 
     chanHash        :: HT.TxHash,
     chanVout        :: Vout,
     chanPayment     :: Payment
-    }
-
+}
 --- TYPES ---
 
-fundingAddrFromParams sendPK = getFundingAddress' sendPK pubKeyServer
+fundingAddressFromParams :: MonadSnap m => HC.PubKey -> m HC.Address
+fundingAddressFromParams pubKey =
+    flip getFundingAddress' pubKey <$>
+        getQueryArg "client_pubkey" <*>
+        getQueryArg "exp_time"
+
 
 ---- Blockchain API ----
 txInfoFromAddr :: MonadSnap m => HC.Address -> m TxInfo

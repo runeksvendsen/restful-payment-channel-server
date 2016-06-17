@@ -4,14 +4,15 @@ module Server.Handlers where
 
 import           Prelude hiding (userError)
 
-import           Server.Config (pubKeyServer, fundsDestAddr, openPrice, minConf, settlementPeriodHours)
+import           Server.Types (ChanSettleConfig(..))
+import           Server.Config -- (App(..))
 
 import           Common.Common
 import           Common.Types
 
 import           Server.Util (writeJSON, ChanOpenConfig(..),ChanPayConfig(..),
-                              ChanSettleConfig(..),userError,internalError,
-                              errorWithDescription, fundingAddrFromParams,
+                              StdConfig(..), userError,internalError,
+                              errorWithDescription, fundingAddressFromParams,
                               getQueryArg,getOptionalQueryArg,
                               txInfoFromAddr, guardIsConfirmed)
 import           BlockchainAPI.Impl.BlockrIo (txIDFromAddr, fundingOutInfoFromTxId)
@@ -28,9 +29,8 @@ import           Control.Applicative
 import           Control.Concurrent (forkIO)
 import           Control.Monad.State (gets)
 import           Snap.Core
--- import           Snap.Util.FileServe
 import           Snap.Http.Server
--- import           Snap.Extras.JSON (reqBoundedJSON, writeJSON)
+import           Snap (Handler)
 
 import           Data.Bitcoin.PaymentChannel
 import           Data.Bitcoin.PaymentChannel.Types (ReceiverPaymentChannel, PaymentChannel(..), ChannelParameters(..), PayChanError(..)
@@ -41,7 +41,7 @@ import           Data.Bitcoin.PaymentChannel.Util (getFundingAddress, setSenderC
 
 import qualified Network.Haskoin.Constants as HCC
 import Network.Wreq (get, post, asJSON, responseBody)
-import Control.Lens ((^.))
+import Control.Lens ((^.), use)
 
 import qualified Network.Haskoin.Crypto as HC
 import qualified Network.Haskoin.Transaction as HT
@@ -82,14 +82,21 @@ writeFundingInfoResp (fi, url) = do
     writeJSON . toJSON $ fi
     writeBS "\n"
 
-mkFundingInfo :: HC.PubKey -> HC.PubKey -> BitcoinLockTime -> (FundingInfo,URL)
-mkFundingInfo recvPK sendPK lockTime  =
+mkFundingInfo ::
+    BitcoinAmount ->
+    Int ->
+    Int ->
+    HC.PubKey ->
+    HC.PubKey ->
+    BitcoinLockTime ->
+    (FundingInfo,URL)
+mkFundingInfo openPrice minConf settleHours recvPK sendPK lockTime  =
     (FundingInfo
         recvPK
         (getFundingAddress' sendPK recvPK lockTime)
         openPrice
         minConf
-        settlementPeriodHours,
+        settleHours,
     cs $ channelOpenURL hOSTNAME sendPK lockTime)
 
 logFundingInfo :: MonadSnap m => m ()
@@ -105,8 +112,8 @@ logFundingInfo  = do
 
 
 ----Settlement----
-chanSettle :: MonadSnap m => ChanSettleConfig -> m ()
-chanSettle (SettleConfig privKey recvAddr txFee chanMap hash vout payment) = do
+chanSettle :: MonadSnap m => ChanSettleConfig -> StdConfig -> m ()
+chanSettle (SettleConfig privKey recvAddr txFee _) (StdConfig chanMap hash vout payment) = do
     liftIO . putStrLn $ printf
         "Processing settlement request for channel %s/%d: "
             (cs $ HT.txHashToHex hash :: String) vout ++ show payment
@@ -155,7 +162,7 @@ channelOpenHandler :: MonadSnap m =>
     ChanOpenConfig
     -> m (BitcoinAmount, ReceiverPaymentChannel)
 channelOpenHandler
-    (OpenConfig openPrice pubKeyServ chanMap txInfo@(TxInfo txId _ (OutInfo _ chanVal idx)) sendPK sendChgAddr lockTime payment) = do
+    (ChanOpenConfig openPrice pubKeyServ chanMap txInfo@(TxInfo txId _ (OutInfo _ chanVal idx)) sendPK sendChgAddr lockTime payment) = do
     liftIO . putStrLn $ "Processing channel open request... " ++
         show (sendPK, lockTime, txInfo, payment)
 
@@ -199,37 +206,28 @@ writePaymentResult (valRecvd,recvChanState) =
             }
             return chanStatus
 
-testOr_blockchainGetFundingInfo :: MonadSnap m => m TxInfo
-testOr_blockchainGetFundingInfo = do
+tEST_blockchainGetFundingInfo :: Handler App App TxInfo
+tEST_blockchainGetFundingInfo = do
+    pubKeyServer <- use pubKey
+    minConf <- use fundingMinConf
+
     maybeArg <- getOptionalQueryArg "test"
     case maybeArg :: Maybe Bool of
-        Just True -> test_GetDerivedFundingInfo
-        _         ->
-            fundingAddressFromParams >>=
-            blockchainAddressCheckEverything
+        Just True -> test_GetDerivedFundingInfo pubKeyServer
+        _         -> fundingAddressFromParams pubKeyServer >>=
+                        blockchainAddressCheckEverything minConf
 
-fundingAddressFromParams :: MonadSnap m => m HC.Address
-fundingAddressFromParams =
-    fundingAddrFromParams <$>
-        getQueryArg "client_pubkey" <*>
-        getQueryArg "exp_time"
-
-blockchainAddressCheckEverything :: MonadSnap m => HC.Address -> m TxInfo
-blockchainAddressCheckEverything  addr =
+blockchainAddressCheckEverything :: MonadSnap m => Int -> HC.Address -> m TxInfo
+blockchainAddressCheckEverything minConf addr =
     (liftIO . chainSoAddressInfo . cs . HC.addrToBase58) addr >>=
         either internalError return . toEither >>=
         maybe (userError $ "No transactions paying to " ++ cs (HC.addrToBase58 addr)) return >>=
         guardIsConfirmed (fromIntegral minConf)
 
---     fundingAddrFromParams <$>
---         getQueryArg "client_pubkey" <*>
---         getQueryArg "exp_time"
---     >>= txInfoFromAddr >>= guardIsConfirmed (fromIntegral minConf)
-
 -- | Deterministically derives a mock TxInfo from ChannelParameters,
 -- which matches that of the test data generated by Test.GenData.
-test_GetDerivedFundingInfo :: MonadSnap m => m TxInfo
-test_GetDerivedFundingInfo = do
+test_GetDerivedFundingInfo :: MonadSnap m => HC.PubKey -> m TxInfo
+test_GetDerivedFundingInfo pubKeyServer = do
     cp <- flip CChannelParameters pubKeyServer <$>
             getQueryArg "client_pubkey" <*>
             getQueryArg "exp_time"

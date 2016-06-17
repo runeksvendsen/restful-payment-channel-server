@@ -1,17 +1,21 @@
-{-# LANGUAGE TemplateHaskell #-}
 {-# LANGUAGE OverloadedStrings #-}
 
 module Server.App where
 
+
 import           Data.Bitcoin.PaymentChannel.Types (PaymentChannel(channelIsExhausted),
                                                     ReceiverPaymentChannel, BitcoinAmount)
--- import Paths_bitcoin_payment_channel_example (getDataDir)
-import Server.Util (getPathArg, getQueryArg, getOptionalQueryArg,
-                    ChanOpenConfig(..), ChanPayConfig(..), ChanSettleConfig(..),
-                    headerGetPayment,
-                    txInfoFromAddr, guardIsConfirmed, fundingAddrFromParams)
-import Server.Config (pubKeyServer, prvKeyServer, openPrice, fundsDestAddr, settlementTxFee)
-import Server.Handlers -- (mkFundingInfo, writeFundingInfoResp, channelOpenHandler)
+
+import           Server.Util (getPathArg, getQueryArg, getOptionalQueryArg,
+                                ChanOpenConfig(..), ChanPayConfig(..),
+                                StdConfig(..), headerGetPayment,
+                                txInfoFromAddr)
+import           Server.Config -- (calcSettlementFeeSPB, App(..))
+import           Server.Types (OpenConfig(..), ChanSettleConfig(..))
+import           Server.Handlers -- (mkFundingInfo, writeFundingInfoResp, channelOpenHandler)
+
+import           Common.Common (pathParamEncode)
+import           Data.String.Conversions (cs)
 
 import           Server.ChanStore (ChannelMap,
                                    newChanMap, diskSyncThread)
@@ -22,6 +26,8 @@ import           Control.Concurrent (forkIO)
 import           Control.Lens.TH
 import           Control.Lens (use)
 
+import           Data.Configurator (require)
+import qualified Network.Haskoin.Crypto as HC
 import qualified Data.ByteString.Char8 as B
 import           Data.Maybe
 import           Snap
@@ -29,20 +35,31 @@ import           Snap.CORS
 import           Snap.Util.FileServe (serveDirectory)
 
 
--- dataDir = fmap (++ "/resources") getDataDir
-
-data App = App
- { _channelStateMap :: ChannelMap
- }
-
--- Template Haskell magic
-makeLenses ''App
-
 
 appInit :: SnapletInit App App
-appInit = makeSnaplet "PayChanServer" "Payment channel REST interface" Nothing $ do --(Just dataDir)
+appInit = makeSnaplet "PayChanServer" "Payment channel REST interface" Nothing $ do
+    cfg <- getSnapletUserConfig     -- devel.cfg
+
+    settleConfig@(SettleConfig _ _ settleFee _) <- SettleConfig <$>
+            liftIO (require cfg "settlement.privKeySeed") <*>
+            liftIO (require cfg "settlement.fundsDestinationAddress") <*>
+            fmap calcSettlementFeeSPB (liftIO (require cfg "settlement.txFeeSatoshisPerByte")) <*>
+            liftIO (require cfg "settlement.settlementPeriodHours")
+
+    (OpenConfig minConf basePrice addSettleFee) <- OpenConfig <$>
+            liftIO (require cfg "open.fundingTxMinConf") <*>
+            liftIO (require cfg "open.basePrice") <*>
+            liftIO (require cfg "open.priceAddSettlementFee")
+
+    let pubKey = HC.derivePubKey $ confSettlePrivKey settleConfig
+    let openPrice = if addSettleFee then basePrice + settleFee else basePrice
+
+    liftIO . putStrLn $ "Channel PubKey: " ++ cs (pathParamEncode pubKey)
+
+    -- Disk channel store setup
     chanOpenMap <- liftIO newChanMap
     liftIO . forkIO $ diskSyncThread chanOpenMap 5
+
     addRoutes [
           ("/fundingInfo" -- ?client_pubkey&exp_time
             ,   method GET    fundingInfoHandler)
@@ -65,21 +82,34 @@ appInit = makeSnaplet "PayChanServer" "Payment channel REST interface" Nothing $
             ,   method OPTIONS   applyCORS')
               ]
     wrapCORS
-    return $ App chanOpenMap
+
+    return $ App
+        chanOpenMap
+        settleConfig
+        pubKey
+        openPrice
+        minConf
+
 
 fundingInfoHandler :: Handler App App ()
-fundingInfoHandler =
-    logFundingInfo >>
-    mkFundingInfo pubKeyServer <$>
+fundingInfoHandler = logFundingInfo >>
+    mkFundingInfo <$>
+    use openPrice <*>
+    use fundingMinConf <*>
+    fmap confSettlePeriod (use settleConfig) <*>
+    use pubKey <*>
     getQueryArg "client_pubkey" <*>
     getQueryArg "exp_time"
         >>= writeFundingInfoResp
 
+
 newChannelHandler :: Handler App App (BitcoinAmount, ReceiverPaymentChannel)
 newChannelHandler = applyCORS' >>
-    OpenConfig openPrice pubKeyServer <$>
+    ChanOpenConfig <$>
+        use openPrice <*>
+        use pubKey <*>
         use channelStateMap <*>
-        testOr_blockchainGetFundingInfo <*>
+        tEST_blockchainGetFundingInfo <*>
         getQueryArg "client_pubkey" <*>
         getQueryArg "change_address" <*>
         getQueryArg "exp_time" <*>
@@ -97,15 +127,14 @@ paymentHandler = applyCORS' >>
     >>= chanPay
 
 settlementHandler :: Handler App App ()
-settlementHandler = applyCORS' >>
-    SettleConfig
-        prvKeyServer
-        fundsDestAddr
-        settlementTxFee <$>
-        use channelStateMap <*>
-        getPathArg "funding_txid" <*>
-        getPathArg "funding_vout" <*>
-        getQueryArg "payment"
-    >>= chanSettle
+settlementHandler = do
+    applyCORS'
 
+    settleConf <- use settleConfig
+    stdConf <- StdConfig <$>
+            use channelStateMap <*>
+            getPathArg "funding_txid" <*>
+            getPathArg "funding_vout" <*>
+            getQueryArg "payment"
+    chanSettle settleConf stdConf
 
