@@ -8,6 +8,7 @@ import           Common.Common (fromHexString)
 import           Data.Bitcoin.PaymentChannel.Types (BitcoinAmount)
 
 import qualified Network.Haskoin.Crypto as HC
+import qualified Network.Haskoin.Constants as HCC
 import qualified Crypto.Secp256k1 as Secp
 
 import           Control.Lens.TH (makeLenses)
@@ -30,6 +31,15 @@ data App = App
 -- Template Haskell magic
 makeLenses ''App
 
+data BitcoinNet = Mainnet | Testnet3
+
+setBitcoinNetwork :: BitcoinNet -> IO ()
+setBitcoinNetwork Mainnet = return ()
+setBitcoinNetwork Testnet3 = HCC.switchToTestnet3
+
+toString :: BitcoinNet -> String
+toString Mainnet = "live"
+toString Testnet3 = "test"
 
 instance Configured HC.Address where
     convert (String text) = HC.base58ToAddr . cs $ text
@@ -44,19 +54,12 @@ instance Configured HC.PrvKey where
     convert (String text) =
         fmap HC.makePrvKey . Secp.secKey . fromHexString . cs $ text
 
--- mkPrivKey :: String -> Maybe HC.PrvKey
--- mkPrivKey = fmap HC.makePrvKey . Secp.secKey . fromHexString
+instance Configured BitcoinNet where
+    convert (String "live") = return Mainnet
+    convert (String "test") = return Testnet3
+    convert (String _) = Nothing
 
--- pubKeyServer = HC.derivePubKey prvKeyServer
--- prvKeyServer = HC.makePrvKey $ fromJust $ Secp.secKey $ fromHexString
---                        "456af7395529404380edc4fa35a161e096aa510610b98d3d219dc178dc58c1d7"
 
--- fundsDestAddr :: HC.Address
--- fundsDestAddr = "mmA2XECa7bVERzQKkyy1pNBQ3PC4HnxTC5"
-
--- settlement tx b86014b07c49425b6011c267e35bb261c07781933f472a6f83541ba0b656d4c8 314 bytes
--- settlementTxFee :: BitcoinAmount
--- settlementTxFee = 15650 -- 50 satoshi/byte
 
 
 calcSettlementFeeSPB :: BitcoinAmount -> BitcoinAmount

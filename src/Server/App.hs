@@ -51,6 +51,10 @@ appInit = makeSnaplet "PayChanServer" "Payment channel REST interface" Nothing $
             liftIO (require cfg "open.basePrice") <*>
             liftIO (require cfg "open.priceAddSettlementFee")
 
+    bitcoinNetwork <- liftIO (require cfg "bitcoin.network")
+    liftIO $ setBitcoinNetwork bitcoinNetwork
+    let basePath = "v1/" ++ toString bitcoinNetwork
+
     let pubKey = HC.derivePubKey $ confSettlePrivKey settleConfig
     let openPrice = if addSettleFee then basePrice + settleFee else basePrice
 
@@ -59,6 +63,10 @@ appInit = makeSnaplet "PayChanServer" "Payment channel REST interface" Nothing $
     -- Disk channel store setup
     chanOpenMap <- liftIO newChanMap
     liftIO . forkIO $ diskSyncThread chanOpenMap 5
+
+    dir basePath ( route [ ("foo", writeBS "bar")
+                             , ("echo/:echoparam", echoHandler)
+                             ])
 
     addRoutes [
           ("/fundingInfo" -- ?client_pubkey&exp_time
