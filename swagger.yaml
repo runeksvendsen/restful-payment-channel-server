@@ -217,15 +217,16 @@ definitions:
       channel_status:
         description: Equal to "open" if the channel is still open, otherwise "closed". The channel is automatically closed when there is no value left to send. If a payment sends all remaining channel value to the server, the server will close the channel and set this field to "closed".
         type: string
+        example: "open"
       channel_value_left:
         description: Remaining channel value. This is the amount that the client/sender would receive if the channel was closed now.
         type: integer
         format: int64
-        minimum: 0
+        example: 1700000
       value_received:
         description: Value of the payment that was just received. This is the additional value assigned to the receiver/server with this payment.
         type: integer
         format: int64
-        minimum: 0
+        example: 1000
   
       
