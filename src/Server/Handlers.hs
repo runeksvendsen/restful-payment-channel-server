@@ -193,9 +193,9 @@ channelOpenHandler
     return (valRecvd,recvChanState)
 
 
-exitIfChannelStillOpen :: MonadSnap m => ChannelStatus -> m ()
-exitIfChannelStillOpen ChannelOpen = finishWith =<< getResponse
-exitIfChannelStillOpen ChannelClosed = return ()
+proceedIfExhausted :: MonadSnap m => ChannelStatus -> m ()
+proceedIfExhausted ChannelOpen = finishWith =<< getResponse
+proceedIfExhausted ChannelClosed = return ()
 
 
 writePaymentResult :: MonadSnap m => (BitcoinAmount, ReceiverPaymentChannel) -> m ChannelStatus

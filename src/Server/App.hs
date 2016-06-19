@@ -60,37 +60,29 @@ appInit = makeSnaplet "PayChanServer" "Payment channel REST interface" Nothing $
 
     liftIO . putStrLn $ "Channel PubKey: " ++ cs (pathParamEncode pubKey)
 
-    -- Disk channel store setup
+    -- Disk channel store setup (TODO: fix)
     chanOpenMap <- liftIO newChanMap
     liftIO . forkIO $ diskSyncThread chanOpenMap 5
 
---     dir basePath ( route [ ("foo", writeBS "bar") ] )
+    let mainRoutes = [
+             ("/fundingInfo" -- ?client_pubkey&exp_time
+               ,   method GET    fundingInfoHandler)
 
-    addRoutes [
-          ("/fundingInfo" -- ?client_pubkey&exp_time
-            ,   method GET    fundingInfoHandler)
+           , ("/channels/new" -- ?client_pubkey&exp_time&change_address
+               ,   method POST (newChannelHandler >>= writePaymentResult >>=
+                                   proceedIfExhausted >> settlementHandler))
 
-        , ("/channels/new" -- ?client_pubkey&exp_time&change_address
-            ,   method POST (newChannelHandler >>= writePaymentResult >>=
-                                exitIfChannelStillOpen >> settlementHandler))
+           , ("/channels/:funding_txid/:funding_vout"
+               ,   method PUT    (paymentHandler >>= writePaymentResult >>=
+                                   proceedIfExhausted >> settlementHandler)
+               <|> method DELETE settlementHandler)
+            ]
 
-        , ("/channels/:funding_txid/:funding_vout"
-            ,   method PUT    (paymentHandler >>= writePaymentResult >>=
-                                exitIfChannelStillOpen >> settlementHandler)
-            <|> method DELETE settlementHandler
-            <|> method OPTIONS applyCORS') -- CORS
+    let corsRoutes = [ ("/channels/:funding_txid/:funding_vout", method OPTIONS applyCORS'),
+                        ("/channels/new" ,                       method OPTIONS applyCORS') ]
+    let docRoute = [ ("/", serveDirectory "dist") ]
 
-        , (basePath
-            ,  route [ ("foo", writeBS "bar") ] )
-
-        , ("/"
-            , serveDirectory "dist")
-
-        -- CORS
-        , ("/channels/new" -- ?client_pubkey&exp_time&change_address
-            ,   method OPTIONS   applyCORS')
-              ]
-    wrapCORS
+    addRoutes [ mainRoutes ++ corsRoutes ++ docRoute ]
 
     return $ App
         chanOpenMap
