@@ -85,7 +85,7 @@ appInit = makeSnaplet "PayChanServer" "Payment channel REST interface" Nothing $
     let docRoute = [ ("/", serveDirectory "dist") ] :: [(BS.ByteString, Handler b v ())]
 
 
-    addRoutes [ mainRoutes ++ corsRoutes ++ docRoute ]
+    addRoutes $ mainRoutes ++ corsRoutes ++ docRoute
 
     return $ App
         chanOpenMap
