@@ -61,6 +61,8 @@ appInit = makeSnaplet "PayChanServer" "Payment channel REST interface" Nothing $
 
     liftIO . putStrLn $ "Channel PubKey: " ++ cs (pathParamEncode pubKey)
 
+    hostname <- liftIO (require cfg "network.hostname")
+
     -- Disk channel store setup (TODO: fix)
     chanOpenMap <- liftIO newChanMap
     liftIO . forkIO $ diskSyncThread chanOpenMap 5
@@ -71,41 +73,34 @@ appInit = makeSnaplet "PayChanServer" "Payment channel REST interface" Nothing $
 
            , (basePath `mappend` "/channels/new" -- ?client_pubkey&exp_time&change_address
                ,   method POST (newChannelHandler >>= writePaymentResult >>=
-                                   proceedIfExhausted >> settlementHandler))
+                                   proceedIfExhausted >> settlementHandler)
+                   <|> method OPTIONS applyCORS')
 
            , (basePath `mappend` "/channels/:funding_txid/:funding_vout"
                ,   method PUT    (paymentHandler >>= writePaymentResult >>=
                                    proceedIfExhausted >> settlementHandler)
-               <|> method DELETE settlementHandler)
+               <|> method DELETE settlementHandler
+               <|> method OPTIONS applyCORS')
             ] :: [(BS.ByteString, Handler App App ())]
-
-    let corsRoutes = [ (basePath `mappend` "/channels/:funding_txid/:funding_vout"
-                            , method OPTIONS applyCORS'),
-                       (basePath `mappend` "/channels/new"
-                            , method OPTIONS applyCORS') ] :: [(BS.ByteString, Handler b v ())]
 
     let docRoute = [ ("/", serveDirectory "dist") ] :: [(BS.ByteString, Handler b v ())]
 
+    addRoutes $ mainRoutes ++ docRoute
 
-    addRoutes $ mainRoutes ++ corsRoutes ++ docRoute
-
-    return $ App
-        chanOpenMap
-        settleConfig
-        pubKey
-        openPrice
-        minConf
+    return $ App chanOpenMap settleConfig pubKey openPrice minConf basePath hostname
 
 
 fundingInfoHandler :: Handler App App ()
-fundingInfoHandler = logFundingInfo >>
+fundingInfoHandler =
     mkFundingInfo <$>
     use openPrice <*>
     use fundingMinConf <*>
     fmap confSettlePeriod (use settleConfig) <*>
     use pubKey <*>
     getQueryArg "client_pubkey" <*>
-    getQueryArg "exp_time"
+    getQueryArg "exp_time" <*>
+    use hostname <*>
+    use basePath
         >>= writeFundingInfoResp
 
 
@@ -116,6 +111,8 @@ newChannelHandler = applyCORS' >>
         use pubKey <*>
         use channelStateMap <*>
         tEST_blockchainGetFundingInfo <*>
+        use hostname <*>
+        use basePath <*>
         getQueryArg "client_pubkey" <*>
         getQueryArg "change_address" <*>
         getQueryArg "exp_time" <*>

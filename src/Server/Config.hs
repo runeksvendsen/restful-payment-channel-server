@@ -27,6 +27,8 @@ data App = App
  , _pubKey          :: HC.PubKey
  , _openPrice       :: BitcoinAmount
  , _fundingMinConf  :: Int
+ , _basePath        :: BS.ByteString
+ , _hostname        :: String
  }
 
 -- Template Haskell magic

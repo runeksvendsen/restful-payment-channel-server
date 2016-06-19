@@ -38,11 +38,13 @@ import qualified Data.Text as T
 
 import Debug.Trace
 
-type URI = T.Text
+----- ========
+---- DEPRECATED: Not compatible with server as of now.
+----    Use javascript client implementation:
+----    https://github.com/runeksvendsen/paychanjs-client
+----- ========
 
----- NOTE: Not compatible with server as of now.
----- Use javascript client implementation:
----- https://github.com/runeksvendsen/paychanjs-client
+type URI = T.Text
 
 pubKeyClient = HC.derivePubKey prvKeyClient
 prvKeyClient = HC.makePrvKey $ fromJust $ Secp.secKey $ fromHexString

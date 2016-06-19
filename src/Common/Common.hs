@@ -43,7 +43,7 @@ import Data.String.Conversions (cs)
 import Text.Printf (printf)
 import qualified Data.Binary as Bin
 
-hOSTNAME="paychan.runeks.me"
+-- hOSTNAME="paychan.runeks.me"
 -- hOSTNAME="localhost:8000"
 ----
 -- |Types that can be encoded to fit in a URI path
@@ -115,20 +115,20 @@ instance PathParamDecode Bool where
 
 
 ----URLs----
-channelRootURL :: String -> String
-channelRootURL host = "https://" ++ host -- ++ "/v1"
+channelRootURL :: String -> BS.ByteString -> String
+channelRootURL host basePath = host ++ (cs basePath)
 
-fundingInfoURL :: String -> HC.PubKey -> BitcoinLockTime ->  String
-fundingInfoURL host sendPK expTime =
-    channelRootURL host ++ "/fundingInfo" ++
+fundingInfoURL :: String -> BS.ByteString -> HC.PubKey -> BitcoinLockTime ->  String
+fundingInfoURL host basePath sendPK expTime =
+    channelRootURL host basePath ++ "/fundingInfo" ++
     printf "?client_pubkey=%s&exp_time=%d"
         (cs $ pathParamEncode sendPK :: String)
         (toWord32 expTime)
 
 -- /channels/new" -- ?client_pubkey&exp_time
-channelOpenURL :: String -> HC.PubKey -> BitcoinLockTime -> String
-channelOpenURL host sendPK expTime =
-    channelRootURL host ++ channelOpenPath sendPK expTime
+channelOpenURL :: String -> BS.ByteString -> HC.PubKey -> BitcoinLockTime -> String
+channelOpenURL host basePath sendPK expTime =
+    channelRootURL host basePath ++ channelOpenPath sendPK expTime
 
 channelOpenPath :: HC.PubKey -> BitcoinLockTime -> String
 channelOpenPath sendPK expTime = "/channels/new" ++
@@ -147,9 +147,9 @@ mkOpenPath sendPK expTime chgAddr payment =
     channelOpenPath sendPK expTime ++ mkOpenQueryParams chgAddr payment
 
 -- https://localhost/channels/f583e0b.../1
-activeChannelURL :: String -> HT.TxHash -> Integer -> String
-activeChannelURL host txid vout =
-    channelRootURL host ++ activeChannelPath txid vout
+activeChannelURL :: String -> BS.ByteString -> HT.TxHash -> Integer -> String
+activeChannelURL host basePath txid vout =
+    channelRootURL host basePath ++ activeChannelPath txid vout
 
 activeChannelPath :: HT.TxHash -> Integer -> String
 activeChannelPath txid vout  = "/channels/" ++

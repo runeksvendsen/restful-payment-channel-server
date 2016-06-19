@@ -89,15 +89,17 @@ mkFundingInfo ::
     HC.PubKey ->
     HC.PubKey ->
     BitcoinLockTime ->
+    String ->
+    BS.ByteString ->
     (FundingInfo,URL)
-mkFundingInfo openPrice minConf settleHours recvPK sendPK lockTime  =
+mkFundingInfo openPrice minConf settleHours recvPK sendPK lockTime hostname basePath =
     (FundingInfo
         recvPK
         (getFundingAddress' sendPK recvPK lockTime)
         openPrice
         minConf
         settleHours,
-    cs $ channelOpenURL hOSTNAME sendPK lockTime)
+    cs $ channelOpenURL hostname basePath sendPK lockTime)
 
 logFundingInfo :: MonadSnap m => m ()
 logFundingInfo  = do
@@ -169,11 +171,11 @@ channelOpenHandler :: MonadSnap m =>
     ChanOpenConfig
     -> m (BitcoinAmount, ReceiverPaymentChannel)
 channelOpenHandler
-    (ChanOpenConfig openPrice pubKeyServ chanMap txInfo@(TxInfo txId _ (OutInfo _ chanVal idx)) sendPK sendChgAddr lockTime payment) = do
+    (ChanOpenConfig openPrice pubKeyServ chanMap txInfo@(TxInfo txId _ (OutInfo _ chanVal idx)) hostname basePath sendPK sendChgAddr lockTime payment) = do
     liftIO . putStrLn $ "Processing channel open request... " ++
         show (sendPK, lockTime, txInfo, payment)
 
-    confirmChannelDoesntExistOrAbort chanMap txId idx
+    confirmChannelDoesntExistOrAbort chanMap hostname basePath txId idx
 
     (valRecvd,recvChanState) <- either (userError . show) return $
         channelFromInitialPayment
@@ -188,7 +190,7 @@ channelOpenHandler
     modifyResponse $ setResponseStatus 201 (C.pack "Channel ready")
 
     unless (channelIsExhausted recvChanState) $
-        modifyResponse $ setHeader "Location" (cs $ activeChannelURL hOSTNAME txId idx)
+        modifyResponse $ setHeader "Location" (cs $ activeChannelURL hostname basePath txId idx)
 
     return (valRecvd,recvChanState)
 
@@ -243,11 +245,11 @@ test_GetDerivedFundingInfo pubKeyServer = do
 
 --- POST /channels/ ---
 
-confirmChannelDoesntExistOrAbort :: MonadSnap m => ChannelMap -> HT.TxHash -> Integer -> m ()
-confirmChannelDoesntExistOrAbort chanMap hash idx = do
+confirmChannelDoesntExistOrAbort :: MonadSnap m => ChannelMap -> String -> BS.ByteString -> HT.TxHash -> Integer -> m ()
+confirmChannelDoesntExistOrAbort chanMap hostname basePath hash idx = do
     maybeItem <- liftIO (getItem chanMap hash)
     unless (isNothing maybeItem) $ do
-        modifyResponse $ setHeader "Location" (cs $ activeChannelURL hOSTNAME hash idx)
+        modifyResponse $ setHeader "Location" (cs $ activeChannelURL hostname basePath hash idx)
         errorWithDescription 409 "Channel already exists"
 
 
