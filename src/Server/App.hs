@@ -28,6 +28,7 @@ import           Control.Lens (use)
 
 import           Data.Configurator (require)
 import qualified Network.Haskoin.Crypto as HC
+import qualified Data.ByteString as BS
 import qualified Data.ByteString.Char8 as B
 import           Data.Maybe
 import           Snap
@@ -76,11 +77,13 @@ appInit = makeSnaplet "PayChanServer" "Payment channel REST interface" Nothing $
                ,   method PUT    (paymentHandler >>= writePaymentResult >>=
                                    proceedIfExhausted >> settlementHandler)
                <|> method DELETE settlementHandler)
-            ]
+            ] :: [(BS.ByteString, Handler b v ())]
 
     let corsRoutes = [ ("/channels/:funding_txid/:funding_vout", method OPTIONS applyCORS'),
                         ("/channels/new" ,                       method OPTIONS applyCORS') ]
-    let docRoute = [ ("/", serveDirectory "dist") ]
+                        :: [(BS.ByteString, Handler b v ())]
+    let docRoute = [ ("/", serveDirectory "dist") ] :: [(BS.ByteString, Handler b v ())]
+
 
     addRoutes [ mainRoutes ++ corsRoutes ++ docRoute ]
 
