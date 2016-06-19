@@ -77,7 +77,7 @@ appInit = makeSnaplet "PayChanServer" "Payment channel REST interface" Nothing $
                ,   method PUT    (paymentHandler >>= writePaymentResult >>=
                                    proceedIfExhausted >> settlementHandler)
                <|> method DELETE settlementHandler)
-            ] :: [(BS.ByteString, Handler b v ())]
+            ] :: [(BS.ByteString, Handler App App ())]
 
     let corsRoutes = [ ("/channels/:funding_txid/:funding_vout", method OPTIONS applyCORS'),
                         ("/channels/new" ,                       method OPTIONS applyCORS') ]
