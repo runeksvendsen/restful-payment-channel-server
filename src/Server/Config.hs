@@ -12,6 +12,7 @@ import qualified Network.Haskoin.Constants as HCC
 import qualified Crypto.Secp256k1 as Secp
 
 import           Control.Lens.TH (makeLenses)
+import qualified Data.ByteString as BS
 import           Data.Ratio
 import           Data.Maybe (fromJust)
 import           Data.Configurator.Types
@@ -37,7 +38,7 @@ setBitcoinNetwork :: BitcoinNet -> IO ()
 setBitcoinNetwork Mainnet = return ()
 setBitcoinNetwork Testnet3 = HCC.switchToTestnet3
 
-toPathString :: BitcoinNet -> String
+toPathString :: BitcoinNet -> BS.ByteString
 toPathString Mainnet = "live"
 toPathString Testnet3 = "test"
 

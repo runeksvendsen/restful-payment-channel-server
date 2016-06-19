@@ -53,7 +53,7 @@ appInit = makeSnaplet "PayChanServer" "Payment channel REST interface" Nothing $
 
     bitcoinNetwork <- liftIO (require cfg "bitcoin.network")
     liftIO $ setBitcoinNetwork bitcoinNetwork
-    let basePath = "v1/" ++ toPathString bitcoinNetwork
+    let basePath = "v1/" `mappend` toPathString bitcoinNetwork
 
     let pubKey = HC.derivePubKey $ confSettlePrivKey settleConfig
     let openPrice = if addSettleFee then basePrice + settleFee else basePrice
