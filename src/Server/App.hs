@@ -64,7 +64,7 @@ appInit = makeSnaplet "PayChanServer" "Payment channel REST interface" Nothing $
     chanOpenMap <- liftIO newChanMap
     liftIO . forkIO $ diskSyncThread chanOpenMap 5
 
-    dir basePath ( route [ ("foo", writeBS "bar") ] )
+--     dir basePath ( route [ ("foo", writeBS "bar") ] )
 
     addRoutes [
           ("/fundingInfo" -- ?client_pubkey&exp_time
@@ -79,6 +79,9 @@ appInit = makeSnaplet "PayChanServer" "Payment channel REST interface" Nothing $
                                 exitIfChannelStillOpen >> settlementHandler)
             <|> method DELETE settlementHandler
             <|> method OPTIONS applyCORS') -- CORS
+
+        , (basePath
+            ,  route [ ("foo", writeBS "bar") ] )
 
         , ("/"
             , serveDirectory "dist")
