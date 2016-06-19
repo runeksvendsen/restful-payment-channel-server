@@ -41,6 +41,10 @@ appInit :: SnapletInit App App
 appInit = makeSnaplet "PayChanServer" "Payment channel REST interface" Nothing $ do
     cfg <- getSnapletUserConfig     -- devel.cfg
 
+    bitcoinNetwork <- liftIO (require cfg "bitcoin.network")
+    liftIO $ setBitcoinNetwork bitcoinNetwork
+    let basePath = "/v1/" `mappend` toPathString bitcoinNetwork
+
     settleConfig@(SettleConfig _ _ settleFee _) <- SettleConfig <$>
             liftIO (require cfg "settlement.privKeySeed") <*>
             liftIO (require cfg "settlement.fundsDestinationAddress") <*>
@@ -52,10 +56,6 @@ appInit = makeSnaplet "PayChanServer" "Payment channel REST interface" Nothing $
             liftIO (require cfg "open.basePrice") <*>
             liftIO (require cfg "open.priceAddSettlementFee")
 
-    bitcoinNetwork <- liftIO (require cfg "bitcoin.network")
-    liftIO $ setBitcoinNetwork bitcoinNetwork
-    let basePath = "v1/" `mappend` toPathString bitcoinNetwork
-
     let pubKey = HC.derivePubKey $ confSettlePrivKey settleConfig
     let openPrice = if addSettleFee then basePrice + settleFee else basePrice
 
@@ -66,22 +66,24 @@ appInit = makeSnaplet "PayChanServer" "Payment channel REST interface" Nothing $
     liftIO . forkIO $ diskSyncThread chanOpenMap 5
 
     let mainRoutes = [
-             ("/fundingInfo" -- ?client_pubkey&exp_time
+             (basePath `mappend` "/fundingInfo" -- ?client_pubkey&exp_time
                ,   method GET    fundingInfoHandler)
 
-           , ("/channels/new" -- ?client_pubkey&exp_time&change_address
+           , (basePath `mappend` "/channels/new" -- ?client_pubkey&exp_time&change_address
                ,   method POST (newChannelHandler >>= writePaymentResult >>=
                                    proceedIfExhausted >> settlementHandler))
 
-           , ("/channels/:funding_txid/:funding_vout"
+           , (basePath `mappend` "/channels/:funding_txid/:funding_vout"
                ,   method PUT    (paymentHandler >>= writePaymentResult >>=
                                    proceedIfExhausted >> settlementHandler)
                <|> method DELETE settlementHandler)
             ] :: [(BS.ByteString, Handler App App ())]
 
-    let corsRoutes = [ ("/channels/:funding_txid/:funding_vout", method OPTIONS applyCORS'),
-                        ("/channels/new" ,                       method OPTIONS applyCORS') ]
-                        :: [(BS.ByteString, Handler b v ())]
+    let corsRoutes = [ (basePath `mappend` "/channels/:funding_txid/:funding_vout"
+                            , method OPTIONS applyCORS'),
+                       (basePath `mappend` "/channels/new"
+                            , method OPTIONS applyCORS') ] :: [(BS.ByteString, Handler b v ())]
+
     let docRoute = [ ("/", serveDirectory "dist") ] :: [(BS.ByteString, Handler b v ())]
 
 
