@@ -64,9 +64,7 @@ appInit = makeSnaplet "PayChanServer" "Payment channel REST interface" Nothing $
     chanOpenMap <- liftIO newChanMap
     liftIO . forkIO $ diskSyncThread chanOpenMap 5
 
-    dir basePath ( route [ ("foo", writeBS "bar")
-                             , ("echo/:echoparam", echoHandler)
-                             ])
+    dir basePath ( route [ ("foo", writeBS "bar") ] )
 
     addRoutes [
           ("/fundingInfo" -- ?client_pubkey&exp_time
