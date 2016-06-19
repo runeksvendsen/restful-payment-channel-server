@@ -221,12 +221,12 @@ definitions:
       channel_value_left:
         description: Remaining channel value. This is the amount that the client/sender would receive if the channel was closed now.
         type: integer
-        format: int64
+        minimum: 0
         example: 1700000
       value_received:
         description: Value of the payment that was just received. This is the additional value assigned to the receiver/server with this payment.
         type: integer
-        format: int64
+        minimum: 0
         example: 1000
   
       
