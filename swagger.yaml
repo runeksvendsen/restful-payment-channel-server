@@ -8,16 +8,16 @@ info:
     
     The payment server speaking this protocol is the recipient of value, operating on behalf of a content delivery server who receives value from a customer/client. The content delivery server passes requests supplied by the client (payer) to the payment server, and delivers content to the client dependent on the response from the payment server. 
     
-    * Server implementation: https://github.com/runeksvendsen/restful-payment-channel-server (this s
+    * Server implementation: https://github.com/runeksvendsen/restful-payment-channel-server
     * Client library: https://github.com/runeksvendsen/paychanjs-client
     
 host: paychan.runeks.me #Bitcoin testnet server
-# basePath: /v1
+basePath: /v1
 schemes:
   - https
 
 paths:
-  /fundingInfo:
+  /{net}/fundingInfo:
     get:
       summary: Retrieve information about how to fund a new payment channel.
       description: |
@@ -26,10 +26,9 @@ paths:
         The client will first calculate the funding address, confirm that it matches the server's, then pay to the funding address, and wait until the funding transaction has the server-specified number of confirmations ("funding_tx_min_conf").
         
         After this, the client will create a new payment of value equal to the server-specified channel open price ("open_price"), and POST this to the channel-open URL in order to open the channel.
-        
-        Test URL: https://paychan.runeks.me/fundingInfo?client_pubkey=02d320b6da0190089ed63667cf497d9c1e949be05b6f991832ae9397eb34a66e65&exp_time=1466288456
       operationId: getFundingInfo
       parameters:
+        - $ref: "#/parameters/networkParam"
         - $ref: "#/parameters/clientPubKeyParam"
         - $ref: "#/parameters/expTimeParam"
       responses:
@@ -40,15 +39,15 @@ paths:
         400:
           description: Invalid input (see status message for error description)
   
-  /channels/new:
+  /{net}/channels/new:
     post:
       summary: Create a new payment channel
       description: |
         After publishing the funding Bitcoin transaction, and waiting for the specified number of confirmations, the client will POST a payment, paying the server's specified channel open price, to the channel open URL.
         
-        Test URL: https://paychan.runeks.me/channels/new?client_pubkey=02d320b6da0190089ed63667cf497d9c1e949be05b6f991832ae9397eb34a66e65&exp_time=1466288456&change_address=mmA2XECa7bVERzQKkyy1pNBQ3PC4HnxTC5&payment=OCfOczoLAAAwRQIhAOzfueLz55pXhrqWAjC4UZ72j17ZCrkudg8dNVlkgUtLAiB3nMc4Gs7535IXOq3Jf6ohkchvynieckFmwCSbBwBjW4M=&test=true
       operationId: createPaymentChannel
       parameters:
+        - $ref: "#/parameters/networkParam"
         - $ref: "#/parameters/clientPubKeyParam"
         - $ref: "#/parameters/expTimeParam"
         - $ref: "#/parameters/paymentParam"
@@ -82,22 +81,25 @@ paths:
         400:
           description: Invalid input (see status message for error description)
           
-  /channels/{funding_txid}/{funding_vout}:
+  /{net}/channels/{funding_txid}/{funding_vout}:
     put:
       summary: Make payment over an existing payment channel
-      description: 'Test URL: https://paychan.runeks.me/channels/c3d4e98323f071f37e42cb0cf0486b166d4227ed91513236aa55d7768d762e11/3?payment=LifOczoLAAAwRQIhAOZ3g2uVLbEwY_j0HDs8bxMW_m6dcTphJ9jzSQgAHrtuAiA0ElapVhwIvURKtw5AzwEkwuZYxpqLWcayAlMSLOfE-YM='
+      #description: 
       operationId: payPaymentChannel
       consumes:
         - application/json
       produces:
         - application/json
       parameters:
+        - $ref: "#/parameters/networkParam"
         - $ref: "#/parameters/fundingTxIdParam"
         - $ref: "#/parameters/fundingTxVoutParam"
         - $ref: "#/parameters/paymentParam"
-        - name: change_address
-          in: query
-          description: New client/value sender change address (optional). If the client wishes to update its change address, it will set this parameter to the new change address and provide a Payment with the specified change address.
+        #- name: change_address
+        #  in: query
+        #  description: |
+        #    NOTE: Not implemented yet in reference server/client yet   
+        #    New client/value sender change address (optional). If the client wishes to update its change address, it will set this parameter to the new change address and provide a Payment with the specified change address.'
           type: string
           required: false
       responses:
@@ -113,9 +115,10 @@ paths:
           description: No such payment channel
     delete:
       summary: Delete an existing payment channel
-      description: 'Test URL (same as PUT URL): https://paychan.runeks.me/channels/c3d4e98323f071f37e42cb0cf0486b166d4227ed91513236aa55d7768d762e11/3?payment=LifOczoLAAAwRQIhAOZ3g2uVLbEwY_j0HDs8bxMW_m6dcTphJ9jzSQgAHrtuAiA0ElapVhwIvURKtw5AzwEkwuZYxpqLWcayAlMSLOfE-YM='
+      description: The payment included here is the most recent payment sent over the channel. This payment is included as a form of authentication token, making sure only the client can close the channel.
       operationId: deletePaymentChannel
       parameters:
+        - $ref: "#/parameters/networkParam"
         - $ref: "#/parameters/fundingTxIdParam"
         - $ref: "#/parameters/fundingTxVoutParam"
         - $ref: "#/parameters/paymentParam"
@@ -132,6 +135,12 @@ paths:
           description: No such payment channel
 
 parameters:
+    networkParam:
+      name: net
+      in: path
+      required: true
+      description: Bitcoin network. Use "live" for mainnet and "test" for testnet3.
+      type: string
     paymentParam:
       name: payment
       in: query
