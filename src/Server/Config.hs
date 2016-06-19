@@ -37,9 +37,9 @@ setBitcoinNetwork :: BitcoinNet -> IO ()
 setBitcoinNetwork Mainnet = return ()
 setBitcoinNetwork Testnet3 = HCC.switchToTestnet3
 
-toString :: BitcoinNet -> String
-toString Mainnet = "live"
-toString Testnet3 = "test"
+toPathString :: BitcoinNet -> String
+toPathString Mainnet = "live"
+toPathString Testnet3 = "test"
 
 instance Configured HC.Address where
     convert (String text) = HC.base58ToAddr . cs $ text
