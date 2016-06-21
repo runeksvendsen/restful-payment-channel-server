@@ -1,0 +1,8 @@
+exec: PayChanServer
+#args:
+#    - Hello
+host: paychan.runeks.me
+redirects:
+    - from: www.paychan.runeks.me
+      to: paychan.runeks.me
+
