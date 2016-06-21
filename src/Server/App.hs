@@ -61,7 +61,7 @@ mainRoutes basePath =
 
 appInit :: SnapletInit App App
 appInit = makeSnaplet "PayChanServer" "Payment channel REST interface" Nothing $ do
-    cfg <- getSnapletUserConfig     -- devel.cfg
+    cfg <- getSnapletUserConfig
 
     bitcoinNetwork <- liftIO (require cfg "bitcoin.network")
     liftIO $ setBitcoinNetwork bitcoinNetwork
@@ -84,6 +84,10 @@ appInit = makeSnaplet "PayChanServer" "Payment channel REST interface" Nothing $
     liftIO . putStrLn $ "Channel PubKey: " ++ cs (pathParamEncode pubKey)
 
     hostname <- liftIO (require cfg "network.hostname")
+
+    env <- getEnvironment
+    liftIO $ putStrLn env
+
 
     -- Disk channel store setup (TODO: fix)
     chanOpenMap <- liftIO newChanMap
