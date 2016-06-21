@@ -6,11 +6,11 @@ set -e
 
 OPENURL=$(jq -r '.open_url' < "$TESTDATA")
 
-curl --silent -X POST -d "" "$OPENURL"
+curl -v -X POST -d "" "$OPENURL"
 
 
 jq -r '.payment_urls[]' < "$TESTDATA"  |\
 while read URL
 do
-  curl --silent -X PUT -d "" "$URL" 
+  curl -v -X PUT -d "" "$URL" 
 done

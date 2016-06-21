@@ -36,6 +36,28 @@ import           Snap.CORS
 import           Snap.Util.FileServe (serveDirectory)
 
 
+mainRoutes basePath =
+    let
+        mainRoutes = [
+             (basePath `mappend` "/fundingInfo" -- ?client_pubkey&exp_time
+               ,   method GET    fundingInfoHandler)
+
+           , (basePath `mappend` "/channels/new" -- ?client_pubkey&exp_time&change_address
+               ,   method POST (newChannelHandler >>= writePaymentResult >>=
+                                   proceedIfExhausted >> settlementHandler)
+                   <|> method OPTIONS applyCORS') --CORS
+
+           , (basePath `mappend` "/channels/:funding_txid/:funding_vout"
+               ,   method PUT    (paymentHandler >>= writePaymentResult >>=
+                                   proceedIfExhausted >> settlementHandler)
+               <|> method DELETE settlementHandler
+               <|> method OPTIONS applyCORS') --CORS
+            ] :: [(BS.ByteString, Handler App App ())]
+
+
+        docRoute = [ ("/", serveDirectory "dist") ] :: [(BS.ByteString, Handler b v ())]
+
+    in  mainRoutes ++ docRoute
 
 appInit :: SnapletInit App App
 appInit = makeSnaplet "PayChanServer" "Payment channel REST interface" Nothing $ do
@@ -67,25 +89,7 @@ appInit = makeSnaplet "PayChanServer" "Payment channel REST interface" Nothing $
     chanOpenMap <- liftIO newChanMap
     liftIO . forkIO $ diskSyncThread chanOpenMap 5
 
-    let mainRoutes = [
-             (basePath `mappend` "/fundingInfo" -- ?client_pubkey&exp_time
-               ,   method GET    fundingInfoHandler)
-
-           , (basePath `mappend` "/channels/new" -- ?client_pubkey&exp_time&change_address
-               ,   method POST (newChannelHandler >>= writePaymentResult >>=
-                                   proceedIfExhausted >> settlementHandler)
-                   <|> method OPTIONS applyCORS')
-
-           , (basePath `mappend` "/channels/:funding_txid/:funding_vout"
-               ,   method PUT    (paymentHandler >>= writePaymentResult >>=
-                                   proceedIfExhausted >> settlementHandler)
-               <|> method DELETE settlementHandler
-               <|> method OPTIONS applyCORS')
-            ] :: [(BS.ByteString, Handler App App ())]
-
-    let docRoute = [ ("/", serveDirectory "dist") ] :: [(BS.ByteString, Handler b v ())]
-
-    addRoutes $ mainRoutes ++ docRoute
+    addRoutes $ mainRoutes basePath
 
     return $ App chanOpenMap settleConfig pubKey openPrice minConf basePath hostname
 

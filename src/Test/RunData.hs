@@ -19,5 +19,5 @@ main = Wreq.withAPISession $
                 Left e -> fail $ "failed to decode JSON test data from stdin: " ++ e
                 Right pd -> return pd
 
-        Wreq.post conn (cs openURL) BS.empty
-        forM_ (map cs payURLList) (flip (Wreq.put conn) BS.empty)
+        Wreq.post conn (cs openURL) BS.empty -- 1. Open
+        forM_ (map cs payURLList) (flip (Wreq.put conn) BS.empty) -- 2. Pay loop

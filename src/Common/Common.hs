@@ -163,9 +163,9 @@ mkPaymentQueryParams payment maybeAddr =
         (cs $ pathParamEncode payment :: String) ++
     maybe "" (\addr -> "&change_address=" ++ (cs . pathParamEncode $ addr)) maybeAddr
 
-mkPaymentPath :: HT.TxHash -> Integer -> Maybe HC.Address -> Payment -> String
-mkPaymentPath txid vout maybeAddr payment  =
-    activeChannelPath txid vout ++ mkPaymentQueryParams payment maybeAddr
+mkPaymentURL :: String -> BS.ByteString -> HT.TxHash -> Integer -> Payment -> String
+mkPaymentURL host basePath txid vout payment  =
+    activeChannelURL host basePath txid vout ++ mkPaymentQueryParams payment Nothing
 
 ----URLs-----
 

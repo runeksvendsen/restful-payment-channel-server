@@ -2,7 +2,7 @@
 
 module Test.GenData where
 
-import Common.Common    (mkOpenPath, mkPaymentPath, pathParamDecode)
+import Common.Common    (channelOpenURL,mkOpenQueryParams,mkPaymentURL, pathParamDecode)
 import           Data.Bitcoin.PaymentChannel (channelWithInitialPaymentOf, sendPayment)
 import           Data.Bitcoin.PaymentChannel.Util (BitcoinLockTime(..), toWord32, parseBitcoinLocktime,
                                                    getFundingAddress)
@@ -91,12 +91,13 @@ getSessionData :: ChannelSession -> PaySessionData
 getSessionData (ChannelSession endPoint cp fundAddr initPay payList) =
     let
         (CFundingTxInfo txid vout val) = deriveMockFundingInfo cp
-        openPath = mkOpenPath (cpSenderPubKey cp) (cpLockTime cp)
-                mockChangeAddress initPay
+        openURL = channelOpenURL (cs endPoint) "/v1/test" (cpSenderPubKey cp)
+                (cpLockTime cp) ++ mkOpenQueryParams mockChangeAddress initPay
     in
         PaySessionData
-            (endPoint `mappend` cs openPath `mappend` "&test=true")
-            (map (mappend endPoint . cs . mkPaymentPath txid (fromIntegral vout) Nothing) payList)
+            (cs openURL `mappend` "&test=true")
+--             (map (mappend endPoint . cs . mkPaymentURL txid (fromIntegral vout) Nothing) payList)
+            (map (cs . mkPaymentURL (cs endPoint) "/v1/test" txid (fromIntegral vout)) payList)
 
 
 

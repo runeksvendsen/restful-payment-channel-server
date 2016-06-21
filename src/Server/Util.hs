@@ -74,6 +74,12 @@ data StdConfig = StdConfig {
 }
 --- TYPES ---
 
+
+setFeeSatoshiPerByte :: HT.Tx -> BitcoinAmount -> HT.Tx
+setFeeSatoshiPerByte = undefined
+
+
+
 fundingAddressFromParams :: MonadSnap m => HC.PubKey -> m HC.Address
 fundingAddressFromParams pubKey =
     flip getFundingAddress' pubKey <$>

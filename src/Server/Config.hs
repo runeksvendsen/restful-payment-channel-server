@@ -63,8 +63,6 @@ instance Configured BitcoinNet where
     convert (String _) = Nothing
 
 
-
-
 calcSettlementFeeSPB :: BitcoinAmount -> BitcoinAmount
 calcSettlementFeeSPB satoshisPerByte = 314 * satoshisPerByte -- 346 2 outputs
 
