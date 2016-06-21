@@ -95,13 +95,6 @@ paths:
         - $ref: "#/parameters/fundingTxIdParam"
         - $ref: "#/parameters/fundingTxVoutParam"
         - $ref: "#/parameters/paymentParam"
-        #- name: change_address
-        #  in: query
-        #  description: |
-        #    NOTE: Not implemented yet in reference server/client yet   
-        #    New client/value sender change address (optional). If the client wishes to update its change address, it will set this parameter to the new change address and provide a Payment with the specified change address.'
-          type: string
-          required: false
       responses:
         200:
           description: Payment received
