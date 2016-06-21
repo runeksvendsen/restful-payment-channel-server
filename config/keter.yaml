@@ -1,4 +1,4 @@
-exec: PayChanServer
+exec: ../PayChanServer
 args:
     - "--keter"
 host: paychan.runeks.me
