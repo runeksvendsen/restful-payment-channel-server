@@ -85,10 +85,6 @@ appInit = makeSnaplet "PayChanServer" "Payment channel REST interface" Nothing $
 
     hostname <- liftIO (require cfg "network.hostname")
 
-    env <- getEnvironment
-    liftIO $ putStrLn env
-
-
     -- Disk channel store setup (TODO: fix)
     chanOpenMap <- liftIO newChanMap
     liftIO . forkIO $ diskSyncThread chanOpenMap 5
