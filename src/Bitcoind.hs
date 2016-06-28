@@ -19,8 +19,14 @@ import Data.Text as T
 import qualified Data.Binary as Bin
 import qualified Data.ByteString.Lazy as BL
 
--- isStatusCodeException 401
+data BitcoindCredentials = BitcoindCredentials {
+    rpcIP :: String,
+    rpcPort :: Word,
+    rpcUser :: String,
+    rpcPass :: String
+}
 
+bitcoindNetworkSumbitTx :: HT.Tx -> IO (Either String HT.TxHash)
 bitcoindNetworkSumbitTx tx = withClient "192.168.1.102" 8334
     (T.pack "john_oliver") (T.pack "KGbv6HvJ5z")
         (tryBitcoindSubmitToNetwork tx)
