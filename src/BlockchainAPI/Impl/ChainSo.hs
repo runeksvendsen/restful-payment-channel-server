@@ -3,6 +3,7 @@
 module BlockchainAPI.Impl.ChainSo where
 
 import BlockchainAPI.Types
+import qualified Network.Haskoin.Constants as HCC
 import qualified Network.Haskoin.Crypto as HC
 import           Data.Aeson         (Value(Object, Array), FromJSON, parseJSON, (.:))
 import           Data.Aeson.Types   (Parser, parseMaybe, parseEither)
@@ -19,7 +20,11 @@ import           Control.Lens ((^.))
 chainSoAddressInfo :: T.Text -> IO (JsendResult TxInfo)
 chainSoAddressInfo addr =
     fmap (^. responseBody) $ asJSON =<<
-    get ("https://chain.so/api/v2/get_tx_unspent/BTCTEST/" ++ cs addr)
+    get ("https://chain.so/api/v2/get_tx_unspent/" ++ netStr ++ "/" ++ cs addr)
+        where netStr = case HCC.getNetworkName HCC.getNetwork of
+                "prodnet" -> "BTC"
+                "testnet3" -> "BTCTEST"
+
 
 toEither :: Show a => JsendResult a -> Either String (Maybe a)
 toEither (Success maybeA) = Right maybeA
