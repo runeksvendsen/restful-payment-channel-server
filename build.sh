@@ -1,5 +1,7 @@
 #!/bin/bash
 
+set -e
+
 apt-get install -y curl libssl-dev autoconf autogen libtool
 
 curl -sSL https://get.haskellstack.org/ | sh
