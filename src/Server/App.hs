@@ -6,13 +6,13 @@ module Server.App where
 import           Data.Bitcoin.PaymentChannel.Types (PaymentChannel(channelIsExhausted),
                                                     ReceiverPaymentChannel, BitcoinAmount)
 
-import           Server.Util (getPathArg, getQueryArg, getOptionalQueryArg,
-                                ChanOpenConfig(..), ChanPayConfig(..),
-                                StdConfig(..), headerGetPayment,
-                                txInfoFromAddr)
-import           Server.Config -- (calcSettlementFeeSPB, App(..))
-import           Server.Types (OpenConfig(..), ChanSettleConfig(..))
-import           Server.Handlers -- (mkFundingInfo, writeFundingInfoResp, channelOpenHandler)
+import           Server.Util (getPathArg, getQueryArg, getOptionalQueryArg)
+import           Server.Config
+import           Server.Types (OpenConfig(..),
+                                ChanOpenConfig(..),ChanPayConfig(..),
+                                StdConfig(..), ChanSettleConfig(..))
+import           Server.Handlers
+
 import           Bitcoind (BTCRPCInfo(..), bitcoindNetworkSumbitTx)
 
 import           Common.Common (pathParamEncode)
@@ -35,26 +35,25 @@ import           Data.Maybe
 import           Snap
 import           Snap.CORS
 import           Snap.Util.FileServe (serveDirectory)
-
+import           Data.Monoid ((<>))
 
 
 mainRoutes basePath =
         [
-         (basePath `mappend` "/fundingInfo" -- ?client_pubkey&exp_time
+         (basePath <> "/fundingInfo" -- ?client_pubkey&exp_time
            ,   method GET    fundingInfoHandler)
 
-       , (basePath `mappend` "/channels/new" -- ?client_pubkey&exp_time&change_address
+       , (basePath <> "/channels/new" -- ?client_pubkey&exp_time&change_address
            ,   method POST (newChannelHandler >>= writePaymentResult >>=
                                proceedIfExhausted >> settlementHandler)
                <|> method OPTIONS applyCORS') --CORS
 
-       , (basePath `mappend` "/channels/:funding_txid/:funding_vout"
+       , (basePath <> "/channels/:funding_txid/:funding_vout"
            ,   method PUT    (paymentHandler >>= writePaymentResult >>=
                                proceedIfExhausted >> settlementHandler)
            <|> method DELETE settlementHandler
            <|> method OPTIONS applyCORS') --CORS
         ] :: [(BS.ByteString, Handler App App ())]
-
 
 
 
@@ -65,7 +64,7 @@ appInit = makeSnaplet "PayChanServer" "Payment channel REST interface" Nothing $
 
     bitcoinNetwork <- liftIO (configLookupOrFail cfg "bitcoin.network")
     liftIO $ setBitcoinNetwork bitcoinNetwork
-    let basePath = "/v1/" `mappend` toPathString bitcoinNetwork
+    let basePath = "/v1/" <> toPathString bitcoinNetwork
 
     settleConfig@(SettleConfig _ _ settleFee _) <- SettleConfig <$>
             liftIO (configLookupOrFail cfg "settlement.privKeySeed") <*>
@@ -100,6 +99,9 @@ appInit = makeSnaplet "PayChanServer" "Payment channel REST interface" Nothing $
     addRoutes $ mainRoutes basePath
 
     return $ App chanOpenMap settleConfig pubKey openPrice minConf basePath hostname pushTxFunc
+
+
+
 
 
 fundingInfoHandler :: Handler App App ()

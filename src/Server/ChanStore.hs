@@ -18,6 +18,10 @@ data ChanState = ReadyForPayment {
 instance ToFileName HT.TxHash
 instance ToFileName HC.Address
 
+instance Hashable HT.OutPoint where
+    hashWithSalt salt (HT.OutPoint h i) =
+        salt `hashWithSalt` serialize h `hashWithSalt` i
+
 instance Hashable HT.TxHash where
     hashWithSalt salt txid = hashWithSalt salt (serialize txid)
 
@@ -54,13 +58,10 @@ instance Bin.Binary ChanState where
             n       -> fail $ "ChanState parser: unknown start byte: " ++ show n)
 
 type ChannelMap = DiskMap HT.TxHash ChanState
--- type InitChannelMap  = DiskMap HC.Address InitState
 
 newChanMap :: IO ChannelMap
 newChanMap = newDiskMap
 
--- newInitMap :: IO InitChannelMap
--- newInitMap = newDiskMap
 
 diskSyncThread ::
     (ToFileName k, Serializable v) =>

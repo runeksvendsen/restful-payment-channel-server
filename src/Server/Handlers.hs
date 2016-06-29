@@ -4,14 +4,14 @@ module Server.Handlers where
 
 import           Prelude hiding (userError)
 
-import           Server.Types (ChanSettleConfig(..))
+import           Server.Types (ChanOpenConfig(..),ChanPayConfig(..),
+                                StdConfig(..), ChanSettleConfig(..))
 import           Server.Config -- (App(..))
 
 import           Common.Common
 import           Common.Types
 
-import           Server.Util (writeJSON, ChanOpenConfig(..),ChanPayConfig(..),
-                              StdConfig(..), userError,internalError,
+import           Server.Util (writeJSON, userError,internalError,
                               errorWithDescription, fundingAddressFromParams,
                               getQueryArg,getOptionalQueryArg,
                               txInfoFromAddr, guardIsConfirmed)
@@ -223,12 +223,14 @@ tEST_blockchainGetFundingInfo :: Handler App App TxInfo
 tEST_blockchainGetFundingInfo = do
     pubKeyServer <- use pubKey
     minConf <- use fundingMinConf
+    testArgTrue <- fmap (== Just True) $ getOptionalQueryArg "test"
 
-    maybeArg <- getOptionalQueryArg "test"
-    case maybeArg :: Maybe Bool of
-        Just True -> test_GetDerivedFundingInfo pubKeyServer
-        _         -> fundingAddressFromParams pubKeyServer >>=
-                        blockchainAddressCheckEverything minConf
+    if (HCC.getNetworkName HCC.getNetwork == "testnet3") && testArgTrue then
+            test_GetDerivedFundingInfo pubKeyServer
+        else
+            fundingAddressFromParams pubKeyServer >>=
+                blockchainAddressCheckEverything minConf
+
 
 blockchainAddressCheckEverything :: MonadSnap m => Int -> HC.Address -> m TxInfo
 blockchainAddressCheckEverything minConf addr =
