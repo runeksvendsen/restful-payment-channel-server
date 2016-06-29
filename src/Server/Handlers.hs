@@ -114,8 +114,12 @@ logFundingInfo  = do
 
 
 ----Settlement----
-chanSettle :: MonadSnap m => ChanSettleConfig -> StdConfig -> m ()
-chanSettle (SettleConfig privKey recvAddr txFee _) (StdConfig chanMap hash vout payment) = do
+chanSettle :: MonadSnap m =>
+    ChanSettleConfig ->
+    StdConfig ->
+    (HT.Tx -> IO (Either String HT.TxHash))
+    -> m ()
+chanSettle (SettleConfig privKey recvAddr txFee _) (StdConfig chanMap hash vout payment) pushTx = do
     liftIO . putStrLn $ printf
         "Processing settlement request for channel %s/%d: "
             (cs $ HT.txHashToHex hash :: String) vout ++ show payment
@@ -135,7 +139,7 @@ chanSettle (SettleConfig privKey recvAddr txFee _) (StdConfig chanMap hash vout 
         Left e -> internalError $ show e
         Right tx -> return tx
 
-    eitherTxId <- liftIO $ bitcoindNetworkSumbitTx tx
+    eitherTxId <- liftIO $ pushTx tx
     txid <- case eitherTxId of
         Left e -> internalError e
         Right txid -> return txid

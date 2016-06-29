@@ -7,6 +7,7 @@ module Server.Config where
 import           Common.Common (fromHexString)
 import           Data.Bitcoin.PaymentChannel.Types (BitcoinAmount)
 
+import qualified Network.Haskoin.Transaction as HT
 import qualified Network.Haskoin.Crypto as HC
 import qualified Network.Haskoin.Constants as HCC
 import qualified Crypto.Secp256k1 as Secp
@@ -25,7 +26,8 @@ import           Bitcoind (BTCRPCInfo(..))
 configLookupOrFail :: Configured a => Config -> Name -> IO a
 configLookupOrFail conf name =
     Conf.lookup conf name >>= maybe
-        (fail $ "ERROR: Key \"" ++ cs name ++ "\" not present in config")
+        (fail $ "ERROR: Failed to read key \"" ++ cs name ++
+            "\" in config (key not present or invalid)")
         return
 
 data App = App
@@ -36,6 +38,7 @@ data App = App
  , _fundingMinConf  :: Int
  , _basePath        :: BS.ByteString
  , _hostname        :: String
+ , _bitcoinPushTx   :: (HT.Tx -> IO (Either String HT.TxHash))
  }
 
 -- Template Haskell magic

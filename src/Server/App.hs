@@ -13,6 +13,7 @@ import           Server.Util (getPathArg, getQueryArg, getOptionalQueryArg,
 import           Server.Config -- (calcSettlementFeeSPB, App(..))
 import           Server.Types (OpenConfig(..), ChanSettleConfig(..))
 import           Server.Handlers -- (mkFundingInfo, writeFundingInfoResp, channelOpenHandler)
+import           Bitcoind (BTCRPCInfo(..), bitcoindNetworkSumbitTx)
 
 import           Common.Common (pathParamEncode)
 import           Data.String.Conversions (cs)
@@ -59,6 +60,7 @@ mainRoutes basePath =
 
 appInit :: SnapletInit App App
 appInit = makeSnaplet "PayChanServer" "Payment channel REST interface" Nothing $ do
+    --- CONFIG ---
     cfg <- getSnapletUserConfig
 
     bitcoinNetwork <- liftIO (configLookupOrFail cfg "bitcoin.network")
@@ -76,20 +78,28 @@ appInit = makeSnaplet "PayChanServer" "Payment channel REST interface" Nothing $
             liftIO (configLookupOrFail cfg "open.basePrice") <*>
             liftIO (configLookupOrFail cfg "open.priceAddSettlementFee")
 
+    bitcoindRPCConf <- BTCRPCInfo <$>
+            liftIO (configLookupOrFail cfg "bitcoin.bitcoindRPC.ip") <*>
+            liftIO (configLookupOrFail cfg "bitcoin.bitcoindRPC.port") <*>
+            liftIO (configLookupOrFail cfg "bitcoin.bitcoindRPC.user") <*>
+            liftIO (configLookupOrFail cfg "bitcoin.bitcoindRPC.pass")
+    let pushTxFunc = bitcoindNetworkSumbitTx bitcoindRPCConf
+
     let pubKey = HC.derivePubKey $ confSettlePrivKey settleConfig
     let openPrice = if addSettleFee then basePrice + settleFee else basePrice
 
-    liftIO . putStrLn $ "Channel PubKey: " ++ cs (pathParamEncode pubKey)
+    liftIO . putStrLn $ "Server PubKey: " ++ cs (pathParamEncode pubKey)
 
     hostname <- liftIO (configLookupOrFail cfg "network.hostname")
+    --- CONFIG ---
 
-    -- Disk channel store setup (TODO: fix)
+    -- Disk channel store setup
     chanOpenMap <- liftIO newChanMap
     liftIO . forkIO $ diskSyncThread chanOpenMap 5
 
     addRoutes $ mainRoutes basePath
 
-    return $ App chanOpenMap settleConfig pubKey openPrice minConf basePath hostname
+    return $ App chanOpenMap settleConfig pubKey openPrice minConf basePath hostname pushTxFunc
 
 
 fundingInfoHandler :: Handler App App ()
@@ -136,10 +146,11 @@ settlementHandler = do
     applyCORS'
 
     settleConf <- use settleConfig
+    pushTxFunc <- use bitcoinPushTx
     stdConf <- StdConfig <$>
             use channelStateMap <*>
             getPathArg "funding_txid" <*>
             getPathArg "funding_vout" <*>
             getQueryArg "payment"
-    chanSettle settleConf stdConf
+    chanSettle settleConf stdConf pushTxFunc
 

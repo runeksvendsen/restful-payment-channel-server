@@ -22,15 +22,14 @@ import qualified Data.ByteString.Lazy as BL
 
 data BTCRPCInfo = BTCRPCInfo {
     rpcIP    :: String
-    ,rpcPort :: Word
-    ,rpcUser :: String
-    ,rpcPass :: String
+    ,rpcPort :: Int
+    ,rpcUser :: T.Text
+    ,rpcPass :: T.Text
 }
 
-
-bitcoindNetworkSumbitTx :: HT.Tx -> IO (Either String HT.TxHash)
-bitcoindNetworkSumbitTx tx = withClient "192.168.1.102" 8334
-    (T.pack "john_oliver") (T.pack "KGbv6HvJ5z")
+bitcoindNetworkSumbitTx :: BTCRPCInfo -> HT.Tx -> IO (Either String HT.TxHash)
+bitcoindNetworkSumbitTx (BTCRPCInfo ip port user pass) tx =
+    withClient ip port user pass
         (tryBitcoindSubmitToNetwork tx)
 
 tryBitcoindSubmitToNetwork ::
