@@ -35,7 +35,7 @@ import qualified Network.Haskoin.Util as HU
 import qualified Data.ByteString as BS
 import qualified Data.ByteString.Char8 as C
 import qualified Data.ByteString.Base16 as B16
-import Data.Word (Word8, Word32)
+import Data.Word (Word8, Word32, Word64)
 import Data.List (filter)
 import Data.Maybe (listToMaybe)
 import Data.EitherR (fmapL)
@@ -43,10 +43,9 @@ import Data.String.Conversions (cs)
 import Text.Printf (printf)
 import qualified Data.Binary as Bin
 
--- hOSTNAME="paychan.runeks.me"
--- hOSTNAME="localhost:8000"
-----
--- |Types that can be encoded to fit in a URI path
+
+
+-- |Types that can be encoded to fit in a URI
 class PathParamEncode a where
     pathParamEncode :: a -> BS.ByteString
 
@@ -71,7 +70,7 @@ instance PathParamEncode Payment where
 ----
 
 ----
--- |Types that can be decoded from a URI path component
+-- |Types that can be decoded from a URI component
 class PathParamDecode a where
     pathParamDecode :: BS.ByteString -> Either String a
 
@@ -174,10 +173,6 @@ getFundingAddress' :: HC.PubKey -> HC.PubKey -> BitcoinLockTime -> HC.Address
 getFundingAddress' sendPK recvPK blt =
     getFundingAddress $ CChannelParameters sendPK recvPK blt
 
-addressFromMessages :: OpenRequest -> OpenResponse -> HC.Address
-addressFromMessages (OpenRequest _ sendPK) (OpenResponse recvPK _ blt _) =
-    getFundingAddress' sendPK recvPK blt
-
 toString :: HC.Address -> String
 toString = C.unpack . HC.addrToBase58
 
@@ -187,63 +182,6 @@ toString = C.unpack . HC.addrToBase58
 
 
 
-
-
-
-
-data OpenRequest = OpenRequest {
-    reqDuration ::  Word32,
-    reqPubKey   ::  HC.PubKey
-} deriving Show
-
-data OpenResponse = OpenResponse {
-    resPubKey   ::  HC.PubKey,
-    resMinConf  ::  Integer,
-    resLockTime ::  BitcoinLockTime,
-    resFundAddr ::  HC.Address
-} deriving Show
-
-data OpenFinish = OpenFinish {
-    ofinFundAddr ::  HC.Address,
-    ofinTxId     ::  HT.TxHash,
-    ofinPayment  ::  Payment
-} deriving Show
-
------
-instance ToJSON OpenFinish where
-    toJSON (OpenFinish addr tid pmnt) = object
-        [ "fundingAddress" .= addr, "fundingTxId" .= tid
-        , "initialPayment" .= pmnt ]
-
-instance FromJSON OpenFinish where
-    parseJSON (Object v) = OpenFinish <$>
-        v .: "fundingAddress" <*> v .: "fundingTxId" <*>
-        v .: "initialPayment"
-    parseJSON _          = mzero
------
-
------
-instance ToJSON OpenRequest where
-    toJSON (OpenRequest lt pk) = object [ "lockTime" .= lt, "senderPubKey" .= pk ]
-
-instance FromJSON OpenRequest where
-    parseJSON (Object v) =
-        OpenRequest <$> v .: "lockTime" <*> v .: "senderPubKey"
-    parseJSON _          = mzero
------
-
------
-instance ToJSON OpenResponse where
-    toJSON (OpenResponse pk conf lt addr) =
-        object [ "receiverPubKey" .= pk, "minConfFundingTx" .= conf,
-            "channelExpirationDate" .= lt, "channelFundingAddress" .= addr ]
-
-instance FromJSON OpenResponse where
-    parseJSON (Object v) =
-        OpenResponse <$> v .: "receiverPubKey" <*> v .: "minConfFundingTx"
-            <*> v .: "channelExpirationDate" <*> v .: "channelFundingAddress"
-    parseJSON _          = mzero
------
 
 
 
@@ -263,10 +201,13 @@ instance FromJSON BitcoinLockTime where
         fmap (parseBitcoinLocktime . fromIntegral) . parseJSONInt
 
 parseJSONInt :: Scientific -> Parser Integer
-parseJSONInt s =
+parseJSONInt = fmap fromIntegral . parseJSONWord
+
+parseJSONWord :: Scientific -> Parser Word64
+parseJSONWord s =
     case toBoundedInteger s of
-        Just (Satoshi i) -> return i
-        Nothing -> fail $ "failed to decode JSON number to integer. data: " ++ show s
+        Just w -> return w
+        Nothing -> fail $ "failed to decode JSON number to Word64. data: " ++ show s
 
 -----
 
@@ -278,10 +219,3 @@ fromHexString hexStr =
     case (B16.decode . C.pack) hexStr of
         (bs,e) ->
             if BS.length e /= 0 then BS.empty else bs
-
-hashToStr :: HT.TxHash -> String
-hashToStr = C.unpack . HT.txHashToHex
-
-
-prettyShow :: Value -> String
-prettyShow = C.unpack . toStrict . encodePretty

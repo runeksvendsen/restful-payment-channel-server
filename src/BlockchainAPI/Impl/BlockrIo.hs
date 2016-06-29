@@ -4,7 +4,7 @@
 module BlockchainAPI.Impl.BlockrIo where
 
 import BlockchainAPI.Types (OutInfo(..), TxInfo(..), parseBTCAmount)
-import Common.Common (parseJSONInt, hashToStr)
+import Common.Common (parseJSONInt)
 
 import           Control.Concurrent (threadDelay)
 import           Control.Monad      (mzero, unless)
@@ -14,10 +14,11 @@ import           Network.Wreq       (get, asJSON, responseBody)
 import           Data.Aeson.Types   (Parser, parseMaybe, parseEither)
 import           Data.Aeson         (Value(Object), FromJSON, parseJSON, (.:))
 import           Data.Maybe         (listToMaybe, isJust)
-import           Network.Haskoin.Transaction  (TxHash)
+import           Network.Haskoin.Transaction  (TxHash, txHashToHex)
 
 import           Text.Printf        (printf)
 import qualified Data.Text as T
+import           Data.String.Conversions (cs)
 
 
 instance FromJSON OutInfo where
@@ -97,6 +98,8 @@ getTxJSON :: TxHash -> IO Value
 getTxJSON txId =
     fmap (^. responseBody) $ asJSON =<<
     get ("http://tbtc.blockr.io/api/v1/tx/info/" ++ hashToStr txId)
+        where hashToStr = cs . txHashToHex
+
 
 parseFundingOutput :: String -> Value -> Parser OutInfo
 parseFundingOutput fundAddr txJSON =
