@@ -15,8 +15,24 @@ import qualified Data.Binary.Put as Put
 data ChanState = ReadyForPayment {
     csState :: ReceiverPaymentChannel }
 
+type ChannelMap = DiskMap HT.TxHash ChanState
+
+newChanMap :: IO ChannelMap
+newChanMap = newDiskMap
+
+
+diskSyncThread ::
+    (ToFileName k, Serializable v) =>
+    DiskMap k v
+    -> Int -- ^Sync interval in seconds
+    -> IO ()
+diskSyncThread m i = putStrLn "Started disk sync thread." >> mapDiskSyncThread m (i * round 1e6)
+
+
+
 instance ToFileName HT.TxHash
 instance ToFileName HC.Address
+
 
 instance Hashable HT.OutPoint where
     hashWithSalt salt (HT.OutPoint h i) =
@@ -27,6 +43,7 @@ instance Hashable HT.TxHash where
 
 instance Hashable HC.Address where
     hashWithSalt salt addr = hashWithSalt salt (serialize addr)
+
 
 instance Serializable HT.TxHash where
     serialize   = BL.toStrict . Bin.encode
@@ -47,6 +64,7 @@ instance Serializable ChanState where
     serialize   = BL.toStrict . Bin.encode
     deserialize = deserEither
 
+
 instance Bin.Binary ChanState where
     put (ReadyForPayment s) =
         Bin.putWord8 0x02 >>
@@ -57,15 +75,3 @@ instance Bin.Binary ChanState where
             0x02    -> ReadyForPayment   <$> Bin.get
             n       -> fail $ "ChanState parser: unknown start byte: " ++ show n)
 
-type ChannelMap = DiskMap HT.TxHash ChanState
-
-newChanMap :: IO ChannelMap
-newChanMap = newDiskMap
-
-
-diskSyncThread ::
-    (ToFileName k, Serializable v) =>
-    DiskMap k v
-    -> Int -- ^Sync interval in seconds
-    -> IO ()
-diskSyncThread m i = putStrLn "Started disk sync thread." >> mapDiskSyncThread m (i * round 1e6)

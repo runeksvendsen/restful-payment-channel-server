@@ -8,6 +8,10 @@ import           Server.ChanStore (ChannelMap, ChanState(..))
 import qualified Data.ByteString as BS
 import           BlockchainAPI.Types (TxInfo)
 
+
+type Vout = Integer     -- Output index
+
+
 data OpenConfig = OpenConfig Int BitcoinAmount Bool
 
 data ChanSettleConfig = SettleConfig {
@@ -18,16 +22,22 @@ data ChanSettleConfig = SettleConfig {
 }
 
 
---- TYPES ---
-type Vout = Integer
+data ChanOpenConfig = ChanOpenConfig {
+    ocOpenPrice     :: BitcoinAmount
+   ,ocServerPubKey  :: HC.PubKey
+   ,ocChanMap       :: ChannelMap
+   ,ocFundingInfo   :: TxInfo
+   ,ocHostname      :: String
+   ,ocBasePath      :: BS.ByteString
+   ,ocClientPubKey  :: HC.PubKey
+   ,ocClientChange  :: HC.Address
+   ,ocExpTime       :: BitcoinLockTime
+   ,ocInitPayment   :: Payment
+}
 
-data ChanOpenConfig = ChanOpenConfig
-    BitcoinAmount HC.PubKey ChannelMap TxInfo String BS.ByteString HC.PubKey HC.Address BitcoinLockTime Payment
---    open_price  server_pk                   client_pk
 
 data ChanPayConfig = PayConfig
     ChannelMap HT.TxHash Vout (Maybe HC.Address) Payment
-
 
 
 data StdConfig = StdConfig {
