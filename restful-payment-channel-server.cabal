@@ -24,15 +24,12 @@ Executable PayChanServer
     snap-core                 >= 0.9   && < 0.10,
     snap-server               >= 0.9   && < 0.10,
     snap,
-    snap-cors,
-    web-fpco,
+
     bitcoin-payment-channel   >= 0.1.1.0 && < 0.2,
     haskoin-core              >= 0.3.0 && < 1.0.0,
-    transformers,
-    haskoin-core,
-    aeson, vector,
-    JsonGrammar, stack-prism,
     secp256k1,
+    transformers,
+    aeson, vector,
     base16-bytestring,
     scientific,
     time,
@@ -47,11 +44,10 @@ Executable PayChanServer
     errors,
     hexstring,
     http-client,
-
     bitcoin-api, bitcoin-tx,
-    case-insensitive,
-    aeson-pretty,
-    configurator
+    case-insensitive
+
+
 
   other-modules: Server.App,
                  BlockchainAPI.Impl.BlockrIo,

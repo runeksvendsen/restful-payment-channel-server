@@ -27,14 +27,6 @@ import qualified STMContainers.Map as STMap
 import qualified Data.ByteString as BS
 
 
-data Store k v = STMap k (ValWrap v)
-
-data ValWrap v = ValWrap v Flags
-
-data Flags =
-    DeleteItem |
-    ItemSynced Bool
-
 class Serializable a where
     serialize   :: a -> BS.ByteString
     deserialize :: BS.ByteString -> Either String a
@@ -46,21 +38,9 @@ class (Serializable k, Eq k, Hashable k) => ToFileName k where
     toFileName = C.unpack . B16.encode . serialize
     fromFileName = deserialize . fst . B16.decode . C.pack
 
--- instance Serializable k => Hashable k where
---     hashWithSalt salt pk = hashWithSalt salt (txHashToHex pk)
-
 
 type ItemExists = Bool
---
--- storeNewItem        :: (Serializable k, v) => Store k v -> k -> v -> IO () --will overwrite
--- updateStoredItem    :: (Serializable k, v) => Store k v -> k -> v -> IO ItemExists
--- lookupItem          :: (Serializable k, v) => Store k v -> k -> IO (Maybe v)
--- removeItem          :: (Serializable k, v) => Store k v -> k -> IO ItemExists
---
--- storeNewItem = undefined
--- updateStoredItem = undefined
--- lookupItem = undefined
--- removeItem = undefined
+
 
 newDiskMap :: (ToFileName k, Serializable v) => IO (DiskMap k v)
 newDiskMap = atomically Map.new
@@ -86,19 +66,13 @@ deleteStoredItem :: (ToFileName k, Serializable v) => DiskMap k v -> k -> IO Ite
 deleteStoredItem m k = do
     maybeItem <- getItem m k
     case maybeItem of
-        Nothing -> markForDeletion k m >> return False
+        Nothing -> return False
         Just _ ->  markForDeletion k m >> return True
-
--- ------======000000======-------- --
-
-
 
 
 
 mapGetItemCount :: DiskMap k v -> IO Integer
 mapGetItemCount m = atomically $ fmap (fromIntegral . length) (LT.toList . Map.stream $ m)
-
-
 
 
 type DiskMap k v = Map.Map k (MapItem v)

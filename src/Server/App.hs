@@ -33,7 +33,7 @@ import qualified Data.ByteString as BS
 import qualified Data.ByteString.Char8 as B
 import           Data.Maybe
 import           Snap
-import           Snap.CORS
+-- import           Snap.CORS
 import           Snap.Util.FileServe (serveDirectory)
 import           Data.Monoid ((<>))
 
