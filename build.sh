@@ -1,6 +1,8 @@
-apt-get install -y wget libssl-dev autotools autoconf autogen libtool
+#!/bin/bash
 
-wget -qO- https://get.haskellstack.org/ | sh
+apt-get install -y curl libssl-dev autoconf autogen libtool
+
+curl -sSL https://get.haskellstack.org/ | sh
 
 git clone https://github.com/runeksvendsen/restful-payment-channel-server.git
 cd restful-payment-channel-server/
