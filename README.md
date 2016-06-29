@@ -21,7 +21,7 @@ Visit [test server](https://paychan.runeks.me).
 https://paychan.runeks.me (also hosts documentation on the root path). Runs on Bitcoin testnet.
 
 #### TODO
-* Auto-settlement
+* ~~Auto-settlement~~
 * OutPoint as key in chanMap
 
 #### Build instructions
