@@ -16,10 +16,17 @@ import qualified Data.ByteString as BS
 import           Data.Ratio
 import           Data.Maybe (fromJust)
 import           Data.Configurator.Types
+import qualified Data.Configurator as Conf (lookup)
 import           Data.String.Conversions (cs)
 import           Server.ChanStore (ChannelMap)
 import           Server.Types
+import           Bitcoind (BTCRPCInfo(..))
 
+configLookupOrFail :: Configured a => Config -> Name -> IO a
+configLookupOrFail conf name =
+    Conf.lookup conf name >>= maybe
+        (fail $ "ERROR: Key \"" ++ cs name ++ "\" not present in config")
+        return
 
 data App = App
  { _channelStateMap :: ChannelMap
@@ -35,6 +42,7 @@ data App = App
 makeLenses ''App
 
 data BitcoinNet = Mainnet | Testnet3
+
 
 setBitcoinNetwork :: BitcoinNet -> IO ()
 setBitcoinNetwork Mainnet = return ()
@@ -62,9 +70,12 @@ instance Configured BitcoinNet where
     convert (String "test") = return Testnet3
     convert (String _) = Nothing
 
+instance Configured BTCRPCInfo where
+    convert = undefined
+
 
 calcSettlementFeeSPB :: BitcoinAmount -> BitcoinAmount
-calcSettlementFeeSPB satoshisPerByte = 314 * satoshisPerByte -- 346 2 outputs
+calcSettlementFeeSPB satoshisPerByte = 331 * satoshisPerByte -- 346 2 outputs
 
 -- openPrice = settlementTxFee + 1000 :: BitcoinAmount
 -- minConf = 0 :: Int

@@ -26,7 +26,7 @@ import           Control.Concurrent (forkIO)
 import           Control.Lens.TH
 import           Control.Lens (use)
 
-import           Data.Configurator (require)
+-- import           Data.Configurator (require, lookup)
 import qualified Network.Haskoin.Crypto as HC
 import qualified Data.ByteString as BS
 import qualified Data.ByteString.Char8 as B
@@ -34,6 +34,7 @@ import           Data.Maybe
 import           Snap
 import           Snap.CORS
 import           Snap.Util.FileServe (serveDirectory)
+
 
 
 mainRoutes basePath =
@@ -53,31 +54,34 @@ mainRoutes basePath =
            <|> method OPTIONS applyCORS') --CORS
         ] :: [(BS.ByteString, Handler App App ())]
 
+
+
+
 appInit :: SnapletInit App App
 appInit = makeSnaplet "PayChanServer" "Payment channel REST interface" Nothing $ do
     cfg <- getSnapletUserConfig
 
-    bitcoinNetwork <- liftIO (require cfg "bitcoin.network")
+    bitcoinNetwork <- liftIO (configLookupOrFail cfg "bitcoin.network")
     liftIO $ setBitcoinNetwork bitcoinNetwork
     let basePath = "/v1/" `mappend` toPathString bitcoinNetwork
 
     settleConfig@(SettleConfig _ _ settleFee _) <- SettleConfig <$>
-            liftIO (require cfg "settlement.privKeySeed") <*>
-            liftIO (require cfg "settlement.fundsDestinationAddress") <*>
-            fmap calcSettlementFeeSPB (liftIO (require cfg "settlement.txFeeSatoshiPerByte")) <*>
-            liftIO (require cfg "settlement.settlementPeriodHours")
+            liftIO (configLookupOrFail cfg "settlement.privKeySeed") <*>
+            liftIO (configLookupOrFail cfg "settlement.fundsDestinationAddress") <*>
+            fmap calcSettlementFeeSPB (liftIO (configLookupOrFail cfg "settlement.txFeeSatoshiPerByte")) <*>
+            liftIO (configLookupOrFail cfg "settlement.settlementPeriodHours")
 
     (OpenConfig minConf basePrice addSettleFee) <- OpenConfig <$>
-            liftIO (require cfg "open.fundingTxMinConf") <*>
-            liftIO (require cfg "open.basePrice") <*>
-            liftIO (require cfg "open.priceAddSettlementFee")
+            liftIO (configLookupOrFail cfg "open.fundingTxMinConf") <*>
+            liftIO (configLookupOrFail cfg "open.basePrice") <*>
+            liftIO (configLookupOrFail cfg "open.priceAddSettlementFee")
 
     let pubKey = HC.derivePubKey $ confSettlePrivKey settleConfig
     let openPrice = if addSettleFee then basePrice + settleFee else basePrice
 
     liftIO . putStrLn $ "Channel PubKey: " ++ cs (pathParamEncode pubKey)
 
-    hostname <- liftIO (require cfg "network.hostname")
+    hostname <- liftIO (configLookupOrFail cfg "network.hostname")
 
     -- Disk channel store setup (TODO: fix)
     chanOpenMap <- liftIO newChanMap

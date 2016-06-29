@@ -19,12 +19,14 @@ import Data.Text as T
 import qualified Data.Binary as Bin
 import qualified Data.ByteString.Lazy as BL
 
-data BitcoindCredentials = BitcoindCredentials {
-    rpcIP :: String,
-    rpcPort :: Word,
-    rpcUser :: String,
-    rpcPass :: String
+
+data BTCRPCInfo = BTCRPCInfo {
+    rpcIP    :: String
+    ,rpcPort :: Word
+    ,rpcUser :: String
+    ,rpcPass :: String
 }
+
 
 bitcoindNetworkSumbitTx :: HT.Tx -> IO (Either String HT.TxHash)
 bitcoindNetworkSumbitTx tx = withClient "192.168.1.102" 8334
