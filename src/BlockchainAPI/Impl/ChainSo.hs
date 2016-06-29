@@ -23,7 +23,7 @@ chainSoAddressInfo addr =
     get ("https://chain.so/api/v2/get_tx_unspent/" ++ netStr ++ "/" ++ cs addr)
         where netStr = case HCC.getNetworkName HCC.getNetwork of
                 "prodnet" -> "BTC"
-                "testnet3" -> "BTCTEST"
+                "testnet" -> "BTCTEST"
 
 
 toEither :: Show a => JsendResult a -> Either String (Maybe a)
