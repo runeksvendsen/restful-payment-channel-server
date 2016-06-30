@@ -19,13 +19,14 @@ import           Common.Common (pathParamEncode)
 import           Data.String.Conversions (cs)
 
 import           Server.ChanStore (ChannelMap,
-                                   newChanMap, diskSyncThread)
+                                   newChanMap, diskSyncThread, diskSyncNow)
 
 import           Control.Applicative ((<|>))
 import           Control.Monad.IO.Class (liftIO)
-import           Control.Concurrent (forkIO)
+import           Control.Concurrent (forkIO, killThread,     threadDelay)
 import           Control.Lens.TH
 import           Control.Lens (use)
+import qualified System.Posix.Signals as Sig (Handler(Catch), installHandler, sigTERM)
 
 -- import           Data.Configurator (require, lookup)
 import qualified Network.Haskoin.Crypto as HC
@@ -94,7 +95,12 @@ appInit = makeSnaplet "PayChanServer" "Payment channel REST interface" Nothing $
 
     -- Disk channel store setup
     chanOpenMap <- liftIO newChanMap
-    liftIO . forkIO $ diskSyncThread chanOpenMap 5
+    tid <- liftIO . forkIO $ diskSyncThread chanOpenMap 5
+    -- If we receive a TERM signal, kill sync thread & sync immediately
+    liftIO $ Sig.installHandler
+        Sig.sigTERM
+        (Sig.Catch $ killThread tid >> diskSyncNow chanOpenMap >> threadDelay (round $ 3 * 1e6) )
+        Nothing
 
     addRoutes $ mainRoutes basePath
 

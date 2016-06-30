@@ -28,6 +28,11 @@ diskSyncThread ::
     -> IO ()
 diskSyncThread m i = putStrLn "Started disk sync thread." >> mapDiskSyncThread m (i * round 1e6)
 
+diskSyncNow ::
+    (ToFileName k, Serializable v) =>
+    DiskMap k v
+    -> IO ()
+diskSyncNow = syncToDisk
 
 
 instance ToFileName HT.TxHash

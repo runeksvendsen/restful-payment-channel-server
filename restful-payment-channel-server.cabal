@@ -45,7 +45,8 @@ Executable PayChanServer
     hexstring,
     http-client,
     bitcoin-api, bitcoin-tx,
-    case-insensitive
+    case-insensitive,
+    unix
 
 
 
