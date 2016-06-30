@@ -2,8 +2,11 @@ type: webapp
 exec: ../PayChanServer
 args:
     - "--environment=/home/rune/paychan/live"
+ssl:
+    key: /opt/keter/etc/server.key
+    certificate: /opt/keter/etc/runeks-rapid.pem
+    chain-certificates: []
 host: paychan.runeks.me
 redirects:
     - from: www.paychan.runeks.me
       to: paychan.runeks.me
-
