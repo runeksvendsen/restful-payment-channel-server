@@ -1,3 +1,4 @@
+type: webapp
 exec: ../PayChanServer
 args:
     - "-e server"
