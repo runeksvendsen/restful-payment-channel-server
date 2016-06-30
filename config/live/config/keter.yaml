@@ -7,6 +7,3 @@ ssl:
     key: /opt/keter/etc/server.key
     certificate: /opt/keter/etc/runeks-rapid.pem
     chain-certificates: []
-redirects:
-    - from: www.paychan.runeks.me
-      to: paychan.runeks.me
