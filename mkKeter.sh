@@ -2,7 +2,7 @@
 
 set -e
 
-CFGFILE="$1"
+CFGFILE="$1.cfg"
 BIN="PayChanServer"
 DEPLOYDIR="/opt/keter/incoming/"
 
@@ -18,7 +18,7 @@ stack build
 cp .stack-work/install/x86_64-linux/lts-5.2/7.10.3/bin/$BIN ./
 strip $BIN
 
-FILENAME="paychan-$1.keter"
+FILENAME="paychan-$(basename $1).keter"
 tar czfv $FILENAME $BIN dist config $CFGFILE
 
 echo "Created $FILENAME"
