@@ -37,7 +37,7 @@ data App = App
  , _openPrice       :: BitcoinAmount
  , _fundingMinConf  :: Int
  , _basePath        :: BS.ByteString
- , _hostname        :: String
+--  , _hostname        :: String
  , _bitcoinPushTx   :: (HT.Tx -> IO (Either String HT.TxHash))
  }
 

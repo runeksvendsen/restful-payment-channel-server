@@ -27,7 +27,7 @@ data ChanOpenConfig = ChanOpenConfig {
    ,ocServerPubKey  :: HC.PubKey
    ,ocChanMap       :: ChannelMap
    ,ocFundingInfo   :: TxInfo
-   ,ocHostname      :: String
+--    ,ocHostname      :: String
    ,ocBasePath      :: BS.ByteString
    ,ocClientPubKey  :: HC.PubKey
    ,ocClientChange  :: HC.Address

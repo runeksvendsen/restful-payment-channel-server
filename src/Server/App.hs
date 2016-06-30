@@ -6,7 +6,7 @@ module Server.App where
 import           Data.Bitcoin.PaymentChannel.Types (PaymentChannel(channelIsExhausted),
                                                     ReceiverPaymentChannel, BitcoinAmount)
 
-import           Server.Util (getPathArg, getQueryArg, getOptionalQueryArg)
+import           Server.Util (getPathArg, getQueryArg, getOptionalQueryArg, getAppRootURL)
 import           Server.Config
 import           Server.Types (OpenConfig(..),
                                 ChanOpenConfig(..),ChanPayConfig(..),
@@ -89,7 +89,7 @@ appInit = makeSnaplet "PayChanServer" "Payment channel REST interface" Nothing $
 
     liftIO . putStrLn $ "Server PubKey: " ++ cs (pathParamEncode pubKey)
 
-    hostname <- liftIO (configLookupOrFail cfg "network.hostname")
+--     hostname <- liftIO (configLookupOrFail cfg "network.hostname")
     --- CONFIG ---
 
     -- Disk channel store setup
@@ -98,7 +98,7 @@ appInit = makeSnaplet "PayChanServer" "Payment channel REST interface" Nothing $
 
     addRoutes $ mainRoutes basePath
 
-    return $ App chanOpenMap settleConfig pubKey openPrice minConf basePath hostname pushTxFunc
+    return $ App chanOpenMap settleConfig pubKey openPrice minConf basePath pushTxFunc
 
 
 
@@ -113,8 +113,7 @@ fundingInfoHandler =
     use pubKey <*>
     getQueryArg "client_pubkey" <*>
     getQueryArg "exp_time" <*>
-    use hostname <*>
-    use basePath
+    (use basePath >>= getAppRootURL)
         >>= writeFundingInfoResp
 
 
@@ -125,7 +124,6 @@ newChannelHandler = applyCORS' >>
         use pubKey <*>
         use channelStateMap <*>
         tEST_blockchainGetFundingInfo <*>
-        use hostname <*>
         use basePath <*>
         getQueryArg "client_pubkey" <*>
         getQueryArg "change_address" <*>

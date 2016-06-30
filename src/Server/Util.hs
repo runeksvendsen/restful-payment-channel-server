@@ -54,6 +54,19 @@ import Data.Aeson.Encode.Pretty (encodePretty)
 
 
 
+getAppRootURL :: MonadSnap m => BS.ByteString -> m String
+getAppRootURL basePath = do
+    serverName <- getsRequest rqServerName
+    isSecure <- getsRequest rqIsSecure
+    return $ channelRootURL isSecure serverName basePath
+
+httpLocationSetActiveChannel :: MonadSnap m => BS.ByteString -> HT.TxHash -> Integer -> m ()
+httpLocationSetActiveChannel basePath hash idx = do
+    chanRootURL <- getAppRootURL basePath
+    modifyResponse $ setHeader "Location" (cs $ chanRootURL ++ activeChannelPath hash idx)
+
+
+
 setFeeSatoshiPerByte :: HT.Tx -> BitcoinAmount -> HT.Tx
 setFeeSatoshiPerByte = undefined
 

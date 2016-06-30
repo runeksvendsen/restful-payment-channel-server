@@ -114,20 +114,24 @@ instance PathParamDecode Bool where
 
 
 ----URLs----
-channelRootURL :: String -> BS.ByteString -> String
-channelRootURL host basePath = host ++ (cs basePath)
+channelRootURL :: Bool -> BS.ByteString -> BS.ByteString -> String
+channelRootURL isSecure hostname basePath =
+    printf "%s://%s%s"
+        (if isSecure then "https" else "http" :: String)
+        (cs hostname :: String)
+        (cs basePath :: String)
 
-fundingInfoURL :: String -> BS.ByteString -> HC.PubKey -> BitcoinLockTime ->  String
-fundingInfoURL host basePath sendPK expTime =
-    channelRootURL host basePath ++ "/fundingInfo" ++
+fundingInfoURL :: Bool -> String -> BS.ByteString -> HC.PubKey -> BitcoinLockTime ->  String
+fundingInfoURL isSecure host basePath sendPK expTime =
+    channelRootURL isSecure (cs host) basePath ++ "/fundingInfo" ++
     printf "?client_pubkey=%s&exp_time=%d"
         (cs $ pathParamEncode sendPK :: String)
         (toWord32 expTime)
 
 -- /channels/new" -- ?client_pubkey&exp_time
-channelOpenURL :: String -> BS.ByteString -> HC.PubKey -> BitcoinLockTime -> String
-channelOpenURL host basePath sendPK expTime =
-    channelRootURL host basePath ++ channelOpenPath sendPK expTime
+channelOpenURL :: Bool -> String -> BS.ByteString -> HC.PubKey -> BitcoinLockTime -> String
+channelOpenURL isSecure host basePath sendPK expTime =
+    channelRootURL isSecure (cs host) basePath ++ channelOpenPath sendPK expTime
 
 channelOpenPath :: HC.PubKey -> BitcoinLockTime -> String
 channelOpenPath sendPK expTime = "/channels/new" ++
@@ -146,9 +150,9 @@ mkOpenPath sendPK expTime chgAddr payment =
     channelOpenPath sendPK expTime ++ mkOpenQueryParams chgAddr payment
 
 -- https://localhost/channels/f583e0b.../1
-activeChannelURL :: String -> BS.ByteString -> HT.TxHash -> Integer -> String
-activeChannelURL host basePath txid vout =
-    channelRootURL host basePath ++ activeChannelPath txid vout
+activeChannelURL :: Bool -> BS.ByteString -> BS.ByteString -> HT.TxHash -> Integer -> String
+activeChannelURL isSecure host basePath txid vout =
+    channelRootURL isSecure (cs host) basePath ++ activeChannelPath txid vout
 
 activeChannelPath :: HT.TxHash -> Integer -> String
 activeChannelPath txid vout  = "/channels/" ++
@@ -162,9 +166,9 @@ mkPaymentQueryParams payment maybeAddr =
         (cs $ pathParamEncode payment :: String) ++
     maybe "" (\addr -> "&change_address=" ++ (cs . pathParamEncode $ addr)) maybeAddr
 
-mkPaymentURL :: String -> BS.ByteString -> HT.TxHash -> Integer -> Payment -> String
-mkPaymentURL host basePath txid vout payment  =
-    activeChannelURL host basePath txid vout ++ mkPaymentQueryParams payment Nothing
+mkPaymentURL :: Bool -> String -> BS.ByteString -> HT.TxHash -> Integer -> Payment -> String
+mkPaymentURL isSecure host basePath txid vout payment  =
+    activeChannelURL isSecure (cs host) basePath txid vout ++ mkPaymentQueryParams payment Nothing
 
 ----URLs-----
 
