@@ -64,7 +64,7 @@ appInit = makeSnaplet "PayChanServer" "Payment channel REST interface" Nothing $
 
     bitcoinNetwork <- liftIO (configLookupOrFail cfg "bitcoin.network")
     liftIO $ setBitcoinNetwork bitcoinNetwork
-    let basePath = "/v1/" <> toPathString bitcoinNetwork
+    let basePath = "/v1"  -- <> toPathString bitcoinNetwork
 
     settleConfig@(SettleConfig _ _ settleFee _) <- SettleConfig <$>
             liftIO (configLookupOrFail cfg "settlement.privKeySeed") <*>
