@@ -8,7 +8,6 @@ import qualified Network.Haskoin.Crypto as HC
 import           Data.Aeson         (Value(Object, Array), FromJSON, parseJSON, (.:))
 import           Data.Aeson.Types   (Parser, parseMaybe, parseEither)
 import           Control.Monad      (mzero)
--- import           Control.Monoid ((<>))
 import qualified Data.Text as T
 import Data.String.Conversions (cs)
 import Data.Vector (toList)
