@@ -13,7 +13,7 @@ FILENAME="paychan-$CONF.keter"
 cd $CONFDIR
 cp "$BINDIR/$BINNAME" ./
 strip $BINNAME
-tar czf ../$FILENAME $BINNAME config server.cfg
+tar czf ../$FILENAME $BINNAME config
 
 echo "Created $FILENAME"
 
