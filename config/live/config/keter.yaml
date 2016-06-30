@@ -5,7 +5,7 @@ stanzas:
         - "--environment=/home/rune/paychan/live"
       host: paychan.runeks.me
       ssl:
-        key: server.key
-        certificate: runeks-rapid.pem
+        key: /opt/keter/etc/server.key
+        certificate: /opt/keter/etc/runeks-rapid.pem
         chain-certificates: []
 

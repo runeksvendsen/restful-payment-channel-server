@@ -5,7 +5,7 @@ stanzas:
         - "--environment=/home/rune/paychan/test"
       host: paychantest.runeks.me
       ssl:
-        key: testpay.key
-        certificate: testpay.pem
+        key: /opt/keter/etc/testpay.key
+        certificate: /opt/keter/etc/testpay.pem
         chain-certificates: []
 
