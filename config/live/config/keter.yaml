@@ -1,9 +1,11 @@
-type: webapp
-exec: ../PayChanServer
-args:
-    - "--environment=/home/rune/paychan/live"
-host: paychan.runeks.me
-redirects:
-    - from: www.paychan.runeks.me
-      to: paychan.runeks.me
+stanzas:
+    - type: webapp
+      exec: ../PayChanServer
+      args:
+        - "--environment=/home/rune/paychan/live"
+      host: paychan.runeks.me
+      ssl:
+        key: server.key
+        certificate: runeks-rapid.pem
+        chain-certificates: []
 
