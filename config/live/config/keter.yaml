@@ -3,3 +3,7 @@ exec: ../PayChanServer
 args:
     - "--environment=/home/rune/paychan/live"
 host: paychan.runeks.me
+redirects:
+    - from: www.paychan.runeks.me
+      to: paychan.runeks.me
+
