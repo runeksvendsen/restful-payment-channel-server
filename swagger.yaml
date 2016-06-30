@@ -17,7 +17,7 @@ schemes:
   - https
 
 paths:
-  /{net}/fundingInfo:
+  /fundingInfo:
     get:
       summary: Retrieve information about how to fund a new payment channel.
       description: |
@@ -28,7 +28,6 @@ paths:
         After this, the client will create a new payment of value equal to the server-specified channel open price ("open_price"), and POST this to the channel-open URL in order to open the channel.
       operationId: getFundingInfo
       parameters:
-        - $ref: "#/parameters/networkParam"
         - $ref: "#/parameters/clientPubKeyParam"
         - $ref: "#/parameters/expTimeParam"
       responses:
@@ -39,7 +38,7 @@ paths:
         400:
           description: Invalid input (see status message for error description)
   
-  /{net}/channels/new:
+  /channels/new:
     post:
       summary: Create a new payment channel
       description: |
@@ -47,7 +46,7 @@ paths:
         
       operationId: createPaymentChannel
       parameters:
-        - $ref: "#/parameters/networkParam"
+        #- $ref: "#/parameters/networkParam"
         - $ref: "#/parameters/clientPubKeyParam"
         - $ref: "#/parameters/expTimeParam"
         - $ref: "#/parameters/paymentParam"
@@ -81,7 +80,7 @@ paths:
         400:
           description: Invalid input (see status message for error description)
           
-  /{net}/channels/{funding_txid}/{funding_vout}:
+  /channels/{funding_txid}/{funding_vout}:
     put:
       summary: Make payment over an existing payment channel
       #description: 
@@ -91,7 +90,7 @@ paths:
       produces:
         - application/json
       parameters:
-        - $ref: "#/parameters/networkParam"
+        #- $ref: "#/parameters/networkParam"
         - $ref: "#/parameters/fundingTxIdParam"
         - $ref: "#/parameters/fundingTxVoutParam"
         - $ref: "#/parameters/paymentParam"
@@ -111,7 +110,7 @@ paths:
       description: The payment included here is the most recent payment sent over the channel. This payment is included as a form of authentication token, making sure only the client can close the channel.
       operationId: deletePaymentChannel
       parameters:
-        - $ref: "#/parameters/networkParam"
+        # - $ref: "#/parameters/networkParam"
         - $ref: "#/parameters/fundingTxIdParam"
         - $ref: "#/parameters/fundingTxVoutParam"
         - $ref: "#/parameters/paymentParam"
@@ -128,12 +127,12 @@ paths:
           description: No such payment channel
 
 parameters:
-    networkParam:
-      name: net
-      in: path
-      required: true
-      description: Bitcoin network. Use "live" for mainnet and "test" for testnet3.
-      type: string
+    #networkParam:
+    #  name: net
+    #  in: path
+    #  required: true
+    #  description: Bitcoin network. Use "live" for mainnet and "test" for testnet3.
+    #  type: string
     paymentParam:
       name: payment
       in: query
