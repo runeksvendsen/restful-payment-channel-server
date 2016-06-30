@@ -18,10 +18,10 @@ Experimental. Should work as intended, more or less, but there are several bugs 
 See [http://paychandoc.runeks.me/](http://paychandoc.runeks.me/).
 
 #### Running hosts
-##### Test
-https://paychantest.runeks.me. Runs on Bitcoin testnet.
-##### Live
+##### Live server
 https://paychan.runeks.me. Runs on livenet.
+##### Test server
+http://paychantest.runeks.me. Runs on Bitcoin testnet.
 
 #### TODO
 * ~~Auto-settlement~~
