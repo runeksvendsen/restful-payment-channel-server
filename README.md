@@ -1,5 +1,5 @@
 ## RESTful Bitcoin payment channel server
-### Server implementation of the [RESTful Bitcoin payment channel protocol](https://paychan.runeks.me)
+### Server implementation of the [RESTful Bitcoin payment channel protocol](http://paychandoc.runeks.me/)
 
 ---
 
@@ -15,15 +15,15 @@ The following works with a fresh `ubuntu:16.04` docker image
 Experimental. Should work as intended, more or less, but there are several bugs and unhandled corner cases that I'm aware of, and probably some that I haven't found yet.
 
 #### Documentation
-Visit [test server](https://paychan.runeks.me).
+See [http://paychandoc.runeks.me/](http://paychandoc.runeks.me/).
 
-#### Test server
-https://paychan.runeks.me (also hosts documentation on the root path). Runs on Bitcoin testnet.
+#### Running hosts
+##### Test
+https://paychantest.runeks.me. Runs on Bitcoin testnet.
+##### Live
+https://paychan.runeks.me. Runs on livenet.
 
 #### TODO
 * ~~Auto-settlement~~
 * OutPoint as key in chanMap
-
-#### Build instructions
-*TODO*
 
