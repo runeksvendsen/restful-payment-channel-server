@@ -1,6 +1,6 @@
 exec: ../PayChanServer
 args:
-    - "-e ../server"
+    - "-e server"
 host: paychan.runeks.me
 redirects:
     - from: www.paychan.runeks.me
