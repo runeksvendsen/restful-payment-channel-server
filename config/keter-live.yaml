@@ -1,8 +1,0 @@
-exec: ../PayChanServer
-args:
-    - "-e config/live"
-host: paychan.runeks.me
-redirects:
-    - from: www.paychan.runeks.me
-      to: paychan.runeks.me
-

@@ -1,8 +1,0 @@
-exec: ../PayChanServer
-args:
-    - "-e config/test"
-host: testpay.runeks.me
-redirects:
-    - from: www.testpay.runeks.me
-      to: testpay.runeks.me
-
