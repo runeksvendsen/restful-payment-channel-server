@@ -1,7 +1,7 @@
 type: webapp
 exec: ../PayChanServer
 args:
-    - "--environment=server"
+    - "--environment=/home/rune/paychan/test"
 host: testpay.runeks.me
 redirects:
     - from: www.testpay.runeks.me
