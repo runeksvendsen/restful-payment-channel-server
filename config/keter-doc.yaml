@@ -1,0 +1,6 @@
+stanzas:
+    - type: static-files
+      host: paychandoc.runeks.me
+      directory-listing: false
+      requires-secure: false
+      root: /opt/www/paychan/
