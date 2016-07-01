@@ -225,7 +225,7 @@ tEST_blockchainGetFundingInfo = do
     minConf <- use fundingMinConf
     testArgTrue <- fmap (== Just True) $ getOptionalQueryArg "test"
 
-    if (HCC.getNetworkName HCC.getNetwork == "testnet3") && testArgTrue then
+    if (HCC.getNetworkName HCC.getNetwork == "testnet") && testArgTrue then
             test_GetDerivedFundingInfo pubKeyServer
         else
             fundingAddressFromParams pubKeyServer >>=

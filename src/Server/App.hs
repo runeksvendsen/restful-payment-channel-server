@@ -90,9 +90,6 @@ appInit = makeSnaplet "PayChanServer" "Payment channel REST interface" Nothing $
 
     liftIO . putStrLn $ "Server PubKey: " ++ cs (pathParamEncode pubKey)
 
---     hostname <- liftIO (configLookupOrFail cfg "network.hostname")
-    --- CONFIG ---
-
     -- Disk channel store setup
     chanOpenMap <- liftIO newChanMap
     tid <- liftIO . forkIO $ diskSyncThread chanOpenMap 5
