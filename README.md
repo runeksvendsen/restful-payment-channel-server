@@ -21,9 +21,10 @@ See [http://paychandoc.runeks.me/](http://paychandoc.runeks.me/).
 ##### Live server
 https://paychan.runeks.me. Runs on livenet.
 ##### Test server
-http://paychantest.runeks.me. Runs on Bitcoin testnet.
+https://paychantest.runeks.me. Runs on Bitcoin testnet.
 
 #### TODO
 * ~~Auto-settlement~~
 * OutPoint as key in chanMap
+* Sync chanMap to disk on TERM signal
 
