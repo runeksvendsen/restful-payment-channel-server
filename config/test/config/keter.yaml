@@ -7,5 +7,5 @@ stanzas:
       ssl:
         key: /opt/keter/etc/testpay.key
         certificate: /opt/keter/etc/testpay.pem
-        chain-certificates: []
-
+        chain-certificates:
+          - /opt/keter/etc/comodo.crt
