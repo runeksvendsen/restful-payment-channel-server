@@ -10,6 +10,13 @@ The following works with a fresh `ubuntu:16.04` docker image
     git clone https://github.com/runeksvendsen/restful-payment-channel-server.git
     cd restful-payment-channel-server/
     stack setup && stack build
+    
+#### Running
+The server executable has one required argument: `--environment` (`-e` for short). This specifies the path to the config file, excluding the `.cfg` extension. Example config files can be found in `config/` as a `server.cfg` file for both Bitcoin livenet and testnet3.
+
+Command to run the server with a configuration contained in the file `/etc/paychan/live.cfg`:
+
+    PayChanServer -e /etc/paychan/live
 
 #### Stability
 Experimental. Should work as intended, more or less, but there are several bugs and unhandled corner cases that I'm aware of, and probably some that I haven't found yet.
