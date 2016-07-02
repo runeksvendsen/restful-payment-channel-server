@@ -20,6 +20,7 @@ type ChannelMap = DiskMap HT.TxHash ChanState
 newChanMap :: FilePath -> IO ChannelMap
 newChanMap = newDiskMap
 
+mapLen = mapGetItemCount
 
 diskSyncThread ::
     (ToFileName k, Serializable v) =>

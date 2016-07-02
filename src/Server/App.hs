@@ -19,9 +19,10 @@ import           Common.Common (pathParamEncode)
 import           Data.String.Conversions (cs)
 
 import           Server.ChanStore (ChannelMap,
-                                   newChanMap, diskSyncThread, diskSyncNow)
+                                   newChanMap, diskSyncThread, diskSyncNow, mapLen)
 
 import           Control.Applicative ((<|>))
+import           Control.Monad (unless)
 import           Control.Monad.IO.Class (liftIO)
 import           Control.Concurrent (forkIO, killThread,     threadDelay)
 import           Control.Lens.TH
@@ -93,6 +94,9 @@ appInit = makeSnaplet "PayChanServer" "Payment channel REST interface" Nothing $
     -- Disk channel store setup
     stateBaseDir <- liftIO (configLookupOrFail cfg "storage.stateDir")
     chanOpenMap <- liftIO $ newChanMap stateBaseDir
+    chanMapLen <- liftIO $ mapLen chanOpenMap
+    unless (chanMapLen == 0) $
+        liftIO $ putStrLn $ "Restored " ++ show chanMapLen ++ " open channel states"
     tid <- liftIO . forkIO $ diskSyncThread chanOpenMap 5
     -- If we receive a TERM signal, kill the sync thread & sync immediately
     liftIO $ Sig.installHandler

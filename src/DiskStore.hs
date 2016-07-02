@@ -85,8 +85,8 @@ deleteStoredItem dm@(DiskMap _ m) k = do
 
 
 
--- mapGetItemCount :: DiskMap k v -> IO Integer
--- mapGetItemCount m = atomically $ fmap (fromIntegral . length) (LT.toList . Map.stream $ m)
+mapGetItemCount :: DiskMap k v -> IO Integer
+mapGetItemCount (DiskMap _ m) = atomically $ fmap (fromIntegral . length) (LT.toList . Map.stream $ m)
 
 
 data Action = Sync | Delete | Ignore
