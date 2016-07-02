@@ -27,6 +27,20 @@ import qualified STMContainers.Map as STMap
 import qualified Data.ByteString as BS
 
 
+type STMMap k v = Map.Map k (MapItem v)
+
+data DiskMap k v = DiskMap MapConfig (STMMap k v)
+
+data MapItem v = Item {
+    itemContent :: v
+    ,needsDiskSync :: Bool
+    ,deleteFromDisk :: Bool }
+    deriving Show
+
+data MapConfig = MapConfig {
+    syncDir :: FilePath
+}
+
 class Serializable a where
     serialize   :: a -> BS.ByteString
     deserialize :: BS.ByteString -> Either String a
@@ -42,46 +56,38 @@ class (Serializable k, Eq k, Hashable k) => ToFileName k where
 type ItemExists = Bool
 
 
-newDiskMap :: (ToFileName k, Serializable v) => IO (DiskMap k v)
-newDiskMap = atomically Map.new
+newDiskMap :: (ToFileName k, Serializable v) => FilePath -> IO (DiskMap k v)
+newDiskMap syncDir = diskGetStateFiles syncDir >>= channelMapFromStateFiles syncDir
 
 addItem :: ToFileName k => DiskMap k v -> k -> v -> IO ()
-addItem m h pc = atomically $ insertItem h pc m
+addItem (DiskMap _ m) h pc = atomically $ insertItem h pc m
 
 getItem :: ToFileName k => DiskMap k v -> k -> IO (Maybe v)
-getItem m k = do
+getItem (DiskMap _ m) k = do
     item <- atomically $ Map.lookup k m
     case item of
         Just Item { deleteFromDisk = True } -> return Nothing
         _ -> return $ fmap itemContent item
 
 updateStoredItem :: (ToFileName k, Serializable v) => DiskMap k v -> k -> v -> IO ItemExists
-updateStoredItem m k v = do
-    maybeItem <- getItem m k
+updateStoredItem dm@(DiskMap _ m) k v = do
+    maybeItem <- getItem dm k
     case maybeItem of
         Nothing -> return False
         Just _ ->  updateItem m k v >> return True
 
 deleteStoredItem :: (ToFileName k, Serializable v) => DiskMap k v -> k -> IO ItemExists
-deleteStoredItem m k = do
-    maybeItem <- getItem m k
+deleteStoredItem dm@(DiskMap _ m) k = do
+    maybeItem <- getItem dm k
     case maybeItem of
         Nothing -> return False
-        Just _ ->  markForDeletion k m >> return True
+        Just _ ->  markForDeletion k dm >> return True
 
 
 
-mapGetItemCount :: DiskMap k v -> IO Integer
-mapGetItemCount m = atomically $ fmap (fromIntegral . length) (LT.toList . Map.stream $ m)
+-- mapGetItemCount :: DiskMap k v -> IO Integer
+-- mapGetItemCount m = atomically $ fmap (fromIntegral . length) (LT.toList . Map.stream $ m)
 
-
-type DiskMap k v = Map.Map k (MapItem v)
-
-data MapItem v = Item {
-    itemContent :: v
-    ,needsDiskSync :: Bool
-    ,deleteFromDisk :: Bool }
-    deriving Show
 
 data Action = Sync | Delete | Ignore
 
@@ -114,43 +120,43 @@ syncToDisk m = do
 
 channelMapFromStateFiles ::
     (Serializable v, ToFileName k) =>
-    [(k,FilePath)]
+    FilePath
+    -> [(k,FilePath)]
     -> IO (DiskMap k v)
-channelMapFromStateFiles l = do
+channelMapFromStateFiles baseDir l = do
     m <- atomically Map.new
-    readRes <- forM l maybeReadStateFile
+    readRes <- forM l tryReadStateFile
     mapRes <- atomically $ forM readRes
         (either error (\(h,s) -> insertDiskSyncedChannel h s m))
-    return m
+    return $ DiskMap (MapConfig baseDir) m
 
-diskGetStateFiles :: ToFileName k => IO [(k,FilePath)]
-diskGetStateFiles = do
-    baseDir <- getStateDir
-    maybeHashPathL <- map (getHashFileName baseDir) <$> getFileList baseDir
+diskGetStateFiles :: ToFileName k => FilePath -> IO [(k,FilePath)]
+diskGetStateFiles baseDir = do
+    maybeHashPathL <- map (getHashAndFilePath baseDir) <$> getFileList baseDir
     return [fromJust t | t <- maybeHashPathL, isJust t]
 
 getFileList :: FilePath -> IO [FilePath]
-getFileList dir = do
-    r <- tryJust (guard . isDoesNotExistError) $ getDirectoryContents dir
+getFileList dir = do --filter (\f -> f /= "." && f /= "..") <$> getDirectoryContents dir
+    r <-  tryJust (guard . isDoesNotExistError) $ getDirectoryContents dir
     case r of
-        Left  e    -> return [] --create dir?
+        Left  e    -> fail $ "State storage directory \"" ++ dir ++ "\" does not exist."
         Right fileList -> return $ filter (\f -> f /= "." && f /= "..") fileList
 
---TODO: decode
-maybeReadStateFile ::
+tryReadStateFile ::
     (Serializable v, ToFileName k) =>
+--     FilePath
     (k, FileName)
     -> IO (Either String (k, v))
-maybeReadStateFile (h,f) = do
+tryReadStateFile (h,f) = do
     e <- deserialize <$> B.readFile f
     case e of
         Right val -> return $ Right (h,val)
         Left e    -> return $ Left $ "ERROR: Failed to parse state file: " ++ f
 
-getHashFileName :: ToFileName k => FilePath -> FileName -> Maybe (k,FilePath)
-getHashFileName baseDir f  =  mkTuple <$>
+getHashAndFilePath :: ToFileName k => FilePath -> FileName -> Maybe (k,FilePath)
+getHashAndFilePath baseDir f  =  mkTuple <$>
     validFileName f <*>
-    Just (baseDir ++ f)
+    Just (baseDir ++ "/" ++ f)
 
 validFileName :: ToFileName k => FilePath -> Maybe k
 validFileName fn = either (const Nothing) Just (fromFileName fn)
@@ -159,25 +165,17 @@ mkTuple :: a -> b -> (a,b)
 mkTuple a b = (a,b)
 ----
 
-singleStateDeleteDisk :: ToFileName k => k -> IO ()
-singleStateDeleteDisk v = getStateDir >>= removeFile . flip getFileName v
+singleStateDeleteDisk :: ToFileName k => FilePath -> k -> IO ()
+singleStateDeleteDisk stateDir v = removeFile $ getAbsoluteFilePath stateDir v
 
-singleStateSyncDisk :: (Serializable v, ToFileName k) => (k, v) -> IO ()
-singleStateSyncDisk (k,v) = getStateDir >>= flip writeEntryToFile (k,v)
 
 writeEntryToFile :: (Serializable v, ToFileName k) => String -> (k, v) -> IO ()
 writeEntryToFile stateDir (h,s) =
-    B.writeFile (getFileName stateDir h) (serializeForDisk s)
+    B.writeFile (getAbsoluteFilePath stateDir h) (serialize s)
 
-getFileName :: ToFileName k => FilePath -> k -> FilePath
-getFileName stateDir key =
+getAbsoluteFilePath :: ToFileName k => FilePath -> k -> FilePath
+getAbsoluteFilePath stateDir key =
     stateDir ++ toFileName key
-
-serializeForDisk :: v -> B.ByteString
-serializeForDisk = undefined --BL.toStrict . Bin.encode
-
-getStateDir :: IO FilePath
-getStateDir = fmap (++ "/state/") getCurrentDirectory
 
 ------INTERFACE-----
 
@@ -191,32 +189,40 @@ syncMapToDisk m = do
     return $ length keyActions
 
 getKeyActions :: DiskMap k v -> IO [(k, Action)]
-getKeyActions m = atomically $
+getKeyActions (DiskMap conf m) = atomically $
         map (mapSnd itemToAction)
         . filter (\(h,i) -> needsDiskSync i || deleteFromDisk i)
         <$> mapAsList m
+            where mapAsList = LT.toList . Map.stream
 
-mapAsList :: DiskMap k v -> STM [(k, MapItem v)]
-mapAsList = LT.toList . Map.stream
-
+----
 performAction :: (Serializable v, ToFileName k) =>  DiskMap k v -> (k, Action) -> IO ()
-performAction m (h,Sync)    = syncKeyDataToDisk m h
-performAction m (h,Delete)  = singleStateDeleteDisk h >> atomically (Map.delete h m)
-performAction m (h,Ignore)  = return ()
 
-syncKeyDataToDisk :: (Serializable v, ToFileName k) =>  DiskMap k v -> k -> IO ()
-syncKeyDataToDisk m h = do
-    maybeItem <- getMapItemForDiskSync h m
-    maybeSyncItemToDisk h maybeItem
+performAction m (h,Sync)    =
+    syncKeyDataToDisk m h
+
+performAction (DiskMap conf m) (h,Delete)  =
+    singleStateDeleteDisk (syncDir conf) h >>
+    atomically (Map.delete h m)
+
+performAction m (h,Ignore)  = return ()
+----
+
+
+syncKeyDataToDisk :: (Serializable v, ToFileName k) => DiskMap k v -> k -> IO ()
+syncKeyDataToDisk dm@(DiskMap conf m) h = do
+    maybeItem <- getMapItemForDiskSync h dm
+    maybeSyncItemToDisk (syncDir conf) h maybeItem
 
 -- | Execute item-getter/sync-status-setter and save result to disk
 maybeSyncItemToDisk ::
     (Serializable v, ToFileName k) =>
-    k
+    FilePath
+    -> k
     -> Maybe (MapItem v) -> IO ()
-maybeSyncItemToDisk h maybeItem =
+maybeSyncItemToDisk dir h maybeItem =
     case maybeItem of
-        Just i -> singleStateSyncDisk (h, itemContent i)
+        Just i -> writeEntryToFile dir (h, itemContent i)  --singleStateSyncDisk (h, itemContent i)
         Nothing -> return ()
 
 -- | Retrieve map item and simultaneously mark the retrieved item as synced to disk
@@ -228,7 +234,7 @@ getMapItemForDiskSync h =
 -- | If a an item exists, read item i, replace in map with (f i), and return
 -- | Maybe (f i).
 mapAndGetItem :: ToFileName k => k -> (MapItem v -> MapItem v) -> DiskMap k v -> IO (Maybe (MapItem v))
-mapAndGetItem h f m =
+mapAndGetItem h f (DiskMap _ m) =
     atomically $ do
         maybeItem <- Map.lookup h m
         case maybeItem of
@@ -244,32 +250,26 @@ markForDeletion h =
 
 
 
------create/remove interface
-
--- saved_to_disk
-
-updateItem :: (ToFileName k, Serializable v) => DiskMap k v -> k -> v -> IO ()
+updateItem :: (ToFileName k, Serializable v) => STMMap k v -> k -> v -> IO ()
 updateItem m k v = atomically $ do
     Map.delete k m
     insertItem k v m
 
-removeChannel :: ToFileName k => k -> DiskMap k v -> IO ()
+removeChannel :: ToFileName k => k -> STMMap k v -> IO ()
 removeChannel k m = atomically $ Map.delete k m
 -----create/remove interface
 
 
 
 ---insert----
-insertItem :: ToFileName k => k -> v -> DiskMap k v -> STM ()
+insertItem :: ToFileName k => k -> v -> STMMap k v -> STM ()
 insertItem key item = Map.insert
     Item { itemContent = item, needsDiskSync = True, deleteFromDisk = False } key
 
-insertDiskSyncedChannel :: ToFileName k => k -> v -> DiskMap k v -> STM ()
+insertDiskSyncedChannel :: ToFileName k => k -> v -> STMMap k v -> STM ()
 insertDiskSyncedChannel h pcs = Map.insert
     Item { itemContent = pcs, needsDiskSync = False, deleteFromDisk = False } h
 ---insert----
-
-
 
 
 

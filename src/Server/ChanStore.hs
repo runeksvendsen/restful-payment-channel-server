@@ -17,7 +17,7 @@ data ChanState = ReadyForPayment {
 
 type ChannelMap = DiskMap HT.TxHash ChanState
 
-newChanMap :: IO ChannelMap
+newChanMap :: FilePath -> IO ChannelMap
 newChanMap = newDiskMap
 
 

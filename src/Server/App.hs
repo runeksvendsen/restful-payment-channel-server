@@ -91,12 +91,13 @@ appInit = makeSnaplet "PayChanServer" "Payment channel REST interface" Nothing $
     liftIO . putStrLn $ "Server PubKey: " ++ cs (pathParamEncode pubKey)
 
     -- Disk channel store setup
-    chanOpenMap <- liftIO newChanMap
+    stateBaseDir <- liftIO (configLookupOrFail cfg "storage.stateDir")
+    chanOpenMap <- liftIO $ newChanMap stateBaseDir
     tid <- liftIO . forkIO $ diskSyncThread chanOpenMap 5
-    -- If we receive a TERM signal, kill sync thread & sync immediately
+    -- If we receive a TERM signal, kill the sync thread & sync immediately
     liftIO $ Sig.installHandler
         Sig.sigTERM
-        (Sig.Catch $ killThread tid >> diskSyncNow chanOpenMap >> threadDelay (round $ 3 * 1e6) )
+        (Sig.Catch $ killThread tid >> diskSyncNow chanOpenMap >> threadDelay (round $ 3 * 1e6) ) --DEBUG
         Nothing
 
     addRoutes $ mainRoutes basePath
