@@ -9,6 +9,10 @@ packages:
     git: https://github.com/runeksvendsen/bitcoin-payment-channel.git
     commit: ba596c2d9e616d3bdbb041e2d9cb792f1e6faef9
   extra-dep: true
+- location:
+    git: https://github.com/runeksvendsen/haskell-bitcoin-api.git
+    commit: d3de7f41a68a1050e02fcb7f7cbf90c4979c02a4
+  extra-dep: true
 
 flags:
     snap-server:
