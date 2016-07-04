@@ -31,7 +31,7 @@ https://paychan.runeks.me. Runs on livenet.
 https://paychantest.runeks.me. Runs on Bitcoin testnet.
 
 #### TODO
-* ~~Auto-settlement~~
+* Actually close channel before expiration date (doh!)
 * OutPoint as key in chanMap
-* Sync chanMap to disk on TERM signal
+* ~~Sync chanMap to disk on TERM signal~~
 
