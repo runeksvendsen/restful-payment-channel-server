@@ -101,7 +101,6 @@ getSessionData (ChannelSession endPoint cp fundAddr initPay payList) =
 
 
 
-
 convertMockFundingInfo :: FundingTxInfo -> TxInfo
 convertMockFundingInfo (CFundingTxInfo txid vout val)  =
     TxInfo txid 27 (OutInfo "" (fromIntegral val) (fromIntegral vout))

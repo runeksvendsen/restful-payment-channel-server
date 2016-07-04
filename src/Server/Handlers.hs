@@ -257,7 +257,7 @@ confirmChannelDoesntExistOrAbort chanMap basePath hash idx = do
     case fmap isSettled maybeItem of
         Nothing -> return ()    -- channel doesn't already exist
         Just False ->           -- channel exists already, and is open
-            httpLocationSetActiveChannel basePath hash idx
+            httpLocationSetActiveChannel basePath hash idx >>
             errorWithDescription 409 "Channel already exists"
         Just True  ->           -- channel in question has been settled
             errorWithDescription 409 "Channel already existed, but has been settled"
