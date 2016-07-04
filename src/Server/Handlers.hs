@@ -21,8 +21,9 @@ import           BlockchainAPI.Impl.ChainSo (chainSoAddressInfo, toEither)
 import           BlockchainAPI.Types (txConfs, toFundingTxInfo,
                                 TxInfo(..), OutInfo(..))
 import           Bitcoind (bitcoindNetworkSumbitTx)
-import           Server.ChanStore (ChannelMap, ChanState(..))
-import           DiskStore (addItem, getItem, updateStoredItem, deleteStoredItem)
+import           Server.ChanStore (ChannelMap, ChanState(..),
+                                   addChanState, updateChanState, deleteChanState, isSettled)
+import           DiskStore (addItem, getItem)
 
 import           Control.Monad.IO.Class (liftIO)
 import           Control.Monad (mzero, forM, unless, when)
@@ -140,14 +141,14 @@ chanSettle (SettleConfig privKey recvAddr txFee _) (StdConfig chanMap hash vout 
         Right tx -> return tx
 
     eitherTxId <- liftIO $ pushTx tx
-    txid <- case eitherTxId of
+    settlementTxId <- case eitherTxId of
         Left e -> internalError e
         Right txid -> return txid
 
-    liftIO $ deleteStoredItem chanMap hash
+    liftIO $ deleteChanState chanMap hash settlementTxId
 
     modifyResponse $ setResponseStatus 202
-        (C.pack $ "Channel closed. Settlement tx txid: " ++ cs (HT.txHashToHex txid))
+        (C.pack $ "Channel closed. Settlement tx txid: " ++ cs (HT.txHashToHex settlementTxId))
 ---
 
 
@@ -162,7 +163,7 @@ chanPay (PayConfig chanMap hash vout maybeNewAddr payment) = do
             return
             (recvPayment existingChanState payment)
 
-    liftIO $ updateStoredItem chanMap hash (ReadyForPayment newChanState)
+    liftIO $ updateChanState chanMap hash newChanState
 
     modifyResponse $ setResponseStatus 200 (C.pack "Payment accepted")
     return (valRecvd,newChanState)
@@ -190,7 +191,7 @@ channelOpenHandler
         userError $ "Initial payment short. Channel open price is " ++
             show openPrice ++ ", received " ++ show valRecvd ++ "."
 
-    liftIO $ addItem chanMap txId (ReadyForPayment recvChanState)
+    liftIO $ addChanState chanMap txId recvChanState
     modifyResponse $ setResponseStatus 201 (C.pack "Channel ready")
 
     unless (channelIsExhausted recvChanState) $
@@ -253,9 +254,13 @@ test_GetDerivedFundingInfo pubKeyServer = do
 confirmChannelDoesntExistOrAbort :: MonadSnap m => ChannelMap -> BS.ByteString -> HT.TxHash -> Integer -> m ()
 confirmChannelDoesntExistOrAbort chanMap basePath hash idx = do
     maybeItem <- liftIO (getItem chanMap hash)
-    unless (isNothing maybeItem) $ do
-        httpLocationSetActiveChannel basePath hash idx
-        errorWithDescription 409 "Channel already exists"
+    case fmap isSettled maybeItem of
+        Nothing -> return ()    -- channel doesn't already exist
+        Just False ->           -- channel exists already, and is open
+            httpLocationSetActiveChannel basePath hash idx
+            errorWithDescription 409 "Channel already exists"
+        Just True  ->           -- channel in question has been settled
+            errorWithDescription 409 "Channel already existed, but has been settled"
 
 
 getChannelStateOr404 :: MonadSnap m => ChannelMap -> HT.TxHash -> m ReceiverPaymentChannel

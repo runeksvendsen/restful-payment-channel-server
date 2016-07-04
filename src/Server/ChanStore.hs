@@ -12,13 +12,36 @@ import qualified Data.Binary as Bin
 import qualified Data.Binary.Put as Put
 
 -- |Holds state for open payment channel
-data ChanState = ReadyForPayment {
-    csState :: ReceiverPaymentChannel }
+data ChanState =
+    ReadyForPayment {
+        csState          :: ReceiverPaymentChannel
+    } |
+    ChannelSettled {
+        csSettlementTxId :: HT.TxHash
+    }
+
+isSettled :: ChanState -> Bool
+isSettled (ReadyForPayment _) = False
+isSettled (ChannelSettled _) = True
 
 type ChannelMap = DiskMap HT.TxHash ChanState
 
 newChanMap :: FilePath -> IO ChannelMap
 newChanMap = newDiskMap
+
+
+addChanState :: ChannelMap -> HT.TxHash -> ReceiverPaymentChannel -> IO ()
+addChanState chanMap key chanState =
+    addItem chanMap key (ReadyForPayment chanState)
+
+updateChanState :: ChannelMap -> HT.TxHash -> ReceiverPaymentChannel -> IO Bool
+updateChanState chanMap key chanState =
+    updateStoredItem chanMap key (ReadyForPayment chanState)
+
+deleteChanState :: ChannelMap -> HT.TxHash -> HT.TxHash -> IO Bool
+deleteChanState chanMap key settlementTxId =
+    updateStoredItem chanMap key (ChannelSettled settlementTxId)
+
 
 mapLen = mapGetItemCount
 
