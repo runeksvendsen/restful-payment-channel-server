@@ -3,6 +3,7 @@ stanzas:
       exec: ../PayChanServer
       args:
         - "--environment=/home/rune/paychan/test"
+        - "--proxy=X_Forwarded_For"
       host: paychantest.runeks.me
       ssl:
         key: /opt/keter/etc/testpay.key

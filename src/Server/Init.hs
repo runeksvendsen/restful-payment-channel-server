@@ -69,8 +69,8 @@ appInit = makeSnaplet "PayChanServer" "RESTful Bitcoin payment channel server" N
         Sig.sigTERM
         (Sig.Catch $
             killThread tid >>
-            diskSyncNow chanOpenMap >>
-            threadDelay (round $ 3 * (1e6 :: Float)) --DEBUG
+            putStrLn "Received TERM signal, syncing channel map to disk before shutting down." >>
+            diskSyncNow chanOpenMap
         )
         Nothing
 

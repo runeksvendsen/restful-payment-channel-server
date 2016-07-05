@@ -57,4 +57,13 @@ serialize = BL.toStrict . Bin.encode
 -- StatusCodeException
 --  (Status {statusCode = 500,
 --  statusMessage = \"Internal Server Error\"})
---  [(\"Content-Type\",\"application/json\"),(\"Date\",\"Sat, 30 Apr 2016 18:15:25 GMT\"),(\"Content-Length\",\"83\"),(\"X-Response-Body-Start\",\"{\\\"result\\\":null,\\\"error\\\":{\\\"code\\\":-26,\\\"message\\\":\\\"64: too-long-mempool-chain\\\"},\\\"id\\\":1}\\n\"),(\"X-Request-URL\",\"POST http://192.168.1.102:8334/\")] (CJ {expose = []})
+--  [
+--      (\"Content-Type\",\"application/json\"),
+--      (\"Date\",\"Sat, 30 Apr 2016 18:15:25 GMT\"),
+--      (\"Content-Length\",\"83\"),
+--      (\"X-Response-Body-Start\",\"{\\\
+--          "result\\\":null,\\\
+--          "error\\\":{\\\
+--              "code\\\":-26,\\\
+--              "message\\\":\\\"64: too-long-mempool-chain\\\"
+--          },\\\"id\\\":1}\\n\"),(\"X-Request-URL\",\"POST http://192.168.1.102:8334/\")] (CJ {expose = []})
