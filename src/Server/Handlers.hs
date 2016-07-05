@@ -129,6 +129,9 @@ chanSettle (SettleConfig privKey recvAddr txFee _)
     when (exists == False) $
         logError "Tried to delete channel map item that doesn't exist"
 
+    -- Clear any previously written response data
+    putResponse emptyResponse
+
     writeJSON . toJSON $ PaymentResult {
             paymentResultchannel_status = ChannelClosed,
             paymentResultchannel_value_left = channelValueLeft chanState,
@@ -138,7 +141,7 @@ chanSettle (SettleConfig privKey recvAddr txFee _)
             paymentResultsettlement_txid = Just settlementTxId
         }
 
-    modifyResponse $ setResponseStatus 202 "Channel closed."
+    modifyResponse $ setResponseStatus 202 "Channel closed"
 ---
 
 
