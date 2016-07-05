@@ -235,7 +235,10 @@ blockchainAddressCheckEverything :: MonadSnap m => Int -> HC.Address -> m TxInfo
 blockchainAddressCheckEverything minConf addr =
     (liftIO . chainSoAddressInfo . cs . HC.addrToBase58) addr >>=
         either internalError return . toEither >>=
-        maybe (userError $ "No transactions paying to " ++ cs (HC.addrToBase58 addr)) return >>=
+        maybe
+            (userError $ "No transactions paying to " ++ cs (HC.addrToBase58 addr) ++
+                ". Maybe wait a little?")
+            return >>=
         guardIsConfirmed (fromIntegral minConf)
 
 -- | Deterministically derives a mock TxInfo from ChannelParameters,
