@@ -24,7 +24,7 @@ Executable PayChanServer
     snap-core                 >= 0.9   && < 0.10,
     snap-server               >= 0.9   && < 0.10,
     snap,
-
+    blaze-builder,
     bitcoin-payment-channel   >= 0.1.1.0 && < 0.2,
     haskoin-core              >= 0.3.0 && < 1.0.0,
     secp256k1,

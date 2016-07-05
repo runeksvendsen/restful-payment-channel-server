@@ -20,8 +20,7 @@ import           Snap.Core
 import           Snap.Core (getHeader)
 -- import           Snap.Util.FileServe
 import           Snap.Http.Server
--- import           Snap.Extras.JSON (reqBoundedJSON, writeJSON)
-
+import           Snap.Iteratee (Enumerator, enumBuilder)
 import           Data.Bitcoin.PaymentChannel
 import           Data.Bitcoin.PaymentChannel.Types (ChannelParameters(..), PayChanError(..)
                                                     ,getChannelState, BitcoinAmount, Payment)
@@ -40,7 +39,9 @@ import           Data.Aeson
 
 import Data.Maybe (isJust, fromJust)
 import qualified Data.ByteString as BS
+import qualified Data.ByteString.Lazy as BL
 import qualified Data.ByteString.Char8 as C
+import Blaze.ByteString.Builder.ByteString (fromLazyByteString)
 import Data.ByteString.Lazy (toStrict)
 import Data.Time.Clock.POSIX (getPOSIXTime, posixSecondsToUTCTime)
 import Data.Int (Int64)
@@ -173,11 +174,23 @@ decodeJSON bs =
 reqBoundedJSON :: (MonadSnap m, FromJSON a) => Int64 -> m (Either String a)
 reqBoundedJSON n = fmap eitherDecode (readRequestBody n)
 
+encodeJSON :: ToJSON a => a -> BL.ByteString
+encodeJSON json = BL.concat [encodePretty json, "\n"]
+
 writeJSON :: (MonadSnap m, ToJSON a) => a -> m ()
 writeJSON json = do
     modifyResponse $ setContentType "application/json"
-    writeLBS $ encodePretty json
-    writeBS "\n"
+    writeLBS $ encodeJSON json
+
+overwriteResponseBody :: MonadSnap m => BL.ByteString -> m ()
+overwriteResponseBody bs =
+    getResponse >>=
+    putResponse . setResponseBody (enumBuilder $ fromLazyByteString bs)
+
+overwriteJSON :: (MonadSnap m, ToJSON a) => a -> m ()
+overwriteJSON json = do
+    modifyResponse $ setContentType "application/json"
+    overwriteResponseBody $ encodeJSON json
 
 ---JSON BODY RESPONSE---
 
