@@ -67,12 +67,6 @@ httpLocationSetActiveChannel basePath hash idx = do
     modifyResponse $ setHeader "Location" (cs $ chanRootURL ++ activeChannelPath hash idx)
 
 
-
-setFeeSatoshiPerByte :: HT.Tx -> BitcoinAmount -> HT.Tx
-setFeeSatoshiPerByte = undefined
-
-
-
 fundingAddressFromParams :: MonadSnap m => HC.PubKey -> m HC.Address
 fundingAddressFromParams pubKey =
     flip getFundingAddress' pubKey <$>
@@ -103,7 +97,7 @@ guardIsConfirmed minConf txInfo@(TxInfo txId txConfs (OutInfo _ _ idx)) =
 ---- Blockchain API ----
 
 
---- Read parameters with built-in error handling
+--- Get parameters with built-in error handling
 failOnError :: MonadSnap m => String -> Either String a -> m a
 failOnError msg = either (userError . (msg ++)) return
 
@@ -129,25 +123,7 @@ getOptionalQueryArg bs = do
     case maybeParam of
         Nothing -> return Nothing
         Just pBS -> fmap Just . handleQueryDecodeFail bs . pathParamDecode $ pBS
-
---- Read parameters with built-in error handling
-
-getHeaderOrFail :: MonadSnap m => CI BS.ByteString -> m BS.ByteString
-getHeaderOrFail h = do
-    r <- getRequest
-    maybe (userError $ cs (original h) ++ " header not present") return (getHeader h r)
-
-headerGetPayment :: MonadSnap m => m Payment
-headerGetPayment = do
-    pBS <- getHeaderOrFail "Payment-Payload"
-    case fromJSON . String . cs $ pBS of
-        Error e -> userError $ "failed to decode payment payload: " ++ e
-        Success p -> return p
-
-bodyJSONGetPayment :: MonadSnap m => m Payment
-bodyJSONGetPayment =
-    reqBoundedJSON 1024 >>=
-    either (userError . ("Failed to parse Payment: " ++)) (return . paymentpayment_data)
+--- Get parameters with built-in error handling
 
 ---ERROR---
 userError :: MonadSnap m => String -> m a
@@ -163,25 +139,8 @@ errorWithDescription code errStr = do
 ---ERROR---
 
 
----JSON BODY RESPONSE---
-decodeJSON :: (MonadSnap m, FromJSON a) => BS.ByteString -> m a
-decodeJSON bs =
-    either
-        (userError . ("failed to decode JSON: " ++))
-        return
-        (eitherDecodeStrict bs)
-
-reqBoundedJSON :: (MonadSnap m, FromJSON a) => Int64 -> m (Either String a)
-reqBoundedJSON n = fmap eitherDecode (readRequestBody n)
-
 encodeJSON :: ToJSON a => a -> BL.ByteString
 encodeJSON json = encodePretty json
-
--- writeJSON :: (MonadSnap m, ToJSON a) => a -> m ()
--- writeJSON json = do
---     modifyResponse $ setContentType "application/json"
---     writeLBS $ encodeJSON json
---     writeBS "\n"
 
 overwriteResponseBody :: MonadSnap m => BL.ByteString -> m ()
 overwriteResponseBody bs =
@@ -194,19 +153,25 @@ writeJSON json = do
     overwriteResponseBody $ encodeJSON json
     writeBS "\n"
 
----JSON BODY RESPONSE---
 
 
-----External IP----
-data ExternalIP = ExtIP String
-instance FromJSON ExternalIP where
-    parseJSON (Object v) = ExtIP <$> v .: "ip"
-    parseJSON _          = mzero
-instance Show ExternalIP where
-    show (ExtIP s) = s
 
-getExternalIP :: IO ExternalIP
-getExternalIP =
-    fmap (^. responseBody) $ asJSON =<< get "https://api.ipify.org?format=json"
-----(External IP)----
-
+-- reqBoundedJSON :: (MonadSnap m, FromJSON a) => Int64 -> m (Either String a)
+-- reqBoundedJSON n = fmap eitherDecode (readRequestBody n)
+--
+-- getHeaderOrFail :: MonadSnap m => CI BS.ByteString -> m BS.ByteString
+-- getHeaderOrFail h = do
+--     r <- getRequest
+--     maybe (userError $ cs (original h) ++ " header not present") return (getHeader h r)
+--
+-- headerGetPayment :: MonadSnap m => m Payment
+-- headerGetPayment = do
+--     pBS <- getHeaderOrFail "Payment-Payload"
+--     case fromJSON . String . cs $ pBS of
+--         Error e -> userError $ "failed to decode payment payload: " ++ e
+--         Success p -> return p
+--
+-- bodyJSONGetPayment :: MonadSnap m => m Payment
+-- bodyJSONGetPayment =
+--     reqBoundedJSON 1024 >>=
+--     either (userError . ("Failed to parse Payment: " ++)) (return . paymentpayment_data)
