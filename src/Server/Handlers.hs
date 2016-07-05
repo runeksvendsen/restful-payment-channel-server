@@ -129,7 +129,7 @@ chanSettle (SettleConfig privKey recvAddr txFee _)
     when (exists == False) $
         logError "Tried to delete channel map item that doesn't exist"
 
-    overwriteJSON . toJSON $ PaymentResult {
+    writeJSON . toJSON $ PaymentResult {
             paymentResultchannel_status = ChannelClosed,
             paymentResultchannel_value_left = channelValueLeft chanState,
             -- If we got here because a channel payment exhausted the channel,

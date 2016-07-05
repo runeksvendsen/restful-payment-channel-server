@@ -175,22 +175,24 @@ reqBoundedJSON :: (MonadSnap m, FromJSON a) => Int64 -> m (Either String a)
 reqBoundedJSON n = fmap eitherDecode (readRequestBody n)
 
 encodeJSON :: ToJSON a => a -> BL.ByteString
-encodeJSON json = BL.concat [encodePretty json, "\n"]
+encodeJSON json = encodePretty json
 
-writeJSON :: (MonadSnap m, ToJSON a) => a -> m ()
-writeJSON json = do
-    modifyResponse $ setContentType "application/json"
-    writeLBS $ encodeJSON json
+-- writeJSON :: (MonadSnap m, ToJSON a) => a -> m ()
+-- writeJSON json = do
+--     modifyResponse $ setContentType "application/json"
+--     writeLBS $ encodeJSON json
+--     writeBS "\n"
 
 overwriteResponseBody :: MonadSnap m => BL.ByteString -> m ()
 overwriteResponseBody bs =
     getResponse >>=
     putResponse . setResponseBody (enumBuilder $ fromLazyByteString bs)
 
-overwriteJSON :: (MonadSnap m, ToJSON a) => a -> m ()
-overwriteJSON json = do
+writeJSON :: (MonadSnap m, ToJSON a) => a -> m ()
+writeJSON json = do
     modifyResponse $ setContentType "application/json"
     overwriteResponseBody $ encodeJSON json
+    writeBS "\n"
 
 ---JSON BODY RESPONSE---
 
