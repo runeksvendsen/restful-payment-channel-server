@@ -24,6 +24,7 @@ import Data.Text (Text)
 import qualified Data.Text as T
 import GHC.Generics (Generic)
 import Data.Function ((&))
+import qualified Network.Haskoin.Transaction as HT
 import qualified Network.Haskoin.Crypto as HC
 import Data.String.Conversions (cs)
 
@@ -78,7 +79,8 @@ instance ToJSON ChannelStatus where
 data PaymentResult = PaymentResult
     { paymentResultchannel_status     :: ChannelStatus
     ,  paymentResultchannel_value_left :: BitcoinAmount -- ^ Remaining channel value. This is the amount that the client/sender would receive if the channel was closed now.
-    , paymentResultvalue_received :: BitcoinAmount -- ^ Value of the payment that was just received. This is the additional value assigned to the receiver/server with this payment.
+    , paymentResultvalue_received :: BitcoinAmount      -- ^ Value of the payment that was just received. This is the additional value assigned to the receiver/server with this payment.
+    , paymentResultsettlement_txid :: Maybe HT.TxHash   -- ^ If channel_status equals "closed": the transaction ID of the Bitcoin transaction which settles the channel; otherwise null
     } deriving (Show, Eq, Generic)
 
 instance FromJSON PaymentResult where

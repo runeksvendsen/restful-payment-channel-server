@@ -2,8 +2,8 @@
 
 module Server.Main where
 
-import           Server.App (appInit)
-import           Snap (Config, Snap, serveSnaplet)
+import           Server.Init (appInit)
+import           Snap (serveSnaplet)
 import           Snap.Snaplet (runSnaplet)
 import           Snap.Http.Server (defaultConfig, httpServe)
 import           System.Environment (lookupEnv)

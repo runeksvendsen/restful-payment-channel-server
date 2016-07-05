@@ -6,65 +6,46 @@ import           Prelude hiding (userError)
 
 import           Server.Types (ChanOpenConfig(..),ChanPayConfig(..),
                                 StdConfig(..), ChanSettleConfig(..))
-import           Server.Config -- (App(..))
+import           Server.Config (App(..), pubKey, fundingMinConf)
 
 import           Common.Common
 import           Common.Types
 
 import           Server.Util
---                                 (writeJSON, userError,internalError,
---                               errorWithDescription, fundingAddressFromParams,
---                               getQueryArg,getOptionalQueryArg,
---                               txInfoFromAddr, guardIsConfirmed)
-import           BlockchainAPI.Impl.BlockrIo (txIDFromAddr, fundingOutInfoFromTxId)
 import           BlockchainAPI.Impl.ChainSo (chainSoAddressInfo, toEither)
-import           BlockchainAPI.Types (txConfs, toFundingTxInfo,
+import           BlockchainAPI.Types (toFundingTxInfo,
                                 TxInfo(..), OutInfo(..))
-import           Bitcoind (bitcoindNetworkSumbitTx)
 import           Server.ChanStore (ChannelMap, ChanState(..),
                                    addChanState, updateChanState, deleteChanState, isSettled)
-import           DiskStore (addItem, getItem)
+import           DiskStore (getItem)
 
 import           Control.Monad.IO.Class (liftIO)
-import           Control.Monad (mzero, forM, unless, when)
-import           Control.Applicative
-import           Control.Concurrent (forkIO)
-import           Control.Monad.State (gets)
+import           Control.Monad (unless, when)
+
+
 import           Snap.Core
-import           Snap.Http.Server
+
 import           Snap (Handler)
 
 import           Data.Bitcoin.PaymentChannel
-import           Data.Bitcoin.PaymentChannel.Types (ReceiverPaymentChannel, PaymentChannel(..), ChannelParameters(..), PayChanError(..)
-                                                    ,getChannelState, BitcoinAmount, valueToMe,
+import           Data.Bitcoin.PaymentChannel.Types (ReceiverPaymentChannel, PaymentChannel(..),
+                                                    ChannelParameters(..), BitcoinAmount,
                                                     channelValueLeft)
-import           Data.Bitcoin.PaymentChannel.Util (getFundingAddress, setSenderChangeAddress,
-                                                    BitcoinLockTime(..), fromDate)
+import           Data.Bitcoin.PaymentChannel.Util (setSenderChangeAddress, BitcoinLockTime)
 
 import qualified Network.Haskoin.Constants as HCC
-import Network.Wreq (get, post, asJSON, responseBody)
-import Control.Lens ((^.), use)
+import           Control.Lens (use)
 
 import qualified Network.Haskoin.Crypto as HC
 import qualified Network.Haskoin.Transaction as HT
 
-import           Data.Aeson
-    (Result(..), Value(Number, Object, String), FromJSON, ToJSON, parseJSON, toJSON,
-    fromJSON, withScientific, eitherDecode, eitherDecodeStrict, decode, encode, (.=), (.:), object)
+import           Data.Aeson (toJSON)
 
-import Data.Maybe (isJust, isNothing, fromJust)
 import qualified Data.ByteString as BS
 import qualified Data.ByteString.Char8 as C
-import Data.ByteString.Lazy (toStrict)
-import Data.Time.Clock.POSIX (getPOSIXTime, posixSecondsToUTCTime)
-import Data.Int (Int64)
-import Data.Word (Word8)
-import Data.Text as T
 import Text.Printf (printf)
-import Data.EitherR (fmapL)
 import Data.String.Conversions (cs)
 import Test.GenData (deriveMockFundingInfo, convertMockFundingInfo)
-import Data.EitherR (fmapL)
 
 
 applyCORS' :: MonadSnap m => m ()
@@ -93,11 +74,11 @@ mkFundingInfo ::
     BitcoinLockTime ->
     String ->
     (FundingInfo,URL)
-mkFundingInfo openPrice minConf settleHours recvPK sendPK lockTime rootURL =
+mkFundingInfo openPrice' minConf settleHours recvPK sendPK lockTime rootURL =
     (FundingInfo
         recvPK
         (getFundingAddress' sendPK recvPK lockTime)
-        openPrice
+        openPrice'
         minConf
         settleHours,
     cs $ rootURL ++ channelOpenPath sendPK lockTime)
@@ -105,57 +86,66 @@ mkFundingInfo openPrice minConf settleHours recvPK sendPK lockTime rootURL =
 logFundingInfo :: MonadSnap m => m ()
 logFundingInfo  = do
     pk <- getQueryArg "client_pubkey"
-    exp <- getQueryArg "exp_time"
+    expTime <- getQueryArg "exp_time"
     liftIO . putStrLn $ printf
         "Got fundingInfo request: pubkey=%s exp=%s"
             (show (pk :: HC.PubKey))
-            (show (exp :: BitcoinLockTime))
+            (show (expTime :: BitcoinLockTime))
 
 --- /fundingInfo ---
 
 
 ----Settlement----
 chanSettle :: MonadSnap m =>
-    ChanSettleConfig ->
-    StdConfig ->
-    (HT.Tx -> IO (Either String HT.TxHash))
+    ChanSettleConfig
+    -> StdConfig
+    -> (HT.Tx -> IO (Either String HT.TxHash))
+    -> BitcoinAmount
     -> m ()
-chanSettle (SettleConfig privKey recvAddr txFee _) (StdConfig chanMap hash vout payment) pushTx = do
-    liftIO . putStrLn $ printf
-        "Processing settlement request for channel %s/%d: "
-            (cs $ HT.txHashToHex hash :: String) vout ++ show payment
-
+chanSettle (SettleConfig privKey recvAddr txFee _)
+    (StdConfig chanMap hash _ payment) pushTx valRecvd = do
     chanState <- getChannelStateOr404 chanMap hash
 
     -- verify payment is the most recent payment received
     case recvPayment chanState payment of
-        Left e -> userError "Invalid payment. Please provide most recent channel payment."
+        Left _ -> userError "Invalid payment. Please provide most recent channel payment."
         Right (val, _) -> unless (val == 0) $
                 userError "Invalid payment. Cannot send value in delete request."
 
-
+    -- generate settlement transaction
     let eitherTx = getSettlementBitcoinTx
             chanState (`HC.signMsg` privKey) recvAddr txFee
     tx <- case eitherTx of
         Left e -> internalError $ show e
         Right tx -> return tx
 
+    -- publish settlement transaction
     eitherTxId <- liftIO $ pushTx tx
     settlementTxId <- case eitherTxId of
         Left e -> internalError e
         Right txid -> return txid
 
-    liftIO $ deleteChanState chanMap hash settlementTxId
+    exists <- liftIO $ deleteChanState chanMap hash settlementTxId
+    when (exists == False) $
+        logError "Tried to delete channel map item that doesn't exist"
 
-    modifyResponse $ setResponseStatus 202
-        (C.pack $ "Channel closed. Settlement tx txid: " ++ cs (HT.txHashToHex settlementTxId))
+    writeJSON . toJSON $ PaymentResult {
+            paymentResultchannel_status = ChannelClosed,
+            paymentResultchannel_value_left = channelValueLeft chanState,
+            -- If we got here because a channel payment exhausted the channel,
+            --  this contains the value of the exhausting payment.
+            paymentResultvalue_received = valRecvd,
+            paymentResultsettlement_txid = Just settlementTxId
+        }
+
+    modifyResponse $ setResponseStatus 202 "Channel closed."
 ---
 
 
 ----Payment----
 
 chanPay :: MonadSnap m => ChanPayConfig -> m (BitcoinAmount, ReceiverPaymentChannel)
-chanPay (PayConfig chanMap hash vout maybeNewAddr payment) = do
+chanPay (PayConfig chanMap hash _ maybeNewAddr payment) = do
     existingChanState <- maybeUpdateChangeAddress maybeNewAddr =<<
             getChannelStateOr404 chanMap hash
     (valRecvd,newChanState) <- either
@@ -163,7 +153,9 @@ chanPay (PayConfig chanMap hash vout maybeNewAddr payment) = do
             return
             (recvPayment existingChanState payment)
 
-    liftIO $ updateChanState chanMap hash newChanState
+    exists <- liftIO $ updateChanState chanMap hash newChanState
+    when (exists == False) $
+        logError "Tried to update channel map item that doesn't exist"
 
     modifyResponse $ setResponseStatus 200 (C.pack "Payment accepted")
     return (valRecvd,newChanState)
@@ -176,36 +168,41 @@ channelOpenHandler :: MonadSnap m =>
     ChanOpenConfig
     -> m (BitcoinAmount, ReceiverPaymentChannel)
 channelOpenHandler
-    (ChanOpenConfig openPrice pubKeyServ chanMap txInfo@(TxInfo txId _ (OutInfo _ chanVal idx)) basePath sendPK sendChgAddr lockTime payment) = do
-    liftIO . putStrLn $ "Processing channel open request... " ++
-        show (sendPK, lockTime, txInfo, payment)
+    (ChanOpenConfig openPrice pubKeyServ chanMap
+        txInfo@(TxInfo txId _ (OutInfo _ chanVal idx))
+        basePath sendPK sendChgAddr lockTime payment) =
+    do
+        liftIO . putStrLn $ "Processing channel open request... " ++
+            show (sendPK, lockTime, txInfo, payment)
 
-    confirmChannelDoesntExistOrAbort chanMap basePath txId idx
+        confirmChannelDoesntExistOrAbort chanMap basePath txId idx
 
-    (valRecvd,recvChanState) <- either (userError . show) return $
-        channelFromInitialPayment
-            (CChannelParameters sendPK pubKeyServ lockTime)
-            (toFundingTxInfo txInfo) sendChgAddr payment
+        (valRecvd,recvChanState) <- either (userError . show) return $
+            channelFromInitialPayment
+                (CChannelParameters sendPK pubKeyServ lockTime)
+                (toFundingTxInfo txInfo) sendChgAddr payment
 
-    when (valRecvd < openPrice) $
-        userError $ "Initial payment short. Channel open price is " ++
-            show openPrice ++ ", received " ++ show valRecvd ++ "."
+        when (valRecvd < openPrice) $
+            userError $ "Initial payment short. Channel open price is " ++
+                show openPrice ++ ", received " ++ show valRecvd ++ "."
 
-    liftIO $ addChanState chanMap txId recvChanState
-    modifyResponse $ setResponseStatus 201 (C.pack "Channel ready")
+        liftIO $ addChanState chanMap txId recvChanState
+        modifyResponse $ setResponseStatus 201 (C.pack "Channel ready")
 
-    unless (channelIsExhausted recvChanState) $
-        httpLocationSetActiveChannel basePath txId idx
+        unless (channelIsExhausted recvChanState) $
+            httpLocationSetActiveChannel basePath txId idx
 
-    return (valRecvd,recvChanState)
-
-
-proceedIfExhausted :: MonadSnap m => ChannelStatus -> m ()
-proceedIfExhausted ChannelOpen = finishWith =<< getResponse
-proceedIfExhausted ChannelClosed = return ()
+        return (valRecvd,recvChanState)
 
 
-writePaymentResult :: MonadSnap m => (BitcoinAmount, ReceiverPaymentChannel) -> m ChannelStatus
+proceedIfExhausted :: MonadSnap m => (ChannelStatus,BitcoinAmount) -> m BitcoinAmount
+proceedIfExhausted (ChannelOpen,_)          = finishWith =<< getResponse
+proceedIfExhausted (ChannelClosed,valRecvd) = return valRecvd
+
+
+writePaymentResult :: MonadSnap m =>
+    (BitcoinAmount, ReceiverPaymentChannel)
+    -> m (ChannelStatus,BitcoinAmount)
 writePaymentResult (valRecvd,recvChanState) =
     let chanStatus =
             if channelIsExhausted recvChanState then
@@ -216,9 +213,10 @@ writePaymentResult (valRecvd,recvChanState) =
             writeJSON . toJSON $ PaymentResult {
                 paymentResultchannel_status = chanStatus,
                 paymentResultchannel_value_left = channelValueLeft recvChanState,
-                paymentResultvalue_received = valRecvd
+                paymentResultvalue_received = valRecvd,
+                paymentResultsettlement_txid = Nothing
             }
-            return chanStatus
+            return (chanStatus,valRecvd)
 
 tEST_blockchainGetFundingInfo :: Handler App App TxInfo
 tEST_blockchainGetFundingInfo = do

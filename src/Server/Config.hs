@@ -15,7 +15,6 @@ import qualified Crypto.Secp256k1 as Secp
 import           Control.Lens.TH (makeLenses)
 import qualified Data.ByteString as BS
 import           Data.Ratio
-import           Data.Maybe (fromJust)
 import           Data.Configurator.Types
 import qualified Data.Configurator as Conf (lookup)
 import           Data.String.Conversions (cs)
@@ -80,6 +79,3 @@ instance Configured BTCRPCInfo where
 calcSettlementFeeSPB :: BitcoinAmount -> BitcoinAmount
 calcSettlementFeeSPB satoshisPerByte = 331 * satoshisPerByte -- 346 2 outputs
 
--- openPrice = settlementTxFee + 1000 :: BitcoinAmount
--- minConf = 0 :: Int
--- settlementPeriodHours = 6 :: Int

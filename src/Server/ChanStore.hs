@@ -9,7 +9,7 @@ import qualified Network.Haskoin.Transaction as HT
 import qualified Network.Haskoin.Crypto as HC
 import qualified Data.ByteString.Lazy as BL
 import qualified Data.Binary as Bin
-import qualified Data.Binary.Put as Put
+
 
 -- |Holds state for open payment channel
 data ChanState =
