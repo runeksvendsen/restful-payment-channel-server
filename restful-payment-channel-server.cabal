@@ -47,7 +47,8 @@ Executable PayChanServer
     bitcoin-api, bitcoin-tx,
     case-insensitive,
     unix,
-    exceptions
+    exceptions,
+    filepath
 
 
 

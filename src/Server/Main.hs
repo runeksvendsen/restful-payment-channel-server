@@ -6,7 +6,7 @@ import           Server.Init (appInit)
 import           Snap (serveSnaplet)
 import           Snap.Snaplet (runSnaplet)
 import           Snap.Http.Server (defaultConfig, httpServe)
-import           System.Environment (lookupEnv)
+import           System.Environment (lookupEnv, getArgs, getProgName)
 import           Text.Read (readMaybe)
 import           Snap.Http.Server.Config (setPort)
 
@@ -17,16 +17,26 @@ import qualified Control.Exception as E
 import qualified System.Posix.Signals as Sig -- (Handler(Catch), installHandler, sigTERM)
 import           Control.Concurrent (ThreadId, forkIO, killThread, threadDelay)
 
-import           Server.ChanStore (ChannelMap, newChanMap, mapLen, diskSyncThread, diskSyncNow)
+import           Server.ChanStore (ChannelMap, newChanMap, mapLen, diskSyncThread, diskSyncNow,
+                                    sync_chanMap, init_chanMap)
 import           DiskStore (syncMapToDisk)
 import qualified Server.ChanStore.Connection as DB
--- import           Server.ChanStore.Client
-import qualified Control.Concurrent.MVar  as MVar
+import qualified System.FilePath as F
 
+-- import qualified Control.Concurrent.MVar  as MVar
+
+wrapArg :: (String -> IO ()) -> IO ()
+wrapArg main' = do
+    args <- getArgs
+    prog <- getProgName
+    if  length args < 1 then
+            putStrLn $ "Usage: " ++ prog ++ " /path/to/config.cfg"
+        else
+            main' $ head args
 
 main :: IO ()
-main = do
-    map <- init_chanMap "/opt/paychan/state/test/" -- 5 theApp
+main = wrapArg $ \cfgFilePath -> do
+    map <- init_chanMap "/opt/paychan/state/test/"
     syncThread <- forkIO (diskSyncThread map 5)
     mainThread <- myThreadId
     conn <- DB.newChanMapConnection map
@@ -39,7 +49,8 @@ main = do
                 throwTo mainThread E.UserInterrupt)
             (Just Sig.fullSignalSet)
 
-    bracket (return conn) (handleShutdown syncThread map) theApp
+    bracket (return conn) (handleShutdown syncThread map) (runApp $ F.dropExtension cfgFilePath)
+
 
 handleShutdown :: ThreadId -> ChannelMap -> DB.ChanMapConn -> IO ()
 handleShutdown syncThread map conn = do
@@ -47,23 +58,8 @@ handleShutdown syncThread map conn = do
     killThread syncThread
     sync_chanMap map
 
-init_chanMap :: String -> IO ChannelMap
-init_chanMap storageDirectory  = do
-    map <- newChanMap storageDirectory
-    chanMapLen <- mapLen map
-    putStrLn $ "Restored " ++ show chanMapLen ++ " open channel states from " ++ show storageDirectory
-    return map
-
-sync_chanMap :: ChannelMap -> IO ()
-sync_chanMap map = do
-    putStrLn "Syncing channel map to disk before shutting down..."
-    syncCount <- syncMapToDisk map
-    putStrLn $ "Synced " ++ show syncCount ++ " channel state(s) to disk."
-
--- theApp :: DB.ChanMapConn -> MVar.MVar () -> IO ()
-theApp :: DB.ChanMapConn -> IO ()
-theApp chanMapConn = do
-    let env = "/Users/rune/IdeaProjects/restful-payment-channel-server/config/test/config/server"
+runApp :: String -> DB.ChanMapConn -> IO ()
+runApp env chanMapConn = do
     (_, app, _) <- runSnaplet (Just env) (appInit chanMapConn)
 
     maybePort <- return . maybe Nothing readMaybe =<< lookupEnv "PORT"
@@ -74,16 +70,3 @@ theApp chanMapConn = do
 
     httpServe conf app
 
-
-
-
-
--- runWithChanMap :: String -> Int -> (ChannelMap -> IO ()) -> IO ThreadId
--- runWithChanMap storageDirectory syncIntervalSeconds runner = do
---     bracket
---         (init_chanMap storageDirectory)
---         sync_chanMap
---         (\map -> do
---                 tid <- forkIO (diskSyncThread map syncIntervalSeconds)
---                 forkIO $ runner map
---                 return tid)
