@@ -15,9 +15,9 @@ import           Server.Util
 import           BlockchainAPI.Impl.ChainSo (chainSoAddressInfo, toEither)
 import           BlockchainAPI.Types (toFundingTxInfo,
                                 TxInfo(..), OutInfo(..))
-import           Server.ChanStore (ChannelMap, ChanState(..),
-                                   addChanState, updateChanState, deleteChanState, isSettled)
-import           DiskStore (getItem)
+-- import           Server.ChanStore (ChannelMap, ChanState(..),
+--                                    addChanState, updateChanState, deleteChanState, isSettled)
+import qualified Server.ChanStore.Client as DBConn
 
 import           Control.Monad.IO.Class (liftIO)
 import           Control.Monad (unless, when)
@@ -48,12 +48,6 @@ import Data.String.Conversions (cs)
 import Test.GenData (deriveMockFundingInfo, convertMockFundingInfo)
 
 
-applyCORS' :: MonadSnap m => m ()
-applyCORS' = do
-    modifyResponse $ setHeader "Access-Control-Allow-Origin"    "*"
-    modifyResponse $ setHeader "Access-Control-Allow-Methods"   "GET,POST,PUT,DELETE"
-    modifyResponse $ setHeader "Access-Control-Allow-Headers"   "Origin,Accept,Content-Type"
-    modifyResponse $ setHeader "Access-Control-Expose-Headers"  "Location"
 
 --- /fundingInfo ---
 type URL = String
@@ -125,7 +119,7 @@ chanSettle (SettleConfig privKey recvAddr txFee _)
         Left e -> internalError e
         Right txid -> return txid
 
-    exists <- liftIO $ deleteChanState chanMap hash settlementTxId
+    exists <- liftIO $ DBConn.chanDelete chanMap hash settlementTxId
     when (exists == False) $
         logError "Tried to delete channel map item that doesn't exist"
 
@@ -153,7 +147,7 @@ chanPay (PayConfig chanMap hash _ maybeNewAddr payment) = do
             return
             (recvPayment existingChanState payment)
 
-    exists <- liftIO $ updateChanState chanMap hash newChanState
+    exists <- liftIO $ DBConn.chanUpdate chanMap hash newChanState
     when (exists == False) $
         logError "Tried to update channel map item that doesn't exist"
 
@@ -186,7 +180,7 @@ channelOpenHandler
             userError $ "Initial payment short. Channel open price is " ++
                 show openPrice ++ ", received " ++ show valRecvd ++ "."
 
-        liftIO $ addChanState chanMap txId recvChanState
+        liftIO $ DBConn.chanAdd chanMap txId recvChanState
         modifyResponse $ setResponseStatus 201 (C.pack "Channel ready")
 
         unless (channelIsExhausted recvChanState) $
@@ -195,10 +189,20 @@ channelOpenHandler
         return (valRecvd,recvChanState)
 
 
+
+
+
+--- Util ---
 proceedIfExhausted :: MonadSnap m => (ChannelStatus,BitcoinAmount) -> m BitcoinAmount
 proceedIfExhausted (ChannelOpen,_)          = finishWith =<< getResponse
 proceedIfExhausted (ChannelClosed,valRecvd) = return valRecvd
 
+applyCORS' :: MonadSnap m => m ()
+applyCORS' = do
+    modifyResponse $ setHeader "Access-Control-Allow-Origin"    "*"
+    modifyResponse $ setHeader "Access-Control-Allow-Methods"   "GET,POST,PUT,DELETE"
+    modifyResponse $ setHeader "Access-Control-Allow-Headers"   "Origin,Accept,Content-Type"
+    modifyResponse $ setHeader "Access-Control-Expose-Headers"  "Location"
 
 writePaymentResult :: MonadSnap m =>
     (BitcoinAmount, ReceiverPaymentChannel)
@@ -218,6 +222,38 @@ writePaymentResult (valRecvd,recvChanState) =
             }
             return (chanStatus,valRecvd)
 
+confirmChannelDoesntExistOrAbort :: MonadSnap m => DBConn.ChanMapConn -> BS.ByteString -> HT.TxHash -> Integer -> m ()
+confirmChannelDoesntExistOrAbort chanMap basePath hash idx = do
+    maybeItem <- liftIO (DBConn.chanGet chanMap hash)
+    case fmap DBConn.isSettled maybeItem of
+        Nothing -> return ()    -- channel doesn't already exist
+        Just False ->           -- channel exists already, and is open
+            httpLocationSetActiveChannel basePath hash idx >>
+            errorWithDescription 409 "Channel already exists"
+        Just True  ->           -- channel in question has been settled
+            errorWithDescription 409 "Channel already existed, but has been settled"
+
+
+getChannelStateOr404 :: MonadSnap m => DBConn.ChanMapConn -> HT.TxHash -> m ReceiverPaymentChannel
+getChannelStateOr404 chanMap hash =
+    liftIO (DBConn.chanGet chanMap hash) >>=
+    maybe
+        (errorWithDescription 404 "No such channel")
+        (return . DBConn.csState)
+
+maybeUpdateChangeAddress :: MonadSnap m =>
+    Maybe HC.Address
+    -> ReceiverPaymentChannel
+    -> m ReceiverPaymentChannel
+maybeUpdateChangeAddress maybeAddr state =
+    maybe (return state) updateAddressAndLog maybeAddr
+        where updateAddressAndLog addr = do
+                liftIO . putStrLn $ "Updating client change address to " ++ toString addr
+                return $ setSenderChangeAddress state addr
+--- Util ---
+
+
+--- Funding ---
 tEST_blockchainGetFundingInfo :: Handler App App TxInfo
 tEST_blockchainGetFundingInfo = do
     pubKeyServer <- use pubKey
@@ -229,7 +265,6 @@ tEST_blockchainGetFundingInfo = do
         else
             fundingAddressFromParams pubKeyServer >>=
                 blockchainAddressCheckEverything minConf
-
 
 blockchainAddressCheckEverything :: MonadSnap m => Int -> HC.Address -> m TxInfo
 blockchainAddressCheckEverything minConf addr =
@@ -249,34 +284,4 @@ test_GetDerivedFundingInfo pubKeyServer = do
             getQueryArg "client_pubkey" <*>
             getQueryArg "exp_time"
     return $ convertMockFundingInfo . deriveMockFundingInfo $ cp
-
-
-
-confirmChannelDoesntExistOrAbort :: MonadSnap m => ChannelMap -> BS.ByteString -> HT.TxHash -> Integer -> m ()
-confirmChannelDoesntExistOrAbort chanMap basePath hash idx = do
-    maybeItem <- liftIO (getItem chanMap hash)
-    case fmap isSettled maybeItem of
-        Nothing -> return ()    -- channel doesn't already exist
-        Just False ->           -- channel exists already, and is open
-            httpLocationSetActiveChannel basePath hash idx >>
-            errorWithDescription 409 "Channel already exists"
-        Just True  ->           -- channel in question has been settled
-            errorWithDescription 409 "Channel already existed, but has been settled"
-
-
-getChannelStateOr404 :: MonadSnap m => ChannelMap -> HT.TxHash -> m ReceiverPaymentChannel
-getChannelStateOr404 chanMap hash =
-    liftIO (getItem chanMap hash) >>=
-    maybe
-        (errorWithDescription 404 "No such channel")
-        (return . csState)
-
-maybeUpdateChangeAddress :: MonadSnap m =>
-    Maybe HC.Address
-    -> ReceiverPaymentChannel
-    -> m ReceiverPaymentChannel
-maybeUpdateChangeAddress maybeAddr state =
-    maybe (return state) updateAddressAndLog maybeAddr
-        where updateAddressAndLog addr = do
-                liftIO . putStrLn $ "Updating client change address to " ++ toString addr
-                return $ setSenderChangeAddress state addr
+--- Funding ---

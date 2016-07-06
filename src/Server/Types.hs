@@ -4,7 +4,9 @@ import           Data.Bitcoin.PaymentChannel.Types (BitcoinAmount, Payment, Bitc
 -- import           Data.Bitcoin.PaymentChannel.Util (BitcoinLockTime)
 import qualified Network.Haskoin.Crypto as HC
 import qualified Network.Haskoin.Transaction as HT
-import           Server.ChanStore (ChannelMap, ChanState(..))
+
+-- import           Server.ChanStore (ChannelMap)
+import           Server.ChanStore.Client (ChanMapConn)
 import qualified Data.ByteString as BS
 import           BlockchainAPI.Types (TxInfo)
 
@@ -21,13 +23,11 @@ data ChanSettleConfig = SettleConfig {
     confSettlePeriod      :: Int
 }
 
-
 data ChanOpenConfig = ChanOpenConfig {
     ocOpenPrice     :: BitcoinAmount
    ,ocServerPubKey  :: HC.PubKey
-   ,ocChanMap       :: ChannelMap
+   ,ocChanMap       :: ChanMapConn
    ,ocFundingInfo   :: TxInfo
---    ,ocHostname      :: String
    ,ocBasePath      :: BS.ByteString
    ,ocClientPubKey  :: HC.PubKey
    ,ocClientChange  :: HC.Address
@@ -35,14 +35,12 @@ data ChanOpenConfig = ChanOpenConfig {
    ,ocInitPayment   :: Payment
 }
 
-
 data ChanPayConfig = PayConfig
-    ChannelMap HT.TxHash Vout (Maybe HC.Address) Payment
+    ChanMapConn HT.TxHash Vout (Maybe HC.Address) Payment
 
 
 data StdConfig = StdConfig {
-    serverChanMap   :: ChannelMap,
-
+    serverChanMap   :: ChanMapConn,
     chanHash        :: HT.TxHash,
     chanVout        :: Vout,
     chanPayment     :: Payment

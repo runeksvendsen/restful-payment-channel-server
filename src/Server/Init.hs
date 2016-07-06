@@ -14,8 +14,7 @@ import           Bitcoind (BTCRPCInfo(..), bitcoindNetworkSumbitTx)
 import           Common.Common (pathParamEncode)
 import           Data.String.Conversions (cs)
 
-import           Server.ChanStore ( -- ChannelMap,
-                                   newChanMap, diskSyncThread, diskSyncNow, mapLen)
+import           Server.ChanStore.Client (ChanMapConn)
 
 import           Control.Monad (unless)
 import           Control.Monad.IO.Class (liftIO)
@@ -26,8 +25,8 @@ import qualified Network.Haskoin.Crypto as HC
 import           Snap
 
 
-appInit :: SnapletInit App App
-appInit = makeSnaplet "PayChanServer" "RESTful Bitcoin payment channel server" Nothing $ do
+appInit :: ChanMapConn -> SnapletInit App App
+appInit chanOpenMap = makeSnaplet "PayChanServer" "RESTful Bitcoin payment channel server" Nothing $ do
     --- CONFIG ---
     cfg <- getSnapletUserConfig
 
@@ -56,23 +55,6 @@ appInit = makeSnaplet "PayChanServer" "RESTful Bitcoin payment channel server" N
     let confOpenPrice = if addSettleFee then basePrice + settleFee else basePrice
 
     liftIO . putStrLn $ "Server PubKey: " ++ cs (pathParamEncode confPubKey)
-
-    -- Disk channel store setup
-    stateBaseDir <- liftIO (configLookupOrFail cfg "storage.stateDir")
-    chanOpenMap <- liftIO $ newChanMap stateBaseDir
-    chanMapLen <- liftIO $ mapLen chanOpenMap
-    unless (chanMapLen == 0) $
-        liftIO $ putStrLn $ "Restored " ++ show chanMapLen ++ " open channel states"
-    tid <- liftIO . forkIO $ diskSyncThread chanOpenMap 5
-    -- If we receive a TERM signal, kill the sync thread & sync immediately
-    _ <- liftIO $ Sig.installHandler
-        Sig.sigTERM
-        (Sig.Catch $
-            killThread tid >>
-            putStrLn "Received TERM signal, syncing channel map to disk before shutting down." >>
-            diskSyncNow chanOpenMap
-        )
-        Nothing
 
     let basePathVersion = "/v1"
     addRoutes $ mainRoutes basePathVersion

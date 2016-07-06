@@ -18,7 +18,7 @@ import           Data.Ratio
 import           Data.Configurator.Types
 import qualified Data.Configurator as Conf (lookup)
 import           Data.String.Conversions (cs)
-import           Server.ChanStore (ChannelMap)
+import           Server.ChanStore.Client (ChanMapConn)
 import           Server.Types
 import           Bitcoind (BTCRPCInfo(..))
 
@@ -30,7 +30,7 @@ configLookupOrFail conf name =
         return
 
 data App = App
- { _channelStateMap :: ChannelMap
+ { _channelStateMap :: ChanMapConn
  , _settleConfig    :: ChanSettleConfig
  , _pubKey          :: HC.PubKey
  , _openPrice       :: BitcoinAmount

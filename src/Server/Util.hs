@@ -8,8 +8,8 @@ import           Common.Types
 import           BlockchainAPI.Impl.BlockrIo (txIDFromAddr, fundingOutInfoFromTxId)
 import           BlockchainAPI.Types (txConfs, toFundingTxInfo,
                                 TxInfo(..), OutInfo(..))
-import           Server.ChanStore (ChannelMap, ChanState(..))
-import           DiskStore (addItem, getItem)
+-- import           Server.ChanStore (ChannelMap, ChanState(..))
+-- import           DiskStore (addItem, getItem)
 
 import           Prelude hiding (userError)
 import           Control.Monad (mzero, forM, unless)
