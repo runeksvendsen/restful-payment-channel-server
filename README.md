@@ -12,9 +12,7 @@ The following works with a fresh `ubuntu:16.04` docker image
     stack setup && stack build
     
 #### Running
-The server executable has one required argument: the path to the config file. Example config files can be found in `config/` as a `server.cfg` file for both Bitcoin livenet and testnet3. The file extension of the config file is ignored (`.cfg` in this case).
-
-Command to run the server with a configuration contained in the file `/etc/paychan/live.cfg`:
+The server executable has one required argument: the path to the config file. Example config files can be found in `config/` as a `server.cfg` file for both Bitcoin livenet and testnet3. Example:
 
     PayChanServer /etc/paychan/live.cfg
 
