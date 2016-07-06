@@ -5,7 +5,6 @@ module Server.ChanStore.Client
     chanUpdate,
     chanDelete,
 
---     chanStoreSize,
     isSettled,
 
     ChanMapConn,

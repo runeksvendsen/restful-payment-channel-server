@@ -27,7 +27,8 @@ import qualified Data.ByteString as B
 import qualified Data.ByteString.Lazy as BL
 import qualified Data.Foldable as F
 import Control.Monad.STM
-import Control.Exception
+import Control.Exception (IOException)
+import Control.Monad.Catch (bracket, finally, try)
 import Control.Monad (guard, forM, unless, forM_)
 import Control.Arrow (second)
 import Control.Concurrent (threadDelay)
@@ -135,10 +136,12 @@ syncToDisk ::
     DiskMap k v
     -> IO ()
 syncToDisk m = do
-    syncCount <- syncMapToDisk m
-    unless (syncCount == 0) $
-        putStrLn $ "Synced " ++ show syncCount ++ " channel state(s) to disk."
-
+    eitherCount <- try $ syncMapToDisk m
+    case eitherCount of
+        Left  e    -> putStrLn $ "ERROR: Disk sync failed! " ++ show (e :: IOException)
+        Right syncCount ->
+            unless (syncCount == 0) $
+                    putStrLn $ "Synced " ++ show syncCount ++ " channel state(s) to disk."
 
 
 channelMapFromStateFiles ::
@@ -160,9 +163,9 @@ diskGetStateFiles baseDir = do
 
 getFileList :: FilePath -> IO [FilePath]
 getFileList dir = do --filter (\f -> f /= "." && f /= "..") <$> getDirectoryContents dir
-    r <-  tryJust (guard . isDoesNotExistError) $ getDirectoryContents dir
+    r <- try $ getDirectoryContents dir
     case r of
-        Left  e    -> fail $ "State storage directory \"" ++ dir ++ "\" does not exist."
+        Left  e    -> fail $ show (e :: IOException) -- "State storage directory \"" ++ dir ++ "\" does not exist."
         Right fileList -> return $ filter (\f -> f /= "." && f /= "..") fileList
 
 tryReadStateFile ::

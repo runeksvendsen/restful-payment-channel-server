@@ -52,7 +52,7 @@ main = wrapArg $ \cfgFilePath -> do
                     show (Sig.siginfoSignal ci))
                 throwTo mainThread E.UserInterrupt)
             (Just Sig.fullSignalSet)
-    --      first do this    at the end do this always             after doing this
+    --      first do this    at the end do this, always             after doing this
     bracket (return conn) (handleShutdown syncThread map) (runApp $ F.dropExtension cfgFilePath)
 
 
