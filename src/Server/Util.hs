@@ -52,12 +52,17 @@ import Data.EitherR (fmapL)
 import Data.String.Conversions (cs)
 import Data.CaseInsensitive (CI, original)
 import Data.Aeson.Encode.Pretty (encodePretty)
+import           Data.Monoid ((<>))
 
 
 
 getAppRootURL :: MonadSnap m => BS.ByteString -> m String
 getAppRootURL basePath = do
     serverName <- getsRequest rqServerName
+    serverPort <- getsRequest rqServerPort
+    let finalHostname = if serverPort == 80 then serverName else
+            serverName <> ":" <> cs (show serverPort)
+
     isSecure <- getsRequest rqIsSecure
     return $ channelRootURL isSecure serverName basePath
 
