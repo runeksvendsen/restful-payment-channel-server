@@ -21,6 +21,7 @@ import           Server.ChanStore (ChannelMap, newChanMap, mapLen, diskSyncThrea
                                     sync_chanMap, init_chanMap)
 import           DiskStore (syncMapToDisk)
 import qualified Server.ChanStore.Connection as DB
+import           Server.Config (loadConfig, configLookupOrFail)
 import qualified System.FilePath as F
 
 -- import qualified Control.Concurrent.MVar  as MVar
@@ -36,10 +37,13 @@ wrapArg main' = do
 
 main :: IO ()
 main = wrapArg $ \cfgFilePath -> do
-    map <- init_chanMap "/opt/paychan/state/test/"
+    chanStoreDir <- loadConfig cfgFilePath >>= flip configLookupOrFail "storage.stateDir"
+
+    map <- init_chanMap chanStoreDir -- "/opt/paychan/state/test/"
     syncThread <- forkIO (diskSyncThread map 5)
-    mainThread <- myThreadId
     conn <- DB.newChanMapConnection map
+    -- we need to kill the main thread manually since we capture kill signals
+    mainThread <- myThreadId
 
     prevHandler <- Sig.installHandler
             Sig.sigTERM
@@ -48,7 +52,7 @@ main = wrapArg $ \cfgFilePath -> do
                     show (Sig.siginfoSignal ci))
                 throwTo mainThread E.UserInterrupt)
             (Just Sig.fullSignalSet)
-
+    --      first do this    at the end do this always             after doing this
     bracket (return conn) (handleShutdown syncThread map) (runApp $ F.dropExtension cfgFilePath)
 
 

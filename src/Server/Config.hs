@@ -16,11 +16,14 @@ import           Control.Lens.TH (makeLenses)
 import qualified Data.ByteString as BS
 import           Data.Ratio
 import           Data.Configurator.Types
-import qualified Data.Configurator as Conf (lookup)
+import qualified Data.Configurator as Conf
 import           Data.String.Conversions (cs)
 import           Server.ChanStore.Client (ChanMapConn)
 import           Server.Types
 import           Bitcoind (BTCRPCInfo(..))
+
+loadConfig :: String -> IO Config
+loadConfig confFile = Conf.load [Conf.Required confFile]
 
 configLookupOrFail :: Configured a => Config -> Name -> IO a
 configLookupOrFail conf name =
