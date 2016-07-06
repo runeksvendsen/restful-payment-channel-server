@@ -2,8 +2,7 @@ stanzas:
     - type: webapp
       exec: ../PayChanServer
       args:
-        - "--environment=/home/rune/paychan/test"
-        - "--proxy=X_Forwarded_For"
+        - /home/rune/paychan/test.cfg
       host: paychantest.runeks.me
       ssl:
         key: /opt/keter/etc/testpay.key

@@ -2,8 +2,7 @@ stanzas:
     - type: webapp
       exec: ../PayChanServer
       args:
-        - "--environment=/home/rune/paychan/live"
-        - "--proxy=X_Forwarded_For"
+        - /home/rune/paychan/live.cfg
       host: paychan.runeks.me
       ssl:
         key: /opt/keter/etc/server.key
