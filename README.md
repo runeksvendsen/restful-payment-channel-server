@@ -12,11 +12,11 @@ The following works with a fresh `ubuntu:16.04` docker image
     stack setup && stack build
     
 #### Running
-The server executable has one required argument: `--environment` (`-e` for short). This specifies the path to the config file, excluding the `.cfg` extension. Example config files can be found in `config/` as a `server.cfg` file for both Bitcoin livenet and testnet3.
+The server executable has one required argument: the path to the config file. Example config files can be found in `config/` as a `server.cfg` file for both Bitcoin livenet and testnet3. The file extension of the config file is ignored (`.cfg` in this case).
 
 Command to run the server with a configuration contained in the file `/etc/paychan/live.cfg`:
 
-    PayChanServer -e /etc/paychan/live
+    PayChanServer /etc/paychan/live.cfg
 
 #### Stability
 Experimental. Should work as intended, more or less, but there are several bugs and unhandled corner cases that I'm aware of, and probably some that I haven't found yet.
@@ -31,7 +31,12 @@ https://paychan.runeks.me. Runs on livenet.
 https://paychantest.runeks.me. Runs on Bitcoin testnet.
 
 #### TODO
-* Actually close channel before expiration date (doh!)
+
+##### Soon
+* Actually close channel before expiration date
 * OutPoint as key in chanMap
 * ~~Sync chanMap to disk on TERM signal~~
+
+##### Less soon
+* Split server into three: 1) logic front-end 2) open channel store backend (database) 3) settlement service
 
