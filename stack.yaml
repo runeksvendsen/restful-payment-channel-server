@@ -7,7 +7,7 @@ packages:
 - '.'
 - location:
     git: https://github.com/runeksvendsen/bitcoin-payment-channel.git
-    commit: 46dd4111cea225c271652046a97aa50a4520bdee
+    commit: 265befb3bb1e7c51ca5974470e460bce0ffd7446
   extra-dep: true
 - location:
     git: https://github.com/runeksvendsen/haskell-bitcoin-api.git

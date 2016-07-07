@@ -12,6 +12,21 @@ import qualified Data.Binary as Bin
 
 import qualified  Control.Concurrent.STM.TVar as TVar
 import            Control.Concurrent.STM (STM)
+import            Data.Time.Clock (getCurrentTime, UTCTime)
+
+
+-- | Important note: does not support 'LockTimeBlockHeight'
+--  TODO: figure out if we want to accept 'LockTimeBlockHeight' as an expiration date at all
+channelsExpiringBefore :: UTCTime -> ChannelMap -> STM [ReceiverPaymentChannel]
+channelsExpiringBefore currentTimeIsh m =
+    filter expiresBefore . map csState <$>
+        getFilteredItems m (not . isSettled) where
+            expiresBefore = expiresEarlierThan currentTimeIsh . getExpirationDate
+
+expiresEarlierThan :: UTCTime -> BitcoinLockTime -> Bool
+expiresEarlierThan circaNow (LockTimeBlockHeight _) = error "LockTimeBlockHeight not supported"
+expiresEarlierThan circaNow (LockTimeDate expDate) = circaNow > expDate
+
 
 -- |Holds state for open payment channel
 data ChanState =

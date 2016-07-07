@@ -3,4 +3,4 @@ stanzas:
       host: paychandoc.runeks.me
       directory-listing: false
       requires-secure: false
-      root: /opt/www/paychan/
+      root: ../dist/
