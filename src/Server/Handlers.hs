@@ -18,6 +18,7 @@ import           BlockchainAPI.Types (toFundingTxInfo,
 -- import           Server.ChanStore (ChannelMap, ChanState(..),
 --                                    addChanState, updateChanState, deleteChanState, isSettled)
 import qualified Server.ChanStore.Client as DBConn
+import           Server.ChanStore.Settlement (settleChannel)
 
 import           Control.Monad.IO.Class (liftIO)
 import           Control.Monad (unless, when)
@@ -106,19 +107,10 @@ chanSettle (SettleConfig privKey recvAddr txFee _)
         Right (val, _) -> unless (val == 0) $
                 userError "Invalid payment. Cannot send value in delete request."
 
-    -- generate settlement transaction
-    let eitherTx = getSettlementBitcoinTx
-            chanState (`HC.signMsg` privKey) recvAddr txFee
-    tx <- case eitherTx of
-        Left e -> internalError $ show e
-        Right tx -> return tx
+    settlementTxId <- either internalError return =<<
+            liftIO (settleChannel privKey recvAddr txFee pushTx chanState)
 
-    -- publish settlement transaction
-    eitherTxId <- liftIO $ pushTx tx
-    settlementTxId <- case eitherTxId of
-        Left e -> internalError e
-        Right txid -> return txid
-
+    -- mark channel as closed in channel store
     exists <- liftIO $ DBConn.chanDelete chanMap hash settlementTxId
     when (exists == False) $
         logError "Tried to delete channel map item that doesn't exist"

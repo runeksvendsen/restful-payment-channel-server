@@ -14,17 +14,14 @@ import qualified Network.Haskoin.Crypto as HC
 import qualified Network.Haskoin.Transaction as HT
 
 
-settle privKey recvAddr txFee pushTx errHandler chanState = do
-    -- generate settlement transaction
-    let eitherTx = getSettlementBitcoinTx
-            chanState (`HC.signMsg` privKey) recvAddr txFee
-    tx <- case eitherTx of
-        Left e -> errHandler $ show e
-        Right tx -> return tx
+settleChannel ::
+    HC.PrvKey
+    -> HC.Address
+    -> BitcoinAmount
+    -> (HT.Tx -> IO (Either String HT.TxHash))
+    -> ReceiverPaymentChannel
+    -> IO (Either String HT.TxHash)
+settleChannel privKey recvAddr txFee pushTx chanState =
+    either (return . Left . show) pushTx $
+        getSettlementBitcoinTx chanState (`HC.signMsg` privKey) recvAddr txFee
 
-    -- publish settlement transaction
-    eitherTxId <- liftIO $ pushTx tx
-    settlementTxId <- case eitherTxId of
-        Left e -> errHandler e
-        Right txid -> return txid
-    return settlementTxId
