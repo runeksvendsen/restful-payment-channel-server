@@ -1,13 +1,16 @@
 module DiskStore
 (
-DiskMap,
+DiskMap(..),
 newDiskMap, addItem, getItem, updateStoredItem, deleteStoredItem,
-mapGetItemCount,getFilteredItems,
+mapGetItem, mapGetItemCount, -- getFilteredItems,
 
 syncToDisk,mapDiskSyncThread,syncMapToDisk,
 
 Serializable(..),
 ToFileName(..),
+
+-- temp
+itemContent,
 
 -- re-exports
 Hashable(..)
@@ -39,13 +42,13 @@ import qualified  STMContainers.Map as Map
 
 -- import Network.Haskoin.Transaction (TxHash, hexToTxHash)
 
-import qualified STMContainers.Map as STMap
+
 import qualified Data.ByteString as BS
 
 
 type STMMap k v = Map.Map k (MapItem v)
 
-data DiskMap k v = DiskMap MapConfig (STMMap k v)
+data DiskMap k v = DiskMap { mapConf :: MapConfig, diskMap :: (STMMap k v) }
 
 data MapItem v = Item {
     itemContent :: v
@@ -114,10 +117,10 @@ mapGetItemCount (DiskMap _ m) =
     atomically $ fromIntegral . length <$>
         LT.toList (Map.stream m)
 
-getFilteredItems :: DiskMap k v -> (v -> Bool) -> STM [v]
-getFilteredItems (DiskMap _ m) filterBy =
-    filter filterBy . map (itemContent . snd) <$>
-        LT.toList (Map.stream m)
+-- getFilteredItems :: DiskMap k v -> (v -> Bool) -> STM [(k,v)]
+-- getFilteredItems (DiskMap _ m) filterBy =
+--     filter filterBy . map (mapSnd itemContent) <$>
+--         LT.toList (Map.stream m)
 
 
 data Action = Sync | Delete | Ignore
@@ -259,16 +262,12 @@ maybeSyncItemToDisk dir h maybeItem =
         Just i -> writeEntryToFile dir (h, itemContent i)  --singleStateSyncDisk (h, itemContent i)
         Nothing -> return ()
 
--- | Retrieve map item and simultaneously mark the retrieved item as synced to disk
-getItem_MarkSynced:: ToFileName k => k -> DiskMap k v -> STM (Maybe (MapItem v))
-getItem_MarkSynced h =
-    mapAndGetItem h
-        (\i@Item {} -> i { needsDiskSync = False })
+mapGetItem m f k = mapGetItem_Internal m (\i@Item { itemContent = v } -> i { itemContent = f v } )
 
 -- | If a an item exists, read item i, replace in map with (f i), and return
 -- | Maybe (f i).
-mapAndGetItem :: ToFileName k => k -> (MapItem v -> MapItem v) -> DiskMap k v -> STM (Maybe (MapItem v))
-mapAndGetItem h f (DiskMap _ m) = do
+mapGetItem_Internal :: ToFileName k => DiskMap k v -> (MapItem v -> MapItem v) -> k -> STM (Maybe (MapItem v))
+mapGetItem_Internal (DiskMap _ m) f h  = do
     maybeItem <- Map.lookup h m
     case maybeItem of
         Just item ->
@@ -277,9 +276,15 @@ mapAndGetItem h f (DiskMap _ m) = do
 
 -- | Retrieve map item and simultaneously mark the retrieved item for disk deletion
 markForDeletion :: ToFileName k => k -> DiskMap k v -> STM (Maybe (MapItem v))
-markForDeletion h =
-    mapAndGetItem h
-        (\i@Item {} -> i { deleteFromDisk = True })
+markForDeletion h m =
+    mapGetItem_Internal m
+        (\i@Item {} -> i { deleteFromDisk = True }) h
+
+-- | Retrieve map item and simultaneously mark the retrieved item as synced to disk
+getItem_MarkSynced:: ToFileName k => k -> DiskMap k v -> STM (Maybe (MapItem v))
+getItem_MarkSynced h m =
+    mapGetItem_Internal m
+        (\i@Item {} -> i { needsDiskSync = False }) h
 
 
 --- Helper functions ---

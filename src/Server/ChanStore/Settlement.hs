@@ -4,6 +4,9 @@ module Server.ChanStore.Settlement where
 import           Control.Monad.IO.Class (liftIO)
 import           Control.Monad (unless, when)
 
+import           Server.Types (ChanSettleConfig(..))
+import           Bitcoind (BTCRPCInfo, bitcoindNetworkSumbitTx)
+
 import           Data.Bitcoin.PaymentChannel
 import           Data.Bitcoin.PaymentChannel.Types (ReceiverPaymentChannel, PaymentChannel(..),
                                                     ChannelParameters(..), BitcoinAmount,
@@ -15,13 +18,13 @@ import qualified Network.Haskoin.Transaction as HT
 
 
 settleChannel ::
-    HC.PrvKey
-    -> HC.Address
-    -> BitcoinAmount
-    -> (HT.Tx -> IO (Either String HT.TxHash))
+    ChanSettleConfig
+    -> BTCRPCInfo
     -> ReceiverPaymentChannel
     -> IO (Either String HT.TxHash)
-settleChannel privKey recvAddr txFee pushTx chanState =
+settleChannel (SettleConfig privKey recvAddr txFee _) rpcInfo chanState =
     either (return . Left . show) pushTx $
         getSettlementBitcoinTx chanState (`HC.signMsg` privKey) recvAddr txFee
+            where pushTx = bitcoindNetworkSumbitTx rpcInfo
+
 

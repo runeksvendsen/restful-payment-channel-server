@@ -7,6 +7,7 @@ import           Data.Bitcoin.PaymentChannel.Types (ReceiverPaymentChannel, Bitc
 
 import           Server.Util (getPathArg, getQueryArg, getOptionalQueryArg, getAppRootURL)
 import           Server.Config
+import           Server.Config.Types
 import           Server.Types ( ChanOpenConfig(..),ChanPayConfig(..),
                                 StdConfig(..), ChanSettleConfig(..))
 import           Server.Handlers

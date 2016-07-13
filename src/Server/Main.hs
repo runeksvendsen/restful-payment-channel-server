@@ -2,26 +2,29 @@
 
 module Server.Main where
 
+import qualified Server.ChanStore.Connection as DB
+import           Server.Config (Config, loadConfig, configLookupOrFail, getSettleConfig, getBitcoindConf)
 import           Server.Init (appInit)
+import           Server.ChanStore (ChannelMap, newChanMap, mapLen, diskSyncThread, diskSyncNow,
+                                    sync_chanMap, init_chanMap)
+import           Server.TimeSettlement (settlementThread)
+
 import           Snap (serveSnaplet)
 import           Snap.Snaplet (runSnaplet)
 import           Snap.Http.Server (defaultConfig, httpServe)
+import           Snap.Http.Server.Config (setPort)
+
 import           System.Environment (lookupEnv, getArgs, getProgName)
 import           Text.Read (readMaybe)
-import           Snap.Http.Server.Config (setPort)
+
 
 import           Control.Monad (unless)
 import           Control.Monad.Catch (bracket, finally)
 import           Control.Concurrent (forkIO, throwTo, myThreadId)
 import qualified Control.Exception as E
-import qualified System.Posix.Signals as Sig -- (Handler(Catch), installHandler, sigTERM)
+import qualified System.Posix.Signals as Sig
 import           Control.Concurrent (ThreadId, forkIO, killThread, threadDelay)
-
-import           Server.ChanStore (ChannelMap, newChanMap, mapLen, diskSyncThread, diskSyncNow,
-                                    sync_chanMap, init_chanMap)
 import           DiskStore (syncMapToDisk)
-import qualified Server.ChanStore.Connection as DB
-import           Server.Config (loadConfig, configLookupOrFail)
 import qualified System.FilePath as F
 
 -- import qualified Control.Concurrent.MVar  as MVar
@@ -37,10 +40,16 @@ wrapArg main' = do
 
 main :: IO ()
 main = wrapArg $ \cfgFilePath -> do
-    chanStoreDir <- loadConfig cfgFilePath >>= flip configLookupOrFail "storage.stateDir"
+    cfg <- loadConfig cfgFilePath
 
-    map <- init_chanMap chanStoreDir -- "/opt/paychan/state/test/"
+    chanStoreDir <- configLookupOrFail cfg "storage.stateDir"
+    map <- init_chanMap chanStoreDir
     syncThread <- forkIO (diskSyncThread map 5)
+
+    settleConf <- getSettleConfig cfg
+    bitcoindConf <- getBitcoindConf cfg
+    settleThread <- forkIO $ settlementThread
+
     conn <- DB.newChanMapConnection map
     -- we need to kill the main thread manually since we capture kill signals
     mainThread <- myThreadId
@@ -48,12 +57,14 @@ main = wrapArg $ \cfgFilePath -> do
     prevHandler <- Sig.installHandler
             Sig.sigTERM
             (Sig.CatchInfo $ \ci -> do
-                putStrLn ("Preparing shutdown. Caught signal: " ++
-                    show (Sig.siginfoSignal ci))
+                putStrLn ("Caught signal: " ++
+                    show (Sig.siginfoSignal ci) ++
+                    ". Killing main thread...")
                 throwTo mainThread E.UserInterrupt)
             (Just Sig.fullSignalSet)
-    --      first do this    at the end do this, always             after doing this
-    bracket (return conn) (handleShutdown syncThread map) (runApp $ F.dropExtension cfgFilePath)
+    --      1. first do this  3. at the end always do this
+    bracket (return conn)     (handleShutdown syncThread map) $
+            runApp (F.dropExtension cfgFilePath) cfg --- <--- 2. do this in-between
 
 
 handleShutdown :: ThreadId -> ChannelMap -> DB.ChanMapConn -> IO ()
@@ -62,9 +73,9 @@ handleShutdown syncThread map conn = do
     killThread syncThread
     sync_chanMap map
 
-runApp :: String -> DB.ChanMapConn -> IO ()
-runApp env chanMapConn = do
-    (_, app, _) <- runSnaplet (Just env) (appInit chanMapConn)
+runApp :: String -> Config -> DB.ChanMapConn -> IO ()
+runApp env cfg chanMapConn = do
+    (_, app, _) <- runSnaplet (Just env) (appInit cfg chanMapConn)
 
     maybePort <- return . maybe Nothing readMaybe =<< lookupEnv "PORT"
 

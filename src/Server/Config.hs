@@ -1,9 +1,18 @@
-{-# LANGUAGE TemplateHaskell #-}
-{-# LANGUAGE  OverloadedStrings #-}
-{-# LANGUAGE FlexibleInstances #-}
+{-# LANGUAGE OverloadedStrings #-}
 
-module Server.Config where
+module Server.Config
+(
+loadConfig,configLookupOrFail,getSettleConfig,getBitcoindConf,
+BitcoinNet,
+setBitcoinNetwork,toPathString,
 
+-- re-exports
+Config
+
+)
+where
+
+import           Server.Config.Types
 import           Common.Common (fromHexString)
 import           Data.Bitcoin.PaymentChannel.Types (BitcoinAmount)
 
@@ -22,6 +31,8 @@ import           Server.ChanStore.Client (ChanMapConn)
 import           Server.Types
 import           Bitcoind (BTCRPCInfo(..))
 
+
+
 loadConfig :: String -> IO Config
 loadConfig confFile = Conf.load [Conf.Required confFile]
 
@@ -32,22 +43,22 @@ configLookupOrFail conf name =
             "\" in config (key not present or invalid)")
         return
 
-data App = App
- { _channelStateMap :: ChanMapConn
- , _settleConfig    :: ChanSettleConfig
- , _pubKey          :: HC.PubKey
- , _openPrice       :: BitcoinAmount
- , _fundingMinConf  :: Int
- , _basePath        :: BS.ByteString
---  , _hostname        :: String
- , _bitcoinPushTx   :: (HT.Tx -> IO (Either String HT.TxHash))
- }
+getSettleConfig :: Config -> IO ChanSettleConfig
+getSettleConfig cfg = SettleConfig <$>
+        configLookupOrFail cfg "settlement.privKeySeed" <*>
+        configLookupOrFail cfg "settlement.fundsDestinationAddress" <*>
+        fmap calcSettlementFeeSPB (configLookupOrFail cfg "settlement.txFeeSatoshiPerByte") <*>
+        configLookupOrFail cfg "settlement.settlementPeriodHours"
 
--- Template Haskell magic
-makeLenses ''App
+getBitcoindConf :: Config -> IO BTCRPCInfo
+getBitcoindConf cfg = BTCRPCInfo <$>
+    configLookupOrFail cfg "bitcoin.bitcoindRPC.ip" <*>
+    configLookupOrFail cfg "bitcoin.bitcoindRPC.port" <*>
+    configLookupOrFail cfg "bitcoin.bitcoindRPC.user" <*>
+    configLookupOrFail cfg "bitcoin.bitcoindRPC.pass"
 
-data BitcoinNet = Mainnet | Testnet3
-
+calcSettlementFeeSPB :: BitcoinAmount -> BitcoinAmount
+calcSettlementFeeSPB satoshisPerByte = 331 * satoshisPerByte -- 346 2 outputs
 
 setBitcoinNetwork :: BitcoinNet -> IO ()
 setBitcoinNetwork Mainnet = return ()
@@ -57,28 +68,5 @@ toPathString :: BitcoinNet -> BS.ByteString
 toPathString Mainnet = "live"
 toPathString Testnet3 = "test"
 
-instance Configured HC.Address where
-    convert (String text) = HC.base58ToAddr . cs $ text
 
-instance Configured BitcoinAmount where
-    convert (Number r) =
-        if denominator r /= 1 then Nothing
-        else Just . fromIntegral $ numerator r
-    convert _ = Nothing
-
-instance Configured HC.PrvKey where
-    convert (String text) =
-        fmap HC.makePrvKey . Secp.secKey . fromHexString . cs $ text
-
-instance Configured BitcoinNet where
-    convert (String "live") = return Mainnet
-    convert (String "test") = return Testnet3
-    convert (String _) = Nothing
-
-instance Configured BTCRPCInfo where
-    convert = undefined
-
-
-calcSettlementFeeSPB :: BitcoinAmount -> BitcoinAmount
-calcSettlementFeeSPB satoshisPerByte = 331 * satoshisPerByte -- 346 2 outputs
 

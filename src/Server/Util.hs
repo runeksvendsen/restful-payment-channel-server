@@ -53,7 +53,7 @@ import Data.String.Conversions (cs)
 import Data.CaseInsensitive (CI, original)
 import Data.Aeson.Encode.Pretty (encodePretty)
 import           Data.Monoid ((<>))
-
+import qualified Data.Binary as Bin (Binary, encode, decodeOrFail)
 
 
 getAppRootURL :: MonadSnap m => BS.ByteString -> m String
@@ -157,6 +157,18 @@ writeJSON json = do
     modifyResponse $ setContentType "application/json"
     overwriteResponseBody $ encodeJSON json
     writeBS "\n"
+
+writeBinary :: (MonadSnap m, Bin.Binary a) => a -> m ()
+writeBinary obj = do
+    modifyResponse $ setContentType "application/octet-stream"
+    overwriteResponseBody $ Bin.encode obj
+
+reqBoundedData :: (MonadSnap m, Bin.Binary a) => Int64 -> m (Either String a)
+reqBoundedData n = fmap Bin.decodeOrFail (readRequestBody n) >>=
+    \eitherResult -> case eitherResult of
+        Left (_,_,e)    -> return $ Left e
+        Right (_,_,val) -> return $ Right val
+
 
 
 

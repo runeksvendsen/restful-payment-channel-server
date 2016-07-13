@@ -1,42 +1,60 @@
 module Server.TimeSettlement where
 
 -- Time-based settlement
--- Close channels well before the channel expiration date
+-- Close channels before the channel expiration date
 
-import Server.ChanStore
+import           Server.ChanStore (ChannelMap)
+import           Server.ChanStore.ChanStore (channelsExpiringBefore, markAsSettlingAndGetIfOpen)
+import           Server.ChanStore.Settlement (settleChannel)
+import           Server.Types (ChanSettleConfig(..))
+import           Bitcoind (BTCRPCInfo)
 
+import qualified Network.Haskoin.Transaction as HT
+import           Data.Time.Clock (UTCTime, getCurrentTime, addUTCTime)
+import           Control.Concurrent.STM (STM, atomically, throwSTM)
 import           Control.Monad.Catch (bracket, finally, try)
 import           Control.Concurrent  (forkIO, killThread, threadDelay)
-import           Control.Monad (unless)
+import           Control.Monad (forM)
 
-startSettlementThread ::
-    ChannelMap
-    -> Int -- ^ Check interval in seconds
-    -- | Settlement period (hours).
-    --  Channels will be closed this many hours before the specified expiration date.
-    -> Word
-    -> IO ()
-startSettlementThread m i settlePeriod =
-    putStrLn "Started disk sync thread." >>
-    settlementThread m (i * round 1e6) settlePeriod
+startSettlementThread = (>>) (putStrLn "Started disk sync thread.") settlementThread
 
 settlementThread ::
     ChannelMap
-    -> Int -- ^ Check interval in microseconds
-    -> Word
+    -> Int -- ^ Check interval in seconds
+    -> (ChanSettleConfig, BTCRPCInfo)
     -> IO ()
-settlementThread m delay settlePeriod =
-    (threadDelay delay >> settleExpiringChannels m settlePeriod)
-        `finally` settlementThread m delay settlePeriod
+settlementThread m delaySecs (settleConf, rpcInfo) =
+    (threadDelay delayMicroSecs >> settleExpiringChannels m (settleConf, rpcInfo))
+        `finally` settlementThread m delaySecs (settleConf, rpcInfo)
+            where delayMicroSecs = delaySecs * round 1e6
 
 settleExpiringChannels ::
     ChannelMap
-    -> Word
+    -> (ChanSettleConfig, BTCRPCInfo)
     -> IO ()
-settleExpiringChannels settlePeriod m = do
-    eitherCount <- try $ undefined m
-    case eitherCount of
-        Left  e    -> putStrLn $ "ERROR: Disk sync failed! " ++ show (e :: IOException)
-        Right syncCount ->
-            unless (syncCount == 0) $
-                    putStrLn $ "Synced " ++ show syncCount ++ " channel state(s) to disk."
+settleExpiringChannels m (settleConf, rpcInfo) = do
+    now <- getCurrentTime
+    let settlementTime =  settlePeriodSecs `addUTCTime` now
+    expiringChannelKeys <- atomically $ channelsExpiringBefore settlementTime m
+    forM expiringChannelKeys (settleSingleChannel m (settleConf, rpcInfo))
+        where settlePeriodSecs = fromInteger $ 3600 * fromIntegral (confSettlePeriod settleConf)
+
+settleSingleChannel ::
+    ChannelMap
+    -> (ChanSettleConfig, BTCRPCInfo)
+    -> HT.TxHash
+    -> IO ()
+settleSingleChannel m (settleConf, rpcInfo) k = do
+    maybeState <- markAsSettlingAndGetIfOpen m k
+    case maybeState of
+        Nothing        -> putStrLn $
+            "INFO: Settlement thread: Channel closed inbetween fetching keys and items" ++
+            " (this should happen rarely)"
+        Just chanState -> settleChannel settleConf rpcInfo chanState
+
+    return ()
+
+--     HC.PrvKey
+--     -> HC.Address
+--     -> BitcoinAmount
+--     -> (HT.Tx -> IO (Either String HT.TxHash))

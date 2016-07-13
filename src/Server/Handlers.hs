@@ -6,7 +6,7 @@ import           Prelude hiding (userError)
 
 import           Server.Types (ChanOpenConfig(..),ChanPayConfig(..),
                                 StdConfig(..), ChanSettleConfig(..))
-import           Server.Config (App(..), pubKey, fundingMinConf)
+import           Server.Config.Types (App, pubKey, fundingMinConf)
 
 import           Common.Common
 import           Common.Types

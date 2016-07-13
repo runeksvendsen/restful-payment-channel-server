@@ -7,6 +7,7 @@ module Server.Init where
 import           Server.App  (mainRoutes)
 
 import           Server.Config
+import           Server.Config.Types
 import           Server.Types (OpenConfig(..), ChanSettleConfig(..))
 
 import           Bitcoind (BTCRPCInfo(..), bitcoindNetworkSumbitTx)
@@ -22,33 +23,25 @@ import           Control.Concurrent (forkIO, killThread,     threadDelay)
 import qualified System.Posix.Signals as Sig (Handler(Catch), installHandler, sigTERM)
 
 import qualified Network.Haskoin.Crypto as HC
-import           Snap
+import           Snap (SnapletInit, makeSnaplet, addRoutes)
 
 
-appInit :: ChanMapConn -> SnapletInit App App
-appInit chanOpenMap = makeSnaplet "PayChanServer" "RESTful Bitcoin payment channel server" Nothing $ do
+appInit :: Config -> ChanMapConn -> SnapletInit App App
+appInit cfg chanOpenMap = makeSnaplet "PayChanServer" "RESTful Bitcoin payment channel server" Nothing $ do
     --- CONFIG ---
-    cfg <- getSnapletUserConfig
+--     cfg <- getSnapletUserConfig
 
     bitcoinNetwork <- liftIO (configLookupOrFail cfg "bitcoin.network")
     liftIO $ setBitcoinNetwork bitcoinNetwork
 
-    cfgSettleConfig@(SettleConfig _ _ settleFee _) <- SettleConfig <$>
-            liftIO (configLookupOrFail cfg "settlement.privKeySeed") <*>
-            liftIO (configLookupOrFail cfg "settlement.fundsDestinationAddress") <*>
-            fmap calcSettlementFeeSPB (liftIO (configLookupOrFail cfg "settlement.txFeeSatoshiPerByte")) <*>
-            liftIO (configLookupOrFail cfg "settlement.settlementPeriodHours")
+    cfgSettleConfig@(SettleConfig _ _ settleFee _) <- liftIO $ getSettleConfig cfg
 
     (OpenConfig minConf basePrice addSettleFee) <- OpenConfig <$>
             liftIO (configLookupOrFail cfg "open.fundingTxMinConf") <*>
             liftIO (configLookupOrFail cfg "open.basePrice") <*>
             liftIO (configLookupOrFail cfg "open.priceAddSettlementFee")
 
-    bitcoindRPCConf <- BTCRPCInfo <$>
-            liftIO (configLookupOrFail cfg "bitcoin.bitcoindRPC.ip") <*>
-            liftIO (configLookupOrFail cfg "bitcoin.bitcoindRPC.port") <*>
-            liftIO (configLookupOrFail cfg "bitcoin.bitcoindRPC.user") <*>
-            liftIO (configLookupOrFail cfg "bitcoin.bitcoindRPC.pass")
+    bitcoindRPCConf <- liftIO $ getBitcoindConf cfg
     let pushTxFunc = bitcoindNetworkSumbitTx bitcoindRPCConf
 
     let confPubKey = HC.derivePubKey $ confSettlePrivKey cfgSettleConfig
