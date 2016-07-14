@@ -5,7 +5,7 @@ module Server.Config
 loadConfig,configLookupOrFail,getSettleConfig,getBitcoindConf,
 BitcoinNet,
 setBitcoinNetwork,toPathString,
-
+getDBConf,connFromDBConf,
 -- re-exports
 Config
 
@@ -13,6 +13,7 @@ Config
 where
 
 import           Server.Config.Types
+import           Server.ChanStore.Connection (newChanMapConnection)
 import           Common.Common (fromHexString)
 import           Data.Bitcoin.PaymentChannel.Types (BitcoinAmount)
 
@@ -27,7 +28,7 @@ import           Data.Ratio
 import           Data.Configurator.Types
 import qualified Data.Configurator as Conf
 import           Data.String.Conversions (cs)
-import           Server.ChanStore.Client (ChanMapConn)
+import           Server.ChanStore.Types (ChanMapConn)
 import           Server.Types
 import           Bitcoind (BTCRPCInfo(..))
 
@@ -42,6 +43,14 @@ configLookupOrFail conf name =
         (fail $ "ERROR: Failed to read key \"" ++ cs name ++
             "\" in config (key not present or invalid)")
         return
+
+connFromDBConf :: DBConf -> IO ChanMapConn
+connFromDBConf (DBConf host port) = newChanMapConnection host port
+
+getDBConf :: Config -> IO DBConf
+getDBConf cfg = DBConf <$>
+    configLookupOrFail cfg "chanStore.host" <*>
+    configLookupOrFail cfg "chanStore.port"
 
 getSettleConfig :: Config -> IO ChanSettleConfig
 getSettleConfig cfg = SettleConfig <$>

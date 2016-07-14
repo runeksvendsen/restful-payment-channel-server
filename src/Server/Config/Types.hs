@@ -4,10 +4,10 @@
 
 module Server.Config.Types where
 
-import           Server.ChanStore.Client (ChanMapConn)
+import           Server.ChanStore.Types (ChanMapConn)
 import           Server.Types
 
-import           Data.Bitcoin.PaymentChannel.Types (BitcoinAmount)
+import           Data.Bitcoin.PaymentChannel.Types (ReceiverPaymentChannel, BitcoinAmount)
 
 import qualified Network.Haskoin.Transaction as HT
 import qualified Network.Haskoin.Crypto as HC
@@ -28,7 +28,7 @@ data App = App
  , _openPrice       :: BitcoinAmount
  , _fundingMinConf  :: Int
  , _basePath        :: BS.ByteString
- , _bitcoinPushTx   :: (HT.Tx -> IO (Either String HT.TxHash))
+ , _settleChanFunc  :: ReceiverPaymentChannel -> IO (Either String HT.TxHash)
  }
 
 -- Template Haskell magic
@@ -36,15 +36,17 @@ makeLenses ''App
 
 data BitcoinNet = Mainnet | Testnet3
 
+data DBConf     = DBConf Host Word
+type Host = BS.ByteString
 
 instance Configured BitcoinNet where
     convert (String "live") = return Mainnet
     convert (String "test") = return Testnet3
-    convert (String _) = Nothing
-
+    convert _ = Nothing
 
 instance Configured HC.Address where
     convert (String text) = HC.base58ToAddr . cs $ text
+    convert _ = Nothing
 
 instance Configured BitcoinAmount where
     convert (Number r) =
@@ -55,3 +57,4 @@ instance Configured BitcoinAmount where
 instance Configured HC.PrvKey where
     convert (String text) =
         fmap HC.makePrvKey . Secp.secKey . fromHexString . cs $ text
+    convert _ = Nothing

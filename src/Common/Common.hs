@@ -61,11 +61,18 @@ instance PathParamEncode BitcoinLockTime where
 instance PathParamEncode Integer where
     pathParamEncode = cs . show
 
+instance PathParamEncode Word32 where
+    pathParamEncode = cs . show
+
 instance PathParamEncode HC.Address where
     pathParamEncode = HC.addrToBase58
 
 instance PathParamEncode Payment where
     pathParamEncode = b64Encode
+
+instance PathParamEncode HT.OutPoint where
+    pathParamEncode = HU.encodeHex . cs . Bin.encode
+
 
 ----
 
@@ -86,6 +93,11 @@ instance PathParamDecode HT.TxHash where
         maybe (Left $ "failed to decode transaction hash: " ++ cs bs)
             Right (HT.hexToTxHash bs)
 
+instance PathParamDecode HT.OutPoint where
+    pathParamDecode bs =
+        decodeHex bs >>=
+        fmapL ("failed to decode outpoint: " ++) . HU.decodeToEither
+
 instance PathParamDecode BitcoinLockTime where
     pathParamDecode bs = maybe
         (Left "expiration time parse failure") Right (decode . cs $ bs)
@@ -100,9 +112,15 @@ instance PathParamDecode Payment where
             Error e -> Left $ "payment parse failure: " ++ e
             Success p -> Right p
 
+decodeVout :: (Num a, FromJSON a) => BS.ByteString -> Either String a
+decodeVout bs = maybe
+    (Left "failed to decode funding tx vout") Right (decode . cs $ bs)
+
 instance PathParamDecode Integer where
-    pathParamDecode bs = maybe
-        (Left "failed to decode funding tx vout") Right (decode . cs $ bs)
+    pathParamDecode = decodeVout
+
+instance PathParamDecode Word32 where
+    pathParamDecode = decodeVout
 
 instance PathParamDecode Bool where
     pathParamDecode bs =
@@ -150,12 +168,12 @@ mkOpenPath sendPK expTime chgAddr payment =
     channelOpenPath sendPK expTime ++ mkOpenQueryParams chgAddr payment
 
 -- https://localhost/channels/f583e0b.../1
-activeChannelURL :: Bool -> BS.ByteString -> BS.ByteString -> HT.TxHash -> Integer -> String
-activeChannelURL isSecure host basePath txid vout =
-    channelRootURL isSecure (cs host) basePath ++ activeChannelPath txid vout
+activeChannelURL :: Bool -> BS.ByteString -> BS.ByteString -> HT.OutPoint -> String
+activeChannelURL isSecure host basePath chanId =
+    channelRootURL isSecure (cs host) basePath ++ activeChannelPath chanId
 
-activeChannelPath :: HT.TxHash -> Integer -> String
-activeChannelPath txid vout  = "/channels/" ++
+activeChannelPath :: HT.OutPoint -> String
+activeChannelPath (HT.OutPoint txid vout)  = "/channels/" ++
     cs (pathParamEncode txid) ++ "/" ++
     cs (pathParamEncode vout)
 
@@ -166,9 +184,9 @@ mkPaymentQueryParams payment maybeAddr =
         (cs $ pathParamEncode payment :: String) ++
     maybe "" (\addr -> "&change_address=" ++ (cs . pathParamEncode $ addr)) maybeAddr
 
-mkPaymentURL :: Bool -> String -> BS.ByteString -> HT.TxHash -> Integer -> Payment -> String
-mkPaymentURL isSecure host basePath txid vout payment  =
-    activeChannelURL isSecure (cs host) basePath txid vout ++ mkPaymentQueryParams payment Nothing
+mkPaymentURL :: Bool -> String -> BS.ByteString -> HT.OutPoint -> Payment -> String
+mkPaymentURL isSecure host basePath chanId payment  =
+    activeChannelURL isSecure (cs host) basePath chanId ++ mkPaymentQueryParams payment Nothing
 
 ----URLs-----
 

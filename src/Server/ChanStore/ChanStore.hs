@@ -1,5 +1,8 @@
+{-# LANGUAGE FlexibleInstances #-}
+
 module Server.ChanStore.ChanStore where
 
+import           Server.ChanStore.Types
 import           DiskStore
 import           Data.Bitcoin.PaymentChannel.Types
 import           Data.Bitcoin.PaymentChannel.Util (deserEither, unsafeUpdateRecvState)
@@ -8,6 +11,8 @@ import qualified Network.Haskoin.Transaction as HT
 import qualified Network.Haskoin.Crypto as HC
 import qualified Data.ByteString.Lazy as BL
 import qualified Data.Binary as Bin
+import qualified Data.Binary.Get as BinGet
+import qualified Data.Binary.Put as BinPut
 
 import qualified STMContainers.Map as Map
 import qualified ListT as LT
@@ -27,7 +32,7 @@ markAsSettlingAndGetIfOpen m k = do
 -- | Important note: does not support 'LockTimeBlockHeight'
 --      TODO: figure out if we even want to accept 'LockTimeBlockHeight' as an expiration date at all
 -- Get keys for all channel states with an expiration date later than the specified 'UTCTime'
-channelsExpiringBefore :: UTCTime -> ChannelMap -> STM [HT.TxHash]
+channelsExpiringBefore :: UTCTime -> ChannelMap -> STM [Key]
 channelsExpiringBefore currentTimeIsh (DiskMap _ m) =
     map getKey .
     filter (chanExpiresBefore . csState . getItem) .
@@ -41,19 +46,6 @@ expiresEarlierThan :: UTCTime -> BitcoinLockTime -> Bool
 expiresEarlierThan _        (LockTimeBlockHeight _) = error "LockTimeBlockHeight not supported"
 expiresEarlierThan circaNow (LockTimeDate expDate) = circaNow > expDate
 
--- settleIt
-
--- |Holds state for payment channel
-data ChanState =
-    ReadyForPayment {
-        csState          :: ReceiverPaymentChannel
-    } |
-    ChannelSettled {
-        csSettlementTxId :: HT.TxHash
-    } |
-    SettlementInProgress {
-        csSettlingState :: ReceiverPaymentChannel
-    }
 
 isSettled :: ChanState -> Bool
 isSettled (ChannelSettled _) = True
@@ -63,35 +55,35 @@ isOpen :: ChanState -> Bool
 isOpen (ReadyForPayment _) = True
 isOpen _ = False
 
-type ChannelMap = DiskMap HT.TxHash ChanState
-
--- data ChanStoreOp =
---     Get    HT.TxHash |
---     Create
-
 newChanMap :: FilePath -> IO ChannelMap
 newChanMap = newDiskMap
 
 
-getChanState :: ChannelMap -> HT.TxHash -> STM (Maybe ChanState)
+getChanState :: ChannelMap -> Key -> STM (Maybe ChanState)
 getChanState = getItem
 
-addChanState :: ChannelMap -> HT.TxHash -> ReceiverPaymentChannel -> STM ()
+addChanState :: ChannelMap -> Key -> ReceiverPaymentChannel -> STM ()
 addChanState chanMap key chanState =
     addItem chanMap key (ReadyForPayment chanState)
 
-updateChanState :: ChannelMap -> HT.TxHash -> ReceiverPaymentChannel -> STM Bool
-updateChanState chanMap key chanState =
-    updateStoredItem chanMap key (ReadyForPayment chanState)
+updateChanState :: ChannelMap -> Key -> Payment -> STM Bool
+updateChanState chanMap key payment = getItem chanMap key >>=
+    \maybeItem -> case maybeItem of
+        Just (ReadyForPayment oldState) ->
+            updateStoredItem chanMap key (ReadyForPayment newState) >>
+            return True
+                where newState = unsafeUpdateRecvState oldState payment
+        _ ->
+            return False
 
-deleteChanState :: ChannelMap -> HT.TxHash -> HT.TxHash -> STM Bool --TODO: switch to OutPoint key
+deleteChanState :: ChannelMap -> Key -> HT.TxHash -> STM Bool --TODO: switch to OutPoint key
 deleteChanState chanMap key settlementTxId =
     updateStoredItem chanMap key (ChannelSettled settlementTxId)
 
 
 mapLen = mapGetItemCount
 
-mapGetState :: ChannelMap -> (ChanState -> ChanState) -> HT.TxHash -> STM (Maybe ChanState)
+mapGetState :: ChannelMap -> (ChanState -> ChanState) -> Key -> STM (Maybe ChanState)
 mapGetState m f k  = do
     maybeCS <- getChanState m k
     case maybeCS of
@@ -167,5 +159,11 @@ instance Bin.Binary ChanState where
             0x02    -> ReadyForPayment   <$> Bin.get
             0x03    -> ChannelSettled   <$> Bin.get
             0x04    -> SettlementInProgress <$> Bin.get
-            n       -> fail $ "ChanState parser: unknown start byte: " ++ show n)
+            n       -> fail $ "unknown start byte: " ++ show n)
 
+instance Bin.Binary MaybeChanState where
+    put (MaybeChanState (Just chs)) = Bin.put chs
+    put (MaybeChanState Nothing  ) = BinPut.putLazyByteString BL.empty
+
+    get = BinGet.isEmpty >>= \empty ->
+        if not empty then MaybeChanState . Just <$> Bin.get else return (MaybeChanState Nothing)

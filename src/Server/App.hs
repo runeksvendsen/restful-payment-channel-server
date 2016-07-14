@@ -5,7 +5,10 @@ module Server.App where
 
 import           Data.Bitcoin.PaymentChannel.Types (ReceiverPaymentChannel, BitcoinAmount)
 
-import           Server.Util (getPathArg, getQueryArg, getOptionalQueryArg, getAppRootURL)
+import           Server.Util (getPathArg, getQueryArg, getOptionalQueryArg, getAppRootURL,
+                              channelIDFromPathArgs, writePaymentResult, proceedIfExhausted,
+                              tEST_blockchainGetFundingInfo,
+                              applyCORS')
 import           Server.Config
 import           Server.Config.Types
 import           Server.Types ( ChanOpenConfig(..),ChanPayConfig(..),
@@ -53,7 +56,6 @@ fundingInfoHandler =
     (use basePath >>= getAppRootURL)
         >>= writeFundingInfoResp
 
-
 newChannelHandler :: Handler App App (BitcoinAmount, ReceiverPaymentChannel)
 newChannelHandler = applyCORS' >>
     ChanOpenConfig <$>
@@ -71,23 +73,21 @@ newChannelHandler = applyCORS' >>
 paymentHandler :: Handler App App (BitcoinAmount, ReceiverPaymentChannel)
 paymentHandler = applyCORS' >>
     PayConfig <$>
-        use channelStateMap <*>
-        getPathArg "funding_txid" <*>
-        getPathArg "funding_vout" <*>
-        getOptionalQueryArg "change_address" <*>
-        getQueryArg "payment"
+        (StdConfig <$>
+            use channelStateMap <*>
+            channelIDFromPathArgs <*>
+            getQueryArg "payment") <*>
+        getOptionalQueryArg "change_address"
     >>= chanPay
 
 settlementHandler :: BitcoinAmount -> Handler App App ()
 settlementHandler valueReceived = do
     applyCORS'
 
-    settleConf <- use settleConfig
-    pushTxFunc <- use bitcoinPushTx
+    settleChanFunc <- use settleChanFunc
     stdConf <- StdConfig <$>
             use channelStateMap <*>
-            getPathArg "funding_txid" <*>
-            getPathArg "funding_vout" <*>
+            channelIDFromPathArgs <*>
             getQueryArg "payment"
-    chanSettle settleConf stdConf pushTxFunc valueReceived
+    chanSettle stdConf settleChanFunc valueReceived
 

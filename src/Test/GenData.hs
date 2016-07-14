@@ -91,13 +91,14 @@ getSessionData :: ChannelSession -> PaySessionData
 getSessionData (ChannelSession endPoint cp fundAddr initPay payList) =
     let
         (CFundingTxInfo txid vout val) = deriveMockFundingInfo cp
+        chanId = HT.OutPoint txid (fromIntegral vout)
         openURL = channelOpenURL False (cs endPoint) "/v1" (cpSenderPubKey cp)
                 (cpLockTime cp) ++ mkOpenQueryParams mockChangeAddress initPay
     in
         PaySessionData
             (cs openURL `mappend` "&test=true")
 --             (map (mappend endPoint . cs . mkPaymentURL txid (fromIntegral vout) Nothing) payList)
-            (map (cs . mkPaymentURL False (cs endPoint) "/v1" txid (fromIntegral vout)) payList)
+            (map (cs . mkPaymentURL False (cs endPoint) "/v1" chanId) payList)
 
 
 

@@ -6,21 +6,17 @@ import qualified Network.Haskoin.Crypto as HC
 import qualified Network.Haskoin.Transaction as HT
 
 -- import           Server.ChanStore (ChannelMap)
-import           Server.ChanStore.Client (ChanMapConn)
+import           Server.ChanStore.Types (ChanMapConn)
 import qualified Data.ByteString as BS
 import           BlockchainAPI.Types (TxInfo)
 
 
 type Vout = Integer     -- Output index
 
-
-data OpenConfig = OpenConfig Int BitcoinAmount Bool
-
-data ChanSettleConfig = SettleConfig {
-    confSettlePrivKey     :: HC.PrvKey,
-    confSettleRecvAddr    :: HC.Address,
-    confSettleTxFee       :: BitcoinAmount,
-    confSettlePeriod      :: Int
+data StdConfig = StdConfig {
+    serverChanMap   :: ChanMapConn,
+    chanId          :: HT.OutPoint,
+    chanPayment     :: Payment
 }
 
 data ChanOpenConfig = ChanOpenConfig {
@@ -35,13 +31,15 @@ data ChanOpenConfig = ChanOpenConfig {
    ,ocInitPayment   :: Payment
 }
 
+data OpenConfig = OpenConfig Int BitcoinAmount Bool
+
 data ChanPayConfig = PayConfig
-    ChanMapConn HT.TxHash Vout (Maybe HC.Address) Payment
+    StdConfig (Maybe HC.Address)
 
-
-data StdConfig = StdConfig {
-    serverChanMap   :: ChanMapConn,
-    chanHash        :: HT.TxHash,
-    chanVout        :: Vout,
-    chanPayment     :: Payment
+data ChanSettleConfig = SettleConfig {
+    confSettlePrivKey     :: HC.PrvKey,
+    confSettleRecvAddr    :: HC.Address,
+    confSettleTxFee       :: BitcoinAmount,
+    confSettlePeriod      :: Int
 }
+

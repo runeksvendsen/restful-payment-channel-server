@@ -3,7 +3,7 @@ module Server.TimeSettlement where
 -- Time-based settlement
 -- Close channels before the channel expiration date
 
-import           Server.ChanStore (ChannelMap)
+import           Server.ChanStore.Types (ChannelMap)
 import           Server.ChanStore.ChanStore (channelsExpiringBefore, markAsSettlingAndGetIfOpen)
 import           Server.ChanStore.Settlement (settleChannel)
 import           Server.Types (ChanSettleConfig(..))
@@ -16,7 +16,8 @@ import           Control.Monad.Catch (bracket, finally, try)
 import           Control.Concurrent  (forkIO, killThread, threadDelay)
 import           Control.Monad (forM)
 
-startSettlementThread = (>>) (putStrLn "Started disk sync thread.") settlementThread
+startSettlementThread m i conf =
+    putStrLn "Started settlement thread." >> settlementThread m i conf
 
 settlementThread ::
     ChannelMap
@@ -34,23 +35,26 @@ settleExpiringChannels ::
     -> IO ()
 settleExpiringChannels m (settleConf, rpcInfo) = do
     now <- getCurrentTime
-    let settlementTime =  settlePeriodSecs `addUTCTime` now
+    let settlePeriodSecs = fromInteger $ 3600 * fromIntegral (confSettlePeriod settleConf)
+    let settlementTime = settlePeriodSecs `addUTCTime` now
+
     expiringChannelKeys <- atomically $ channelsExpiringBefore settlementTime m
     forM expiringChannelKeys (settleSingleChannel m (settleConf, rpcInfo))
-        where settlePeriodSecs = fromInteger $ 3600 * fromIntegral (confSettlePeriod settleConf)
+
+    return ()
 
 settleSingleChannel ::
     ChannelMap
     -> (ChanSettleConfig, BTCRPCInfo)
-    -> HT.TxHash
+    -> HT.OutPoint
     -> IO ()
 settleSingleChannel m (settleConf, rpcInfo) k = do
-    maybeState <- markAsSettlingAndGetIfOpen m k
-    case maybeState of
+    maybeState <- atomically $ markAsSettlingAndGetIfOpen m k
+    _ <- case maybeState of
         Nothing        -> putStrLn $
             "INFO: Settlement thread: Channel closed inbetween fetching keys and items" ++
             " (this should happen rarely)"
-        Just chanState -> settleChannel settleConf rpcInfo chanState
+        Just chanState -> settleChannel rpcInfo settleConf chanState >> undefined
 
     return ()
 

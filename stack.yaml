@@ -7,7 +7,7 @@ packages:
 - '.'
 - location:
     git: https://github.com/runeksvendsen/bitcoin-payment-channel.git
-    commit: 265befb3bb1e7c51ca5974470e460bce0ffd7446
+    commit: 9ba69a13552cc4946a64c8c047b1567bbf4c5d37
   extra-dep: true
 - location:
     git: https://github.com/runeksvendsen/haskell-bitcoin-api.git
@@ -21,7 +21,6 @@ flags:
 extra-deps:
 - haskoin-core-0.3.0
 - snap-server-0.9.5.1
-# - bitcoin-payment-channel-0.1.1.0
 - murmur3-1.0.1
 - pbkdf-1.1.1.1
 - secp256k1-0.4.5

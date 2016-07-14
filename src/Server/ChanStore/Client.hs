@@ -22,28 +22,30 @@ module Server.ChanStore.Client
     ChanMapConn,
     ChanState(..)
 )
- where
+where
 
-import Server.ChanStore.ChanStore ( ChanState(..),
-                                    getChanState, addChanState,
-                                    updateChanState, deleteChanState,
-                                    isSettled)
-import Server.ChanStore.Connection (ChanMapConn, getConnMap, isOpen)
+import           Server.ChanStore.Types
+-- import           Server.ChanStore.Connection (ChanMapConn)
+import           Server.ChanStore.Interface (Create(..), Get(..), Update(..), Delete(..),
+                                             runRequest)
+import           Server.ChanStore.ChanStore (isSettled)
 
-import Control.Monad.STM
-
--- |Get item
-chanGet conn k   = atomically $
-    getConnMap conn >>= (`getChanState` k)
+import           Data.Bitcoin.PaymentChannel.Types (ReceiverPaymentChannel, Payment)
+import qualified Network.Haskoin.Transaction as HT
 
 -- |Add item
-chanAdd conn k v = atomically $
-    getConnMap conn >>= (\map -> addChanState map k v)
+chanAdd :: ChanMapConn -> ReceiverPaymentChannel -> IO ()
+chanAdd conn rpc = runRequest conn $ Create rpc
+
+-- |Get item
+chanGet :: ChanMapConn -> Key -> IO (Maybe ChanState)
+chanGet conn key = runRequest conn (Get key) >>=
+    \(MaybeChanState maybe) -> return maybe     -- needed to avoid overlapping Binary instance
 
 -- |Update item
-chanUpdate conn k v = atomically $
-    getConnMap conn >>= (\map -> updateChanState map k v)
+chanUpdate :: ChanMapConn -> Key -> Payment -> IO ()
+chanUpdate conn key payment = runRequest conn $ Update key payment
 
 -- |Delete item
-chanDelete conn k settleTxId = atomically $
-    getConnMap conn >>= (\map -> deleteChanState map k settleTxId)
+chanDelete :: ChanMapConn -> Key -> HT.TxHash -> IO ()
+chanDelete conn key settleTxId = runRequest conn $ Delete key settleTxId

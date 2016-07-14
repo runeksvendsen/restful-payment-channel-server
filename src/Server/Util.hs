@@ -2,58 +2,51 @@
 
 module Server.Util where
 
+import           Prelude hiding (userError)
+
 import           Common.Common
 import           Common.Types
 
 import           BlockchainAPI.Impl.BlockrIo (txIDFromAddr, fundingOutInfoFromTxId)
 import           BlockchainAPI.Types (txConfs, toFundingTxInfo,
                                 TxInfo(..), OutInfo(..))
--- import           Server.ChanStore (ChannelMap, ChanState(..))
--- import           DiskStore (addItem, getItem)
 
-import           Prelude hiding (userError)
-import           Control.Monad (mzero, forM, unless)
-import           Control.Applicative
-import           Control.Concurrent (forkIO)
-import           Control.Monad.State (gets)
-import           Snap.Core
-import           Snap.Core (getHeader)
--- import           Snap.Util.FileServe
-import           Snap.Http.Server
+import           Snap
 import           Snap.Iteratee (Enumerator, enumBuilder)
-import           Data.Bitcoin.PaymentChannel
-import           Data.Bitcoin.PaymentChannel.Types (ChannelParameters(..), PayChanError(..)
+
+import           Data.Bitcoin.PaymentChannel.Types (PaymentChannel(..), ReceiverPaymentChannel,
+                                                    ChannelParameters(..), PayChanError(..)
                                                     ,getChannelState, BitcoinAmount, Payment)
-import           Data.Bitcoin.PaymentChannel.Util (getFundingAddress, BitcoinLockTime(..), fromDate)
+import           Data.Bitcoin.PaymentChannel.Util (setSenderChangeAddress)
 
 import qualified Network.Haskoin.Constants as HCC
-import Network.Wreq (get, post, asJSON, responseBody)
-import Control.Lens ((^.))
 import           Control.Monad.IO.Class
 import qualified Network.Haskoin.Crypto as HC
 import qualified Network.Haskoin.Transaction as HT
-import qualified Crypto.Secp256k1 as Secp
-import           Data.Aeson
-    (Result(..), Value(Number, Object, String), FromJSON, ToJSON, parseJSON, toJSON,
-    fromJSON, withScientific, eitherDecode, eitherDecodeStrict, decode, encode, (.=), (.:), object)
+import           Data.Aeson (FromJSON, ToJSON, parseJSON, toJSON,
+                            decode, encode)
 
-import Data.Maybe (isJust, fromJust)
 import qualified Data.ByteString as BS
 import qualified Data.ByteString.Lazy as BL
 import qualified Data.ByteString.Char8 as C
 import Blaze.ByteString.Builder.ByteString (fromLazyByteString)
-import Data.ByteString.Lazy (toStrict)
-import Data.Time.Clock.POSIX (getPOSIXTime, posixSecondsToUTCTime)
 import Data.Int (Int64)
-import Data.Word (Word8,Word32)
-import Data.Text as T
 import Text.Printf (printf)
-import Data.EitherR (fmapL)
 import Data.String.Conversions (cs)
-import Data.CaseInsensitive (CI, original)
 import Data.Aeson.Encode.Pretty (encodePretty)
 import           Data.Monoid ((<>))
 import qualified Data.Binary as Bin (Binary, encode, decodeOrFail)
+
+import           Control.Lens (use)
+
+
+import           Server.Config.Types (App, pubKey, fundingMinConf)
+
+
+import           BlockchainAPI.Impl.ChainSo (chainSoAddressInfo, toEither)
+
+import Test.GenData (deriveMockFundingInfo, convertMockFundingInfo)
+
 
 
 getAppRootURL :: MonadSnap m => BS.ByteString -> m String
@@ -62,14 +55,13 @@ getAppRootURL basePath = do
     serverPort <- getsRequest rqServerPort
     let finalHostname = if serverPort == 80 then serverName else
             serverName <> ":" <> cs (show serverPort)
-
     isSecure <- getsRequest rqIsSecure
-    return $ channelRootURL isSecure serverName basePath
+    return $ channelRootURL isSecure finalHostname basePath
 
-httpLocationSetActiveChannel :: MonadSnap m => BS.ByteString -> HT.TxHash -> Integer -> m ()
-httpLocationSetActiveChannel basePath hash idx = do
+httpLocationSetActiveChannel :: MonadSnap m => BS.ByteString -> HT.OutPoint -> m ()
+httpLocationSetActiveChannel basePath chanId = do
     chanRootURL <- getAppRootURL basePath
-    modifyResponse $ setHeader "Location" (cs $ chanRootURL ++ activeChannelPath hash idx)
+    modifyResponse $ setHeader "Location" (cs $ chanRootURL ++ activeChannelPath chanId)
 
 
 fundingAddressFromParams :: MonadSnap m => HC.PubKey -> m HC.Address
@@ -94,13 +86,18 @@ txInfoFromAddr fundAddr = do
 
 -- | Return (hash,idx) if sufficiently confirmed
 guardIsConfirmed :: MonadSnap m => Integer -> TxInfo -> m TxInfo
-guardIsConfirmed minConf txInfo@(TxInfo txId txConfs (OutInfo _ _ idx)) =
+guardIsConfirmed minConf txInfo@(TxInfo _ txConfs (OutInfo _ _ _)) =
     if txConfs >= minConf then
         return txInfo
     else
         userError $ printf "Insufficient confirmation count for funding transaction: %d (need %d)" txConfs minConf
 ---- Blockchain API ----
 
+channelIDFromPathArgs :: MonadSnap m => m HT.OutPoint
+channelIDFromPathArgs =
+    HT.OutPoint <$>
+       getPathArg "funding_txid" <*>
+       getPathArg "funding_vout"
 
 --- Get parameters with built-in error handling
 failOnError :: MonadSnap m => String -> Either String a -> m a
@@ -164,11 +161,88 @@ writeBinary obj = do
     overwriteResponseBody $ Bin.encode obj
 
 reqBoundedData :: (MonadSnap m, Bin.Binary a) => Int64 -> m (Either String a)
-reqBoundedData n = fmap Bin.decodeOrFail (readRequestBody n) >>=
-    \eitherResult -> case eitherResult of
-        Left (_,_,e)    -> return $ Left e
-        Right (_,_,val) -> return $ Right val
+reqBoundedData n = fmap decodeEither (readRequestBody n)
 
+decodeEither :: Bin.Binary a => BL.ByteString -> Either String a
+decodeEither bs = case Bin.decodeOrFail bs of
+       Left (_,_,e)    -> Left e
+       Right (_,_,val) -> Right val
+
+
+--- Util ---
+proceedIfExhausted :: MonadSnap m => (ChannelStatus,BitcoinAmount) -> m BitcoinAmount
+proceedIfExhausted (ChannelOpen,_)          = finishWith =<< getResponse
+proceedIfExhausted (ChannelClosed,valRecvd) = return valRecvd
+
+applyCORS' :: MonadSnap m => m ()
+applyCORS' = do
+    modifyResponse $ setHeader "Access-Control-Allow-Origin"    "*"
+    modifyResponse $ setHeader "Access-Control-Allow-Methods"   "GET,POST,PUT,DELETE"
+    modifyResponse $ setHeader "Access-Control-Allow-Headers"   "Origin,Accept,Content-Type"
+    modifyResponse $ setHeader "Access-Control-Expose-Headers"  "Location"
+
+writePaymentResult :: MonadSnap m =>
+    (BitcoinAmount, ReceiverPaymentChannel)
+    -> m (ChannelStatus,BitcoinAmount)
+writePaymentResult (valRecvd,recvChanState) =
+    let chanStatus =
+            if channelIsExhausted recvChanState then
+                ChannelClosed else
+                ChannelOpen
+    in
+        do
+            writeJSON . toJSON $ PaymentResult {
+                paymentResultchannel_status = chanStatus,
+                paymentResultchannel_value_left = channelValueLeft recvChanState,
+                paymentResultvalue_received = valRecvd,
+                paymentResultsettlement_txid = Nothing
+            }
+            return (chanStatus,valRecvd)
+
+maybeUpdateChangeAddress :: MonadSnap m =>
+    Maybe HC.Address
+    -> ReceiverPaymentChannel
+    -> m ReceiverPaymentChannel
+maybeUpdateChangeAddress maybeAddr state =
+    maybe (return state) updateAddressAndLog maybeAddr
+        where updateAddressAndLog addr = do
+                liftIO . putStrLn $ "Updating client change address to " ++ toString addr
+                return $ setSenderChangeAddress state addr
+--- Util ---
+
+
+--- Funding ---
+tEST_blockchainGetFundingInfo :: Handler App App TxInfo
+tEST_blockchainGetFundingInfo = do
+    pubKeyServer <- use pubKey
+    minConf <- use fundingMinConf
+    testArgTrue <- fmap (== Just True) $ getOptionalQueryArg "test"
+
+    if (HCC.getNetworkName HCC.getNetwork == "testnet") && testArgTrue then
+            test_GetDerivedFundingInfo pubKeyServer
+        else
+            fundingAddressFromParams pubKeyServer >>=
+                blockchainAddressCheckEverything minConf
+
+blockchainAddressCheckEverything :: MonadSnap m => Int -> HC.Address -> m TxInfo
+blockchainAddressCheckEverything minConf addr =
+    (liftIO . chainSoAddressInfo . cs . HC.addrToBase58) addr >>=
+        either internalError return . toEither >>=
+        maybe
+            (userError $ "No transactions paying to " ++ cs (HC.addrToBase58 addr) ++
+                ". Maybe wait a little?")
+            return >>=
+        guardIsConfirmed (fromIntegral minConf)
+
+-- | Deterministically derives a mock TxInfo from ChannelParameters,
+-- which matches that of the test data generated by Test.GenData.
+test_GetDerivedFundingInfo :: MonadSnap m => HC.PubKey -> m TxInfo
+test_GetDerivedFundingInfo pubKeyServer = do
+    cp <- flip CChannelParameters pubKeyServer <$>
+            getQueryArg "client_pubkey" <*>
+            getQueryArg "exp_time"
+    return $ convertMockFundingInfo . deriveMockFundingInfo $ cp
+--- Funding ---
 
 
 
@@ -192,3 +266,14 @@ reqBoundedData n = fmap Bin.decodeOrFail (readRequestBody n) >>=
 -- bodyJSONGetPayment =
 --     reqBoundedJSON 1024 >>=
 --     either (userError . ("Failed to parse Payment: " ++)) (return . paymentpayment_data)
+
+
+
+-- logFundingInfo :: MonadSnap m => m ()
+-- logFundingInfo  = do
+--     pk <- getQueryArg "client_pubkey"
+--     expTime <- getQueryArg "exp_time"
+--     liftIO . putStrLn $ printf
+--         "Got fundingInfo request: pubkey=%s exp=%s"
+--             (show (pk :: HC.PubKey))
+--             (show (expTime :: BitcoinLockTime))

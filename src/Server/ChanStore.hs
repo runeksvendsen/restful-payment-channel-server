@@ -6,6 +6,7 @@ module Server.ChanStore
 )
 where
 
+import           Server.ChanStore.Types
 import Server.ChanStore.ChanStore
 import DiskStore
 

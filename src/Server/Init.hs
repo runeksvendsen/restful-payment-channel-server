@@ -3,33 +3,30 @@
 module Server.Init where
 
 
-
 import           Server.App  (mainRoutes)
 
 import           Server.Config
 import           Server.Config.Types
 import           Server.Types (OpenConfig(..), ChanSettleConfig(..))
 
-import           Bitcoind (BTCRPCInfo(..), bitcoindNetworkSumbitTx)
-
 import           Common.Common (pathParamEncode)
 import           Data.String.Conversions (cs)
 
-import           Server.ChanStore.Client (ChanMapConn)
+import           Server.ChanStore.Types (ChanMapConn)
+import           Server.ChanStore.Settlement (settleChannel)
 
-import           Control.Monad (unless)
-import           Control.Monad.IO.Class (liftIO)
-import           Control.Concurrent (forkIO, killThread,     threadDelay)
-import qualified System.Posix.Signals as Sig (Handler(Catch), installHandler, sigTERM)
 
 import qualified Network.Haskoin.Crypto as HC
 import           Snap (SnapletInit, makeSnaplet, addRoutes)
 
+import           Control.Monad.IO.Class (liftIO)
+import qualified System.Posix.Signals as Sig
+import           Control.Concurrent (ThreadId)
+import           Control.Concurrent (throwTo)
+import qualified Control.Exception as E
 
 appInit :: Config -> ChanMapConn -> SnapletInit App App
 appInit cfg chanOpenMap = makeSnaplet "PayChanServer" "RESTful Bitcoin payment channel server" Nothing $ do
-    --- CONFIG ---
---     cfg <- getSnapletUserConfig
 
     bitcoinNetwork <- liftIO (configLookupOrFail cfg "bitcoin.network")
     liftIO $ setBitcoinNetwork bitcoinNetwork
@@ -42,7 +39,7 @@ appInit cfg chanOpenMap = makeSnaplet "PayChanServer" "RESTful Bitcoin payment c
             liftIO (configLookupOrFail cfg "open.priceAddSettlementFee")
 
     bitcoindRPCConf <- liftIO $ getBitcoindConf cfg
-    let pushTxFunc = bitcoindNetworkSumbitTx bitcoindRPCConf
+    let settleChanFunc = settleChannel bitcoindRPCConf cfgSettleConfig
 
     let confPubKey = HC.derivePubKey $ confSettlePrivKey cfgSettleConfig
     let confOpenPrice = if addSettleFee then basePrice + settleFee else basePrice
@@ -52,4 +49,17 @@ appInit cfg chanOpenMap = makeSnaplet "PayChanServer" "RESTful Bitcoin payment c
     let basePathVersion = "/v1"
     addRoutes $ mainRoutes basePathVersion
 
-    return $ App chanOpenMap cfgSettleConfig confPubKey confOpenPrice minConf basePathVersion pushTxFunc
+    return $ App chanOpenMap cfgSettleConfig
+                 confPubKey confOpenPrice minConf
+                 basePathVersion settleChanFunc
+
+installHandlerKillThreadOnSig :: Sig.Signal -> ThreadId -> IO Sig.Handler
+installHandlerKillThreadOnSig sig tid =
+    Sig.installHandler
+          sig
+          (Sig.CatchInfo $ \ci -> do
+              putStrLn ("Caught signal: " ++
+                  show (Sig.siginfoSignal ci) ++
+                  ". Killing main thread...")
+              throwTo tid E.UserInterrupt)
+          Nothing --(Just Sig.fullSignalSet)
