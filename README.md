@@ -26,7 +26,7 @@ Experimental. Should work as intended, more or less, but there are some bugs and
 ### Documentation
 See [http://paychandoc.runeks.me/](http://paychandoc.runeks.me/).
 
-### Running hosts
+### Live test servers
 #### Live server
 https://paychan.runeks.me. Runs on livenet.
 #### Test server
