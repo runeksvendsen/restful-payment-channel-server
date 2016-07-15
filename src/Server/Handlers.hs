@@ -17,7 +17,7 @@ import           BlockchainAPI.Impl.ChainSo (chainSoAddressInfo, toEither)
 import           BlockchainAPI.Types (toFundingTxInfo,
                                 TxInfo(..), OutInfo(..))
 
-import qualified Server.ChanStore.Client as DBConn
+import qualified Server.ChanStore.Interface as DBConn
 
 import           Control.Monad.IO.Class (liftIO)
 import           Control.Monad (unless, when)

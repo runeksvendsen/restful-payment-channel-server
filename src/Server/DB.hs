@@ -1,7 +1,7 @@
 module Server.DB where
 
 import           Server.Util
-import qualified Server.ChanStore.Client as DBConn
+import qualified Server.ChanStore.Interface as DBConn
 import           Data.Bitcoin.PaymentChannel.Types (ReceiverPaymentChannel, Payment)
 import qualified Network.Haskoin.Transaction as HT
 import qualified Data.ByteString as BS

@@ -48,7 +48,7 @@ site map =
     route [ ("/channels/"
              ,      method POST   $ create map)
 
-          , ("/channels/:funding_outpoint"
+          , ("/channels/by_id/:funding_outpoint"
              ,      method GET    ( get map   )
                 <|> method PUT    ( update map)
                 <|> method DELETE ( settle map) )
@@ -88,16 +88,15 @@ settle map = do
     outPoint    <- getPathArg  "funding_outpoint"
     settleTxId  <- getQueryArg "settlement_txid"
     itemExisted  <- liftIO $ deleteChanState map outPoint settleTxId
-    case itemExisted of
-        True  -> return ()
-        False -> errorWithDescription 404 "No such channel"
+    unless itemExisted $
+        errorWithDescription 404 "No such channel"
 
 getAll :: ChannelMap -> Snap ()
 getAll m = do
-    maybeExpiresEarlier <- getOptionalQueryArg "expires_before"
-    let filterFunc = case maybeExpiresEarlier of
-            Just exp -> \i -> getExpirationDate (csState i) < exp
-            Nothing  -> \_ -> True
+    maybeExpiresEarlierArg <- getOptionalQueryArg "expires_before"
+    let filterFunc = case maybeExpiresEarlierArg of
+            Just expirationDate -> \i -> getExpirationDate (csState i) < expirationDate
+            Nothing             -> const True
     liftIO (getFilteredChanStates m filterFunc) >>= writeBinary
 
 updateWithPayment :: MonadSnap m => ChannelMap -> HT.OutPoint -> Payment -> m ()
