@@ -8,4 +8,9 @@ stanzas:
         key: /opt/keter/etc/server.key
         certificate: /opt/keter/etc/runeks-rapid.pem
         chain-certificates: []
-
+    - type: background
+      exec: ../ChanStore
+      args:
+        - /home/rune/code/restful-payment-channel-server/config/live/config/store.cfg
+      restart-count: 10
+      restart-delay-seconds: 1

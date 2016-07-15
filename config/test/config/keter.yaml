@@ -9,3 +9,9 @@ stanzas:
         certificate: /opt/keter/etc/testpay.pem
         chain-certificates:
           - /opt/keter/etc/comodo.pem
+    - type: background
+      exec: ../ChanStore
+      args:
+        - /home/rune/code/restful-payment-channel-server/config/test/config/store.cfg
+      restart-count: 10
+      restart-delay-seconds: 1
