@@ -53,10 +53,10 @@ getAppRootURL :: MonadSnap m => BS.ByteString -> m String
 getAppRootURL basePath = do
     serverName <- getsRequest rqServerName
     serverPort <- getsRequest rqServerPort
-    let finalHostname = if serverPort == 80 then serverName else
-            serverName <> ":" <> cs (show serverPort)
+--     let finalHostname = if serverPort == 80 then serverName else
+--             serverName <> ":" <> cs (show serverPort)
     isSecure <- getsRequest rqIsSecure
-    return $ channelRootURL isSecure finalHostname basePath
+    return $ channelRootURL isSecure serverName basePath
 
 httpLocationSetActiveChannel :: MonadSnap m => BS.ByteString -> HT.OutPoint -> m ()
 httpLocationSetActiveChannel basePath chanId = do
