@@ -2,7 +2,8 @@ module DiskStore
 (
 DiskMap(..),
 newDiskMap, addItem, getItem, updateStoredItem, deleteStoredItem,
-mapGetItem, mapGetItemCount, -- getFilteredItems,
+mapGetItem, getAllItems,
+mapGetItemCount, -- getFilteredItems,
 
 syncToDisk,mapDiskSyncThread,syncMapToDisk,
 
@@ -48,7 +49,7 @@ import qualified Data.ByteString as BS
 
 type STMMap k v = Map.Map k (MapItem v)
 
-data DiskMap k v = DiskMap { mapConf :: MapConfig, diskMap :: (STMMap k v) }
+data DiskMap k v = DiskMap { mapConf :: MapConfig, diskMap :: STMMap k v }
 
 data MapItem v = Item {
     itemContent :: v
@@ -117,6 +118,11 @@ deleteStoredItem dm@(DiskMap _ m) k = do
 --             atomically (markForDeletion k dm) >>     -- used when disk-sync thread syncs
             performAction dm (k, Delete) >>
             return True
+
+getAllItems :: (ToFileName k, Serializable v) =>
+                DiskMap k v -> IO [v]
+getAllItems (DiskMap _ m) =
+    atomically $ map (itemContent . snd) <$> LT.toList (Map.stream m)
 
     -- User --
 --- Interface ---

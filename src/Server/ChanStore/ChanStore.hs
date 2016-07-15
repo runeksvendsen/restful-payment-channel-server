@@ -76,10 +76,12 @@ updateChanState chanMap key payment = getItem chanMap key >>=
         _ ->
             return False
 
-deleteChanState :: ChannelMap -> Key -> HT.TxHash -> IO Bool --TODO: switch to OutPoint key
+deleteChanState :: ChannelMap -> Key -> HT.TxHash -> IO Bool
 deleteChanState chanMap key settlementTxId =
     updateStoredItem chanMap key (ChannelSettled settlementTxId)
 
+getAllChanStates :: ChannelMap -> IO [ChanState]
+getAllChanStates = getAllItems
 
 mapLen = mapGetItemCount
 
@@ -89,8 +91,6 @@ mapGetState m f k  = do
     case maybeCS of
         Nothing -> return Nothing
         Just cs -> updateStoredItem m k (f cs) >> return (Just cs)
-
--- unsafeUpdatePayment :: ChannelMap -> HT.TxHash -> Payment -> IO
 
 
 diskSyncThread ::

@@ -51,7 +51,10 @@ site map =
           , ("/channels/:funding_outpoint"
              ,      method GET    ( get map   )
                 <|> method PUT    ( update map)
-                <|> method DELETE ( settle map) )]
+                <|> method DELETE ( settle map) )
+
+          , ("/channels/all"
+             ,      method GET    ( getAll map ))]
 
 create :: ChannelMap -> Snap ()
 create map = do
@@ -87,6 +90,10 @@ settle map = do
     case itemExisted of
         True  -> return ()
         False -> errorWithDescription 404 "No such channel"
+
+getAll :: ChannelMap -> Snap ()
+getAll m =
+    liftIO (getAllChanStates m) >>= writeBinary
 
 updateWithPayment :: MonadSnap m => ChannelMap -> HT.OutPoint -> Payment -> m ()
 updateWithPayment  map chanId payment = do
