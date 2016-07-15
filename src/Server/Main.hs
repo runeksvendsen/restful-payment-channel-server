@@ -42,9 +42,9 @@ main :: IO ()
 main = wrapArg $ \cfgFilePath -> do
     cfg <- loadConfig cfgFilePath
     dbConf <- getDBConf cfg
-    mainThread <- myThreadId
 
-    prevHandler <- installHandlerKillThreadOnSig Sig.sigTERM mainThread
+    mainThread <- myThreadId
+    _ <- installHandlerKillThreadOnSig Sig.sigTERM mainThread
     --       1. first do this                         3. at the end always do this
     bracket  (connFromDBConf dbConf)     DB.closeConnection $
              runApp (F.dropExtension cfgFilePath) cfg --- <--- 2. do this in-between
