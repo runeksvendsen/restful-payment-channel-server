@@ -12,5 +12,5 @@ stanzas:
       exec: ../ChanStore
       args:
         - /home/rune/code/restful-payment-channel-server/config/live/config/store.cfg
-      restart-count: 20
+      restart-count: 999999999
       restart-delay-seconds: 5
