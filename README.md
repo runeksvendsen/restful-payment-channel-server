@@ -27,10 +27,10 @@ Experimental. Should work as intended, more or less, but there are some bugs and
 See [http://paychandoc.runeks.me/](http://paychandoc.runeks.me/).
 
 ### Live test servers
-#### Live server
-https://paychan.runeks.me. Runs on livenet.
-#### Test server
-https://paychantest.runeks.me. Runs on Bitcoin testnet.
+#### Bitcoin live net
+https://paychan.runeks.me
+#### Bitcoin testnet3
+https://paychantest.runeks.me
 
 ### Performance
 On my 2015 Macbook Pro I get 800-900 payments per second running the `benchPayChanServer.sh` script (located in `test/`):
