@@ -59,14 +59,14 @@ create map = do
     case eitherState of
         Right newChanState ->
             let key = getChannelID newChanState in
-                liftIO (try . atomically $ addChanState map key newChanState) >>=
+                liftIO (try $ addChanState map key newChanState) >>=
                     either errorOnException (const $ return ())
         Left e -> userError e
 
 get :: ChannelMap -> Snap ()
 get map = do
     outPoint <- getPathArg "funding_outpoint"
-    maybeItem <- liftIO . atomically $ getChanState map outPoint
+    maybeItem <- liftIO $ getChanState map outPoint
     case maybeItem of
         Nothing -> errorWithDescription 404 "No such channel"
         Just item -> writeBinary item
@@ -83,14 +83,14 @@ settle :: ChannelMap -> Snap ()
 settle map = do
     outPoint    <- getPathArg  "funding_outpoint"
     settleTxId  <- getQueryArg "settlement_txid"
-    itemExisted  <- liftIO . atomically $ deleteChanState map outPoint settleTxId
+    itemExisted  <- liftIO $ deleteChanState map outPoint settleTxId
     case itemExisted of
         True  -> return ()
         False -> errorWithDescription 404 "No such channel"
 
 updateWithPayment :: MonadSnap m => ChannelMap -> HT.OutPoint -> Payment -> m ()
 updateWithPayment  map chanId payment = do
-    success <- liftIO . atomically $ updateChanState map chanId payment
+    success <- liftIO $ updateChanState map chanId payment
     unless success $
         userError "Not an open channel"
 

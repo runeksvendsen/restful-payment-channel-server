@@ -49,7 +49,7 @@ settleSingleChannel ::
     -> HT.OutPoint
     -> IO ()
 settleSingleChannel m (settleConf, rpcInfo) k = do
-    maybeState <- atomically $ markAsSettlingAndGetIfOpen m k
+    maybeState <- markAsSettlingAndGetIfOpen m k
     _ <- case maybeState of
         Nothing        -> putStrLn $
             "INFO: Settlement thread: Channel closed inbetween fetching keys and items" ++

@@ -59,14 +59,14 @@ newChanMap :: FilePath -> IO ChannelMap
 newChanMap = newDiskMap
 
 
-getChanState :: ChannelMap -> Key -> STM (Maybe ChanState)
+getChanState :: ChannelMap -> Key -> IO (Maybe ChanState)
 getChanState = getItem
 
-addChanState :: ChannelMap -> Key -> ReceiverPaymentChannel -> STM ()
+addChanState :: ChannelMap -> Key -> ReceiverPaymentChannel -> IO ()
 addChanState chanMap key chanState =
     addItem chanMap key (ReadyForPayment chanState)
 
-updateChanState :: ChannelMap -> Key -> Payment -> STM Bool
+updateChanState :: ChannelMap -> Key -> Payment -> IO Bool
 updateChanState chanMap key payment = getItem chanMap key >>=
     \maybeItem -> case maybeItem of
         Just (ReadyForPayment oldState) ->
@@ -76,14 +76,14 @@ updateChanState chanMap key payment = getItem chanMap key >>=
         _ ->
             return False
 
-deleteChanState :: ChannelMap -> Key -> HT.TxHash -> STM Bool --TODO: switch to OutPoint key
+deleteChanState :: ChannelMap -> Key -> HT.TxHash -> IO Bool --TODO: switch to OutPoint key
 deleteChanState chanMap key settlementTxId =
     updateStoredItem chanMap key (ChannelSettled settlementTxId)
 
 
 mapLen = mapGetItemCount
 
-mapGetState :: ChannelMap -> (ChanState -> ChanState) -> Key -> STM (Maybe ChanState)
+mapGetState :: ChannelMap -> (ChanState -> ChanState) -> Key -> IO (Maybe ChanState)
 mapGetState m f k  = do
     maybeCS <- getChanState m k
     case maybeCS of

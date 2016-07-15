@@ -82,33 +82,42 @@ newDiskMap syncDir = diskGetStateFiles syncDir >>= channelMapFromStateFiles sync
     -- Root --
 
     -- User --
-addItem :: ToFileName k =>
-    DiskMap k v -> k -> v -> STM ()
-addItem (DiskMap _ m) h pc = insertItem h pc m
-
 getItem :: ToFileName k =>
-    DiskMap k v -> k -> STM (Maybe v)
+    DiskMap k v -> k -> IO (Maybe v)
 getItem (DiskMap _ m) k = do
-    item <- Map.lookup k m
+    item <- atomically $ Map.lookup k m
     case item of
         Just Item { deleteFromDisk = True } -> return Nothing
         _ -> return $ fmap itemContent item
 
+addItem :: (ToFileName k, Serializable v) =>
+    DiskMap k v -> k -> v -> IO ()
+addItem dm@(DiskMap _ m) k v =
+    atomically (insertItem k v m) >>
+    syncNow dm k v
+
 updateStoredItem :: (ToFileName k, Serializable v) =>
-    DiskMap k v -> k -> v -> STM ItemExists
+    DiskMap k v -> k -> v -> IO ItemExists
 updateStoredItem dm@(DiskMap _ m) k v = do
     maybeItem <- getItem dm k
     case maybeItem of
         Nothing -> return False
-        Just _ ->  updateItem m k v >> return True
+        Just _ ->
+            atomically (updateItem m k v) >>
+            syncNow dm k v >>
+            return True
 
 deleteStoredItem :: (ToFileName k, Serializable v) =>
-    DiskMap k v -> k -> STM ItemExists
+    DiskMap k v -> k -> IO ItemExists
 deleteStoredItem dm@(DiskMap _ m) k = do
     maybeItem <- getItem dm k
     case maybeItem of
         Nothing -> return False
-        Just _ ->  markForDeletion k dm >> return True
+        Just v ->
+--             atomically (markForDeletion k dm) >>     -- used when disk-sync thread syncs
+            performAction dm (k, Delete) >>
+            return True
+
     -- User --
 --- Interface ---
 
@@ -133,6 +142,12 @@ itemToAction (Item _ False False) = Ignore
 
 type FileName = FilePath
 
+syncNow :: (ToFileName k, Serializable v) =>
+    DiskMap k v
+    -> k
+    -> v
+    -> IO ()
+syncNow (DiskMap (MapConfig dir) _) k v = writeEntryToFile dir (k, v)
 
 mapDiskSyncThread ::
     (ToFileName k, Serializable v) =>
@@ -152,7 +167,7 @@ syncToDisk m = do
         Left  e    -> putStrLn $ "ERROR: Disk sync failed! " ++ show (e :: IOException)
         Right syncCount ->
             unless (syncCount == 0) $
-                    putStrLn $ "Synced " ++ show syncCount ++ " channel state(s) to disk."
+                putStrLn $ "Synced " ++ show syncCount ++ " channel state(s) to disk."
 
 
 channelMapFromStateFiles ::
@@ -205,7 +220,6 @@ mkTuple a b = (a,b)
 singleStateDeleteDisk :: ToFileName k => FilePath -> k -> IO ()
 singleStateDeleteDisk stateDir v = removeFile $ getAbsoluteFilePath stateDir v
 
-
 writeEntryToFile :: (Serializable v, ToFileName k) => String -> (k, v) -> IO ()
 writeEntryToFile stateDir (h,s) =
     B.writeFile (getAbsoluteFilePath stateDir h) (serialize s)
@@ -252,14 +266,14 @@ syncKeyDataToDisk dm@(DiskMap conf m) h = do
     maybeSyncItemToDisk (syncDir conf) h maybeItem
 
 -- | Execute item-getter/sync-status-setter and save result to disk
-maybeSyncItemToDisk ::
-    (Serializable v, ToFileName k) =>
+maybeSyncItemToDisk :: (Serializable v, ToFileName k) =>
     FilePath
     -> k
-    -> Maybe (MapItem v) -> IO ()
+    -> Maybe (MapItem v)
+    -> IO ()
 maybeSyncItemToDisk dir h maybeItem =
     case maybeItem of
-        Just i -> writeEntryToFile dir (h, itemContent i)  --singleStateSyncDisk (h, itemContent i)
+        Just i -> writeEntryToFile dir (h, itemContent i)
         Nothing -> return ()
 
 mapGetItem m f k = mapGetItem_Internal m (\i@Item { itemContent = v } -> i { itemContent = f v } )
