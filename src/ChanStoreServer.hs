@@ -30,10 +30,7 @@ import qualified Control.Exception as E
 
 
 main :: IO ()
-main = wrapArg $ \cfgFilePath -> do
-    putStrLn $ "Using config file " ++ show cfgFilePath ++ ". Reading..."
-    cfg <- loadConfig cfgFilePath
-
+main = wrapArg $ \cfg _ -> do
     configLookupOrFail cfg "bitcoin.network" >>= setBitcoinNetwork
 
     map <- init_chanMap =<< configLookupOrFail cfg "storage.stateDir"

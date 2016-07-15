@@ -100,6 +100,45 @@ Executable ChanStore
     exceptions,
     filepath
 
+Executable SettlementService
+  hs-source-dirs: src
+  main-is: SettlementService/Main.hs
+  ghc-options: -W -O2 -threaded -with-rtsopts=-N -main-is SettlementService.Main
+
+  build-depends:
+    base                      >= 4     && < 5,
+    bytestring                >= 0.9.1 && < 0.11,
+    MonadCatchIO-transformers >= 0.2.1 && < 0.4,
+    mtl                       >= 2     && < 3,
+    snap-core                 >= 0.9   && < 0.10,
+    snap-server               >= 0.9   && < 0.10,
+    snap,
+    blaze-builder,
+    bitcoin-payment-channel   >= 0.1.1.0 && < 0.3,
+    haskoin-core              >= 0.3.0 && < 1.0.0,
+    secp256k1,
+    transformers,
+    aeson, vector,
+    base16-bytestring,
+    scientific,
+    time,
+    wreq,
+    lens,
+    aeson-pretty,
+    stm-containers,
+    configurator,
+    binary, cereal,
+    hashable,
+    string-conversions,
+    errors,
+    hexstring,
+    http-client,
+    bitcoin-api, bitcoin-tx,
+    case-insensitive,
+    unix,
+    exceptions,
+    filepath
+
 Executable CleanImports
   hs-source-dirs: src
   main-is: CleanImports.hs

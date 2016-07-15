@@ -13,7 +13,7 @@ Config
 where
 
 import           Server.Config.Types
-import           Server.ChanStore.Connection (newChanMapConnection)
+import           Server.ChanStore.Connection (newConnManager)
 import           Common.Common (fromHexString)
 import           Data.Bitcoin.PaymentChannel.Types (BitcoinAmount)
 
@@ -28,7 +28,7 @@ import           Data.Ratio
 import           Data.Configurator.Types
 import qualified Data.Configurator as Conf
 import           Data.String.Conversions (cs)
-import           Server.ChanStore.Types (ChanMapConn)
+import           Server.ChanStore.Types (ConnManager)
 import           Server.Types
 import           Bitcoind (BTCRPCInfo(..))
 
@@ -44,8 +44,8 @@ configLookupOrFail conf name =
             "\" in config (key not present or invalid)")
         return
 
-connFromDBConf :: DBConf -> IO ChanMapConn
-connFromDBConf (DBConf host port) = newChanMapConnection host port
+connFromDBConf :: DBConf -> IO ConnManager
+connFromDBConf (DBConf host port) = newConnManager host port
 
 getDBConf :: Config -> IO DBConf
 getDBConf cfg = DBConf <$>

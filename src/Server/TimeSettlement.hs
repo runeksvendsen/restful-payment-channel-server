@@ -5,7 +5,7 @@ module Server.TimeSettlement where
 
 import           Server.ChanStore.Types (ChannelMap)
 import           Server.ChanStore.ChanStore (channelsExpiringBefore, markAsSettlingAndGetIfOpen)
-import           Server.ChanStore.Settlement (settleChannel)
+import           Server.ChanStore.Settlement (settleChannelEither)
 import           Server.Types (ChanSettleConfig(..))
 import           Bitcoind (BTCRPCInfo)
 
@@ -54,7 +54,7 @@ settleSingleChannel m (settleConf, rpcInfo) k = do
         Nothing        -> putStrLn $
             "INFO: Settlement thread: Channel closed inbetween fetching keys and items" ++
             " (this should happen rarely)"
-        Just chanState -> settleChannel rpcInfo settleConf chanState >> undefined
+        Just chanState -> settleChannelEither rpcInfo settleConf chanState >> undefined
 
     return ()
 

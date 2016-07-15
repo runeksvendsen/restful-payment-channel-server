@@ -4,9 +4,9 @@
 
 module Server.Config.Types where
 
-import           Server.ChanStore.Types (ChanMapConn)
+import           Server.ChanStore.Types (ConnManager)
 import           Server.Types
-
+import           Snap (Snap)
 import           Data.Bitcoin.PaymentChannel.Types (ReceiverPaymentChannel, BitcoinAmount)
 
 import qualified Network.Haskoin.Transaction as HT
@@ -22,7 +22,7 @@ import           Data.String.Conversions (cs)
 
 
 data App = App
- { _channelStateMap :: ChanMapConn
+ { _channelStateMap :: ConnManager
  , _settleConfig    :: ChanSettleConfig
  , _pubKey          :: HC.PubKey
  , _openPrice       :: BitcoinAmount

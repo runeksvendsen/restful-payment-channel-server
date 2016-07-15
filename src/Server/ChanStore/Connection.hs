@@ -1,4 +1,4 @@
-module Server.ChanStore.Connection where
+module Server.ChanStore.Connection where --TODO: move
 
 import           Server.ChanStore.Types
 import Server.ChanStore.ChanStore
@@ -17,12 +17,12 @@ import           Network.HTTP.Client
 
 
 
-isOpen :: Connection -> Bool
-isOpen (OpenConnection _) = True
-isOpen ClosedConnection   = False
+-- isOpen :: Connection -> Bool
+-- isOpen (OpenConnection _) = True
+-- isOpen ClosedConnection   = False
 
-newChanMapConnection :: BS.ByteString -> Word -> IO ChanMapConn
-newChanMapConnection host port =
+newConnManager :: BS.ByteString -> Word -> IO ConnManager
+newConnManager host port =
     Conn host port <$> newManager
         defaultManagerSettings {
             managerConnCount = 100
@@ -31,7 +31,7 @@ newChanMapConnection host port =
 dummyRequest :: IO Request
 dummyRequest = parseUrl "http://dummy.com/"
 
-getBaseRequest :: ChanMapConn -> IO Request
+getBaseRequest :: ConnManager -> IO Request
 getBaseRequest (Conn host port _) =
     dummyRequest >>= \req ->
         return $ req {
@@ -40,15 +40,3 @@ getBaseRequest (Conn host port _) =
             port = fromIntegral port
         }
 
-
-
--- closeConnection :: ChanMapConn -> IO ()
-closeConnection = undefined
---     atomically $ TVar.writeTVar conn ClosedConnection
-
--- failOnConnClosed :: Connection -> STM ChannelMap
--- failOnConnClosed (OpenConnection map) = return map
--- failOnConnClosed ClosedConnection     = throwSTM (Fail.RecSelError "Connection closed")
-
--- getConnMap :: ChanMapConn -> STM ChannelMap
--- getConnMap conn = TVar.readTVar conn >>= failOnConnClosed

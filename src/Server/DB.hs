@@ -17,7 +17,7 @@ tryDBRequest ioa = do
        Left e -> internalError $ "Database error: " ++ show (e :: HttpException)
        Right a -> return a
 
-confirmChannelDoesntExistOrAbort :: MonadSnap m => DBConn.ChanMapConn -> BS.ByteString -> HT.OutPoint -> m ()
+confirmChannelDoesntExistOrAbort :: MonadSnap m => DBConn.ConnManager -> BS.ByteString -> HT.OutPoint -> m ()
 confirmChannelDoesntExistOrAbort chanMap basePath chanId = do
     maybeItem <- tryDBRequest (DBConn.chanGet chanMap chanId)
     case fmap DBConn.isSettled maybeItem of
@@ -29,7 +29,7 @@ confirmChannelDoesntExistOrAbort chanMap basePath chanId = do
             errorWithDescription 409 "Channel already existed, but has been settled"
 
 
-getChannelStateOr404 :: MonadSnap m => DBConn.ChanMapConn -> HT.OutPoint -> m ReceiverPaymentChannel
+getChannelStateOr404 :: MonadSnap m => DBConn.ConnManager -> HT.OutPoint -> m ReceiverPaymentChannel
 getChannelStateOr404 chanMap chanId =
     tryDBRequest (DBConn.chanGet chanMap chanId) >>=
     maybe

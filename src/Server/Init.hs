@@ -12,8 +12,8 @@ import           Server.Types (OpenConfig(..), ChanSettleConfig(..))
 import           Common.Common (pathParamEncode)
 import           Data.String.Conversions (cs)
 
-import           Server.ChanStore.Types (ChanMapConn)
-import           Server.ChanStore.Settlement (settleChannel)
+import           Server.ChanStore.Types (ConnManager)
+import           Server.ChanStore.Settlement (settleChannelEither)
 
 
 import qualified Network.Haskoin.Crypto as HC
@@ -25,7 +25,7 @@ import           Control.Concurrent (ThreadId)
 import           Control.Concurrent (throwTo)
 import qualified Control.Exception as E
 
-appInit :: Config -> ChanMapConn -> SnapletInit App App
+appInit :: Config -> ConnManager -> SnapletInit App App
 appInit cfg chanOpenMap = makeSnaplet "PayChanServer" "RESTful Bitcoin payment channel server" Nothing $ do
 
     bitcoinNetwork <- liftIO (configLookupOrFail cfg "bitcoin.network")
@@ -39,7 +39,7 @@ appInit cfg chanOpenMap = makeSnaplet "PayChanServer" "RESTful Bitcoin payment c
             liftIO (configLookupOrFail cfg "open.priceAddSettlementFee")
 
     bitcoindRPCConf <- liftIO $ getBitcoindConf cfg
-    let settleChanFunc = settleChannel bitcoindRPCConf cfgSettleConfig
+    let settleChanFunc = settleChannelEither bitcoindRPCConf cfgSettleConfig
 
     let confPubKey = HC.derivePubKey $ confSettlePrivKey cfgSettleConfig
     let confOpenPrice = if addSettleFee then basePrice + settleFee else basePrice

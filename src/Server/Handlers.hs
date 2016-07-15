@@ -89,11 +89,9 @@ chanSettle (StdConfig chanMap chanId payment) settleChannel valRecvd = do
     case recvPayment chanState payment of
         Left _ -> userError "Invalid payment. Please provide most recent channel payment."
         Right (val, _) -> unless (val == 0) $
-                userError "Invalid payment. Cannot send value in delete request."
+                userError "Invalid payment. Cannot send value in settlement request."
 
-    settlementTxId <- either internalError return =<<
-            liftIO (settleChannel chanState)
-
+    settlementTxId <- either internalError return =<< liftIO (settleChannel chanState)
     -- mark channel as closed in channel store
     tryDBRequest $ DBConn.chanDelete chanMap chanId settlementTxId
 

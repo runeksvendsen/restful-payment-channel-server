@@ -6,7 +6,7 @@ import qualified Network.Haskoin.Crypto as HC
 import qualified Network.Haskoin.Transaction as HT
 
 -- import           Server.ChanStore (ChannelMap)
-import           Server.ChanStore.Types (ChanMapConn)
+import           Server.ChanStore.Types (ConnManager)
 import qualified Data.ByteString as BS
 import           BlockchainAPI.Types (TxInfo)
 
@@ -14,7 +14,7 @@ import           BlockchainAPI.Types (TxInfo)
 type Vout = Integer     -- Output index
 
 data StdConfig = StdConfig {
-    serverChanMap   :: ChanMapConn,
+    serverChanMap   :: ConnManager,
     chanId          :: HT.OutPoint,
     chanPayment     :: Payment
 }
@@ -22,7 +22,7 @@ data StdConfig = StdConfig {
 data ChanOpenConfig = ChanOpenConfig {
     ocOpenPrice     :: BitcoinAmount
    ,ocServerPubKey  :: HC.PubKey
-   ,ocChanMap       :: ChanMapConn
+   ,ocChanMap       :: ConnManager
    ,ocFundingInfo   :: TxInfo
    ,ocBasePath      :: BS.ByteString
    ,ocClientPubKey  :: HC.PubKey

@@ -62,7 +62,7 @@ instance ReqParams Delete where
     rQueryStr (Delete _ tid) = Just $ "settlement_txid=" <> pathParamEncode tid
     rStatusErr               = const Nothing
 
-requestFromParams :: ReqParams a => ChanMapConn -> a -> IO Request
+requestFromParams :: ReqParams a => ConnManager -> a -> IO Request
 requestFromParams conn rp =
     let maybeJustOrDefault _   (Just a) = a
         maybeJustOrDefault def Nothing  = def
@@ -74,7 +74,7 @@ requestFromParams conn rp =
             queryString = maybeJustOrDefault BS.empty (rQueryStr rp)
     }
 
-runRequest :: (ReqParams a, Bin.Binary b) => ChanMapConn -> a -> IO b
+runRequest :: (ReqParams a, Bin.Binary b) => ConnManager -> a -> IO b
 runRequest conn@(Conn _ _ man) rp =
     requestFromParams conn rp >>= \req -> withResponse (installStatusHandler rp req) man
         ( \resp -> failOnLeft . decodeEither =<< responseBodyUnless404 resp )

@@ -5,7 +5,7 @@ module Server.Main where
 import qualified Server.ChanStore.Connection as DB
 import           Server.Config -- (Config, loadConfig, configLookupOrFail, getSettleConfig, getBitcoindConf, getDBConf)
 import           Server.Init (appInit, installHandlerKillThreadOnSig)
-import           Server.ChanStore.Types (ChanMapConn)
+import           Server.ChanStore.Types (ConnManager)
 import           Server.ChanStore (newChanMap, mapLen, diskSyncThread, diskSyncNow,
                                     sync_chanMap, init_chanMap)
 import           Server.TimeSettlement (settlementThread)
@@ -28,35 +28,35 @@ import           DiskStore (syncMapToDisk)
 import qualified System.FilePath as F
 
 
-
-wrapArg :: (String -> IO ()) -> IO ()
+wrapArg :: (Config -> String -> IO ()) -> IO ()
 wrapArg main' = do
     args <- getArgs
     prog <- getProgName
     if  length args < 1 then
             putStrLn $ "Usage: " ++ prog ++ " /path/to/config.cfg"
-        else
-            main' $ head args
+        else do
+            let cfgFile = head args
+            putStrLn $ "Using config file " ++ show cfgFile ++ ". Reading..."
+            cfg <- loadConfig cfgFile
+            main' cfg cfgFile
 
 main :: IO ()
-main = wrapArg $ \cfgFilePath -> do
-    cfg <- loadConfig cfgFilePath
+main = wrapArg $ \cfg cfgFilePath -> do
     dbConf <- getDBConf cfg
 
     mainThread <- myThreadId
     _ <- installHandlerKillThreadOnSig Sig.sigTERM mainThread
     --       1. first do this                         3. at the end always do this
-    bracket  (connFromDBConf dbConf)     DB.closeConnection $
+    bracket  (connFromDBConf dbConf)     handleShutdown $
              runApp (F.dropExtension cfgFilePath) cfg --- <--- 2. do this in-between
 
-
-handleShutdown :: ChanMapConn -> IO ()
-handleShutdown conn = do
-    DB.closeConnection conn
+handleShutdown :: ConnManager -> IO ()
+handleShutdown conn = return ()
+--     DB.closeConnection conn
 --     killThread syncThread
 --     sync_chanMap map
 
-runApp :: String -> Config -> ChanMapConn -> IO ()
+runApp :: String -> Config -> ConnManager -> IO ()
 runApp env cfg chanMapConn = do
     (_, app, _) <- runSnaplet (Just env) (appInit cfg chanMapConn)
     maybePort <- return . maybe Nothing readMaybe =<< lookupEnv "PORT"

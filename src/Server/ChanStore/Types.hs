@@ -15,7 +15,7 @@ data Connection =
 type Host = BS.ByteString
 type Port = Word
 
-data ChanMapConn = Conn Host Port Manager
+data ConnManager = Conn Host Port Manager
 
 
 -- |Holds state for payment channel
