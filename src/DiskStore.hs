@@ -3,7 +3,7 @@ module DiskStore
 DiskMap(..),
 newDiskMap, addItem, getItem, updateStoredItem, deleteStoredItem,
 mapGetItem, getAllItems,
-mapGetItemCount, -- getFilteredItems,
+mapGetItemCount, getFilteredItems,
 
 syncToDisk,mapDiskSyncThread,syncMapToDisk,
 
@@ -132,10 +132,11 @@ mapGetItemCount (DiskMap _ m) =
     atomically $ fromIntegral . length <$>
         LT.toList (Map.stream m)
 
--- getFilteredItems :: DiskMap k v -> (v -> Bool) -> STM [(k,v)]
--- getFilteredItems (DiskMap _ m) filterBy =
---     filter filterBy . map (mapSnd itemContent) <$>
---         LT.toList (Map.stream m)
+getFilteredItems :: DiskMap k v -> (v -> Bool) -> IO [v]
+getFilteredItems (DiskMap _ m) filterBy = atomically $
+    fmap (map snd) $
+        filter (filterBy . snd) . map (mapSnd itemContent) <$>
+            LT.toList (Map.stream m)
 
 
 data Action = Sync | Delete | Ignore

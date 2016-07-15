@@ -83,6 +83,9 @@ deleteChanState chanMap key settlementTxId =
 getAllChanStates :: ChannelMap -> IO [ChanState]
 getAllChanStates = getAllItems
 
+getFilteredChanStates :: ChannelMap -> (ChanState -> Bool) -> IO [ChanState]
+getFilteredChanStates = getFilteredItems
+
 mapLen = mapGetItemCount
 
 mapGetState :: ChannelMap -> (ChanState -> ChanState) -> Key -> IO (Maybe ChanState)

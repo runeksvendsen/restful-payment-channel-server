@@ -21,13 +21,13 @@ data ChanMapConn = Conn Host Port Manager
 -- |Holds state for payment channel
 data ChanState =
     ReadyForPayment {
-        csState          :: ReceiverPaymentChannel
+        csState             :: ReceiverPaymentChannel
     } |
     ChannelSettled {
-        csSettlementTxId :: HT.TxHash
+        csSettlementTxId    :: HT.TxHash
     } |
     SettlementInProgress {
-        csSettlingState :: ReceiverPaymentChannel
+        csSettlingState     :: ReceiverPaymentChannel
     }
 
 -- Needed for Binary instance non-overlap

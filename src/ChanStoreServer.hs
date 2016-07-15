@@ -11,7 +11,7 @@ import           Server.Main (wrapArg)
 import           Server.Config (Config, loadConfig, configLookupOrFail, getSettleConfig,
                                 getBitcoindConf, setBitcoinNetwork)
 import           Server.Util (reqBoundedData, writeBinary,
-                              internalError, userError, getPathArg, getQueryArg,
+                              internalError, userError, getPathArg, getQueryArg, getOptionalQueryArg,
                               errorWithDescription)
 
 import           Data.Bitcoin.PaymentChannel.Types (ReceiverPaymentChannel, PaymentChannel(..), Payment)
@@ -46,13 +46,14 @@ main = wrapArg $ \cfgFilePath -> do
 site :: ChannelMap -> Snap ()
 site map =
     route [ ("/channels/"
-             ,      method POST   $ create map) -- ReceiverPaymentChannel)
+             ,      method POST   $ create map)
 
           , ("/channels/:funding_outpoint"
              ,      method GET    ( get map   )
                 <|> method PUT    ( update map)
                 <|> method DELETE ( settle map) )
 
+            -- management/settlement interface (retrieve a list of open channels)
           , ("/channels/all"
              ,      method GET    ( getAll map ))]
 
@@ -92,8 +93,12 @@ settle map = do
         False -> errorWithDescription 404 "No such channel"
 
 getAll :: ChannelMap -> Snap ()
-getAll m =
-    liftIO (getAllChanStates m) >>= writeBinary
+getAll m = do
+    maybeExpiresEarlier <- getOptionalQueryArg "expires_before"
+    let filterFunc = case maybeExpiresEarlier of
+            Just exp -> \i -> getExpirationDate (csState i) < exp
+            Nothing  -> \_ -> True
+    liftIO (getFilteredChanStates m filterFunc) >>= writeBinary
 
 updateWithPayment :: MonadSnap m => ChannelMap -> HT.OutPoint -> Payment -> m ()
 updateWithPayment  map chanId payment = do
