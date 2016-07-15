@@ -42,7 +42,7 @@ On my 2015 Macbook Pro I get 800-900 payments per second running the `benchPayCh
     Done. Executed 10000 payments.
     real	0m11.194s
     user	0m6.651s
-    sys	0m0.917s
+    sys     0m0.917s
 
 This performs 2000 payments using 5 concurrent threads.
 
