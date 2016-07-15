@@ -100,6 +100,16 @@ Executable ChanStore
     exceptions,
     filepath
 
+Executable CleanImports
+  hs-source-dirs: src
+  main-is: CleanImports.hs
+  ghc-options: -W -O2 -threaded -with-rtsopts=-N -main-is CleanImports
+
+  build-depends:
+    base                      >= 4     && < 5,
+    process,
+    attoparsec,
+    string-conversions
 
 Library
   exposed-modules:      DiskStore

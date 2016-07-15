@@ -95,7 +95,7 @@ getAll :: ChannelMap -> Snap ()
 getAll m = do
     maybeExpiresEarlierArg <- getOptionalQueryArg "expires_before"
     let filterFunc = case maybeExpiresEarlierArg of
-            Just expirationDate -> \i -> getExpirationDate (csState i) < expirationDate
+            Just expirationDate -> expiresBefore expirationDate . csState
             Nothing             -> const True
     liftIO (getFilteredChanStates m filterFunc) >>= writeBinary
 
