@@ -95,8 +95,13 @@ getAll :: ChannelMap -> Snap ()
 getAll m = do
     maybeExpiresEarlierArg <- getOptionalQueryArg "expires_before"
     let filterFunc = case maybeExpiresEarlierArg of
-            Just expirationDate -> expiresBefore expirationDate . csState
-            Nothing             -> const True
+            Just expirationDate -> \chan ->
+                if isOpen chan then
+                        expiresBefore expirationDate (csState chan)
+                    else
+                        False
+            Nothing ->
+                const True
     liftIO (getFilteredChanStates m filterFunc) >>= writeBinary
 
 updateWithPayment :: MonadSnap m => ChannelMap -> HT.OutPoint -> Payment -> m ()
