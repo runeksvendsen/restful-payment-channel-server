@@ -25,6 +25,10 @@ class ReqParams a where
     rBody        :: a -> Maybe BS.ByteString
     rQueryStr    :: a -> Maybe BS.ByteString
     rStatusErr   :: a -> Maybe (Status -> ResponseHeaders -> CookieJar -> Maybe E.SomeException)
+    rBody        = const Nothing
+    rQueryStr    = const Nothing
+    rStatusErr   = const Nothing
+
 
 data Create = Create ReceiverPaymentChannel
 data Get    = Get    HT.OutPoint
@@ -38,29 +42,21 @@ instance ReqParams Create where
     rPath              = const basePath
     rMethod            = const "POST"
     rBody (Create rpc) = Just . BL.toStrict $ Bin.encode rpc
-    rQueryStr          = const Nothing
-    rStatusErr         = const Nothing
 
 instance ReqParams Get where
     rPath (Get key)    = basePath <> pathParamEncode key
     rMethod            = const "GET"
-    rBody              = const Nothing
-    rQueryStr          = const Nothing
     rStatusErr         = const $ Just notFoundMeansNothing -- ignore 404
 
 instance ReqParams Update where
     rPath (Update key _)  = basePath <> pathParamEncode key
     rMethod               = const "PUT"
     rBody (Update _ paym) = Just . BL.toStrict $ Bin.encode paym
-    rQueryStr             = const Nothing
-    rStatusErr            = const Nothing
 
 instance ReqParams Delete where
     rPath (Delete key _)     = basePath <> pathParamEncode key
     rMethod                  = const "DELETE"
-    rBody                    = const Nothing
     rQueryStr (Delete _ tid) = Just $ "settlement_txid=" <> pathParamEncode tid
-    rStatusErr               = const Nothing
 
 requestFromParams :: ReqParams a => ConnManager -> a -> IO Request
 requestFromParams conn rp =
@@ -74,8 +70,8 @@ requestFromParams conn rp =
             queryString = maybeJustOrDefault BS.empty (rQueryStr rp)
     }
 
-runRequest :: (ReqParams a, Bin.Binary b) => ConnManager -> a -> IO b
-runRequest conn@(Conn _ _ man) rp =
+runRequest :: (ReqParams a, Bin.Binary b) => BS.ByteString -> Word -> ConnManager -> a -> IO b
+runRequest host port conn@(Conn _ _ man) rp =
     requestFromParams conn rp >>= \req -> withResponse (installStatusHandler rp req) man
         ( \resp -> failOnLeft . decodeEither =<< responseBodyUnless404 resp )
             where failOnLeft = either (fail . ("failed to parse response: " ++)) return

@@ -32,6 +32,8 @@ import           Server.ChanStore.ChanStore (isSettled)
 import           Data.Bitcoin.PaymentChannel.Types (ReceiverPaymentChannel, Payment)
 import qualified Network.Haskoin.Transaction as HT
 
+endpointHostname =
+
 -- |Add item
 chanAdd :: ConnManager -> ReceiverPaymentChannel -> IO ()
 chanAdd conn rpc = runRequest conn $ Create rpc

@@ -11,10 +11,16 @@ import           Control.Exception (try)
 import           Network.HTTP.Client (HttpException (..))
 
 tryDBRequest :: MonadSnap m => IO a -> m a
-tryDBRequest ioa = do
+tryDBRequest = tryRequestOfType "Database"
+
+trySettlementRequest :: MonadSnap m => IO a -> m a
+trySettlementRequest = tryRequestOfType "Settlement service"
+
+tryRequestOfType :: MonadSnap m => String -> IO a -> m a
+tryRequestOfType descr ioa = do
     res <- liftIO $ try ioa
     case res of
-       Left e -> internalError $ "Database error: " ++ show (e :: HttpException)
+       Left e -> internalError $ descr ++ " error: " ++ show (e :: HttpException)
        Right a -> return a
 
 confirmChannelDoesntExistOrAbort :: MonadSnap m => DBConn.ConnManager -> BS.ByteString -> HT.OutPoint -> m ()

@@ -25,21 +25,23 @@ settlementThread ::
     -> (ChanSettleConfig, BTCRPCInfo)
     -> IO ()
 settlementThread m delaySecs (settleConf, rpcInfo) =
-    (threadDelay delayMicroSecs >> settleExpiringChannels m (settleConf, rpcInfo))
+    (threadDelay delayMicroSecs >> settleExpiringChannels m delaySecs (settleConf, rpcInfo))
         `finally` settlementThread m delaySecs (settleConf, rpcInfo)
             where delayMicroSecs = delaySecs * round 1e6
 
 settleExpiringChannels ::
     ChannelMap
+    -> Int -- ^ Check interval in seconds
     -> (ChanSettleConfig, BTCRPCInfo)
     -> IO ()
-settleExpiringChannels m (settleConf, rpcInfo) = do
+settleExpiringChannels m delaySecs (settleConf,rpcInfo) = do
     now <- getCurrentTime
-    let settlePeriodSecs = fromInteger $ 3600 * fromIntegral (confSettlePeriod settleConf)
-    let settlementTime = settlePeriodSecs `addUTCTime` now
+    let settlePeriodSecsOffset = fromInteger $
+            (fromIntegral delaySecs) + (-3600 * fromIntegral (confSettlePeriod settleConf))
+    let settlementTimeCutoff = settlePeriodSecsOffset `addUTCTime` now
 
-    expiringChannelKeys <- atomically $ channelsExpiringBefore settlementTime m
-    forM expiringChannelKeys (settleSingleChannel m (settleConf, rpcInfo))
+--     expiringChannelKeys <- atomically $ channelsExpiringBefore settlementTime m
+--     forM expiringChannelKeys (settleSingleChannel m (settleConf, rpcInfo))
 
     return ()
 

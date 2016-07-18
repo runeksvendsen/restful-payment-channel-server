@@ -12,7 +12,7 @@ import           Common.Common
 import           Common.Types
 
 import           Server.Util
-import           Server.DB (tryDBRequest, getChannelStateOr404, confirmChannelDoesntExistOrAbort)
+import           Server.DB (tryDBRequest, trySettlementRequest, getChannelStateOr404, confirmChannelDoesntExistOrAbort)
 import           BlockchainAPI.Impl.ChainSo (chainSoAddressInfo, toEither)
 import           BlockchainAPI.Types (toFundingTxInfo,
                                 TxInfo(..), OutInfo(..))
@@ -84,17 +84,16 @@ chanSettle :: MonadSnap m =>
     -> m ()
 chanSettle (StdConfig chanMap chanId payment) settleChannel valRecvd = do
     chanState <- getChannelStateOr404 chanMap chanId
-
     -- verify payment is the most recent payment received
     case recvPayment chanState payment of
         Left _ -> userError "Invalid payment. Please provide most recent channel payment."
         Right (val, _) -> unless (val == 0) $
                 userError "Invalid payment. Cannot send value in settlement request."
-
+    -- settle channel
     settlementTxId <- either internalError return =<< liftIO (settleChannel chanState)
     -- mark channel as closed in channel store
     tryDBRequest $ DBConn.chanDelete chanMap chanId settlementTxId
-
+    --write response
     writeJSON . toJSON $ PaymentResult {
             paymentResultchannel_status = ChannelClosed,
             paymentResultchannel_value_left = channelValueLeft chanState,
@@ -103,7 +102,6 @@ chanSettle (StdConfig chanMap chanId payment) settleChannel valRecvd = do
             paymentResultvalue_received = valRecvd,
             paymentResultsettlement_txid = Just settlementTxId
         }
-
     modifyResponse $ setResponseStatus 202 "Channel closed"
 
 

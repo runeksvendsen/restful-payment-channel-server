@@ -1,16 +1,5 @@
 {-# LANGUAGE OverloadedStrings #-}
 
-{-|
-Module      : SettlementService
-Description : POST a ReceiverPaymentChannel to this service to have the channel settled
-Copyright   : (c) Rune K. Svendsen, 2016
-License     : PublicDomain
-Maintainer  : runesvend@gmail.com
-Stability   : experimental
-Portability : POSIX
-
--}
-
 module SettlementService.Main where
 
 import           Prelude hiding (init, userError)
@@ -54,7 +43,8 @@ pushTx = do
     eitherStates <- reqBoundedData 512
     case eitherStates of
         Right chanStateList -> forM chanStateList (\chanState ->
-            liftIO (settleChan chanState)) >>= either internalError writeBinary
+            liftIO (settleChan chanState)) >>= either internalError writeBinary >>
+            tryDBRequest (DBConn.chanDelete chanMap chanId settlementTxId)
         Left e -> userError $ "Failed to parse ReceiverPaymentChannel from body: " ++ e
 
 init :: Conf.Config -> SnapletInit AppConf AppConf

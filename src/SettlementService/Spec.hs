@@ -20,7 +20,7 @@ import           Data.Monoid ((<>))
 import qualified Control.Exception as E
 import           Control.Monad.Catch (SomeException(..))
 
-data SettleChan = SettleChan ReceiverPaymentChannel
+data SettleChan = SettleChan [ReceiverPaymentChannel]
 
 basePath :: BS.ByteString
 basePath = "/settle_channel"
@@ -30,5 +30,5 @@ instance ReqParams SettleChan where
     rMethod     = const "POST"
     rQueryStr   = const Nothing
     rStatusErr  = const Nothing
-    rBody (SettleChan rpc) =
-        Just . BL.toStrict $ Bin.encode rpc
+    rBody (SettleChan rpcList) =
+        Just . BL.toStrict $ Bin.encode rpcList

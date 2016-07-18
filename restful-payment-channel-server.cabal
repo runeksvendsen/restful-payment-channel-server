@@ -150,20 +150,18 @@ Executable CleanImports
     attoparsec,
     string-conversions
 
-Library
-  exposed-modules:      DiskStore
-
-  ghc-options:          -O2 -threaded -with-rtsopts=-N
-
-  build-depends:        base                      >= 4     && < 5,
-                        directory,
-                        list-t,
-                        stm,
-                        exceptions
-
-  hs-source-dirs:       src
-
-  default-language:     Haskell2010
+--Library
+--  exposed-modules:      DiskStore
+--  ghc-options:          -O2 -threaded -with-rtsopts=-N
+--
+--  build-depends:        base                      >= 4     && < 5,
+--                        directory,
+--                        list-t,
+--                        stm,
+--                        exceptions
+--
+--  hs-source-dirs:       src
+--  default-language:     Haskell2010
 
 Executable Email
     hs-source-dirs:       src
@@ -192,7 +190,6 @@ Executable GenTestData
       transformers,
       haskoin-core,
       aeson,
-      JsonGrammar, stack-prism,
       base16-bytestring,
       scientific,
       time,
@@ -224,7 +221,6 @@ Executable RunTestData
       transformers,
       haskoin-core,
       aeson,
-      JsonGrammar, stack-prism,
       base16-bytestring,
       scientific,
       time,
@@ -239,36 +235,43 @@ Executable RunTestData
       secp256k1,
       optparse-applicative
 
+Library
+  exposed-modules:      SettlementService.Interface
 
---Executable Client
---  hs-source-dirs:       src
---  main-is:              Client.hs
---  ghc-options:          -main-is Client
---
---  Build-depends:
---    base                      >= 4     && < 5,
---    bytestring                >= 0.9.1 && < 0.11,
---    MonadCatchIO-transformers >= 0.2.1 && < 0.4,
---    mtl                       >= 2     && < 3,
---    snap-core                 >= 0.9   && < 0.10,
---    snap-server               >= 0.9   && < 0.10,
---    directory,
---    bitcoin-payment-channel   >= 0.1.1.0 && < 0.2,
---    transformers,
---    haskoin-core,
---    aeson,
---    JsonGrammar, stack-prism,
---    secp256k1,
---    base16-bytestring,
---    scientific,
---    time,
---    wreq,
---    lens,
---    text,
---    aeson-pretty,
---    configurator,
---    string-conversions,
---    errors
---
---  other-modules: Common.Common,
---                 BlockchainAPI.Impl.BlockrIo
+  ghc-options:          -O2 -threaded -with-rtsopts=-N
+
+  build-depends:        base                      >= 4     && < 5,
+                        bytestring                >= 0.9.1 && < 0.11,
+                        MonadCatchIO-transformers >= 0.2.1 && < 0.4,
+                        mtl                       >= 2     && < 3,
+                        snap-core                 >= 0.9   && < 0.10,
+                        snap-server               >= 0.9   && < 0.10,
+                        snap,
+                        blaze-builder,
+                        bitcoin-payment-channel   >= 0.1.1.0 && < 0.3,
+                        haskoin-core              >= 0.3.0 && < 1.0.0,
+                        secp256k1,
+                        transformers,
+                        aeson, vector,
+                        base16-bytestring,
+                        scientific,
+                        time,
+                        wreq,
+                        lens,
+                        aeson-pretty,
+                        stm-containers, stm, list-t,
+                        configurator,
+                        binary, cereal,
+                        hashable,
+                        string-conversions,
+                        errors,
+                        hexstring,
+                        http-client,
+                        bitcoin-api, bitcoin-tx,
+                        case-insensitive,
+                        unix,
+                        exceptions,
+                        filepath
+
+  hs-source-dirs:       src
+  default-language:     Haskell2010
