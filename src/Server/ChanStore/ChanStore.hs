@@ -2,8 +2,14 @@
 
 module Server.ChanStore.ChanStore where
 
+
+import           DiskStore (newDiskMap, addItem, getItem, updateStoredItem, -- deleteStoredItem,
+                            getAllItems,
+                            mapGetItemCount, getFilteredItems,
+                            DiskMap(..), Serializable(..), ToFileName(..), Hashable(..),
+                            itemContent, mapDiskSyncThread, syncToDisk)
+
 import           Server.ChanStore.Types
-import           DiskStore
 import           Data.Bitcoin.PaymentChannel.Types
 import           Data.Bitcoin.PaymentChannel.Util (deserEither, unsafeUpdateRecvState)
 

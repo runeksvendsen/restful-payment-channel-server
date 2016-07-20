@@ -70,8 +70,10 @@ requestFromParams conn rp =
             queryString = maybeJustOrDefault BS.empty (rQueryStr rp)
     }
 
-runRequest :: (ReqParams a, Bin.Binary b) => BS.ByteString -> Word -> ConnManager -> a -> IO b
-runRequest host port conn@(Conn _ _ man) rp =
+-- runRequest :: (ReqParams a, Bin.Binary b) => BS.ByteString -> Word -> ConnManager -> a -> IO b
+-- runRequest host port conn@(Conn _ _ man) rp =
+runRequest :: (ReqParams a, Bin.Binary b) => ConnManager -> a -> IO b
+runRequest conn@(Conn _ _ man) rp =
     requestFromParams conn rp >>= \req -> withResponse (installStatusHandler rp req) man
         ( \resp -> failOnLeft . decodeEither =<< responseBodyUnless404 resp )
             where failOnLeft = either (fail . ("failed to parse response: " ++)) return

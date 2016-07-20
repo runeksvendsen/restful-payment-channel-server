@@ -50,8 +50,8 @@ site map =
                 <|> method PUT    ( update map)
                 <|> method DELETE ( settle map) )
 
-            -- management/settlement interface (retrieve a list of open channels)
-          , ("/channels/all"
+            -- management/settlement interface
+          , ("/channels/expiring_before/:exp_time"
              ,      method GET    ( getAll map ))]
 
 create :: ChannelMap -> Snap ()
@@ -90,15 +90,13 @@ settle map = do
 
 getAll :: ChannelMap -> Snap ()
 getAll m = do
-    maybeExpiresEarlierArg <- getOptionalQueryArg "expires_before"
-    let filterFunc = case maybeExpiresEarlierArg of
-            Just expirationDate -> \chan ->
-                if isOpen chan then
-                        expiresBefore expirationDate (csState chan)
-                    else
-                        False
-            Nothing ->
-                const True
+    expirationDate <- getPathArg "exp_time"
+--     maybeMarkAsSettling <- getOptionalQueryArg "begin_settlement"
+    let filterFunc = \chan ->
+            if isOpen chan then
+                    expiresBefore expirationDate (csState chan)
+                else
+                    False
     liftIO (getFilteredChanStates m filterFunc) >>= writeBinary
 
 updateWithPayment :: MonadSnap m => ChannelMap -> HT.OutPoint -> Payment -> m ()

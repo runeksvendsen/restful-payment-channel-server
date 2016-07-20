@@ -133,11 +133,17 @@ mapGetItemCount (DiskMap _ m) =
         LT.toList (Map.stream m)
 
 getFilteredItems :: DiskMap k v -> (v -> Bool) -> IO [v]
-getFilteredItems (DiskMap _ m) filterBy = atomically $
-    fmap (map snd) $
-        filter (filterBy . snd) . map (mapSnd itemContent) <$>
-            LT.toList (Map.stream m)
+getFilteredItems dm =
+    atomically . fmap (map snd) . (getFilteredKV dm)
 
+getFilteredKeys :: DiskMap k v -> (v -> Bool) -> IO [k]
+getFilteredKeys dm =
+    atomically . fmap (map fst) . (getFilteredKV dm)
+
+getFilteredKV :: DiskMap k v -> (v -> Bool) -> STM [(k,v)]
+getFilteredKV (DiskMap _ m) filterBy =
+    filter (filterBy . snd) . map (mapSnd itemContent) <$>
+        LT.toList (Map.stream m)
 
 data Action = Sync | Delete | Ignore
 

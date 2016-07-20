@@ -32,7 +32,7 @@ import           Server.ChanStore.ChanStore (isSettled)
 import           Data.Bitcoin.PaymentChannel.Types (ReceiverPaymentChannel, Payment)
 import qualified Network.Haskoin.Transaction as HT
 
-endpointHostname =
+-- endpointHostname =
 
 -- |Add item
 chanAdd :: ConnManager -> ReceiverPaymentChannel -> IO ()

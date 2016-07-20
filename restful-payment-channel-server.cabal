@@ -139,39 +139,51 @@ Executable SettlementService
     exceptions,
     filepath
 
-Executable CleanImports
-  hs-source-dirs: src
-  main-is: CleanImports.hs
-  ghc-options: -W -O2 -threaded -with-rtsopts=-N -main-is CleanImports
-
-  build-depends:
-    base                      >= 4     && < 5,
-    process,
-    attoparsec,
-    string-conversions
-
---Library
---  exposed-modules:      DiskStore
---  ghc-options:          -O2 -threaded -with-rtsopts=-N
+--Executable CleanImports
+--  hs-source-dirs: src
+--  main-is: CleanImports.hs
+--  ghc-options: -W -O2 -threaded -with-rtsopts=-N -main-is CleanImports
 --
---  build-depends:        base                      >= 4     && < 5,
---                        directory,
---                        list-t,
---                        stm,
---                        exceptions
+--  build-depends:
+--    base                      >= 4     && < 5,
+--    process,
+--    attoparsec,
+--    string-conversions
+
+
+Executable LevelDBTest
+  hs-source-dirs:       src
+  main-is:              LevelDB.hs
+  ghc-options:          -W -O2 -threaded -with-rtsopts=-N -main-is LevelDB
+
+  build-depends:        base                      >= 4     && < 5,
+                        leveldb-haskell,
+                        higher-leveldb
+
+  default-language:     Haskell2010
+
+Library
+  exposed-modules:      DiskStore
+  ghc-options:          -O2 -threaded -with-rtsopts=-N
+
+  build-depends:        base                      >= 4     && < 5,
+                        directory,
+                        list-t,
+                        stm,
+                        exceptions
+
+  hs-source-dirs:       src
+  default-language:     Haskell2010
+
+--Executable Email
+--    hs-source-dirs:       src
+--    main-is:              Email.hs
+--    ghc-options:          -main-is Email
 --
---  hs-source-dirs:       src
---  default-language:     Haskell2010
-
-Executable Email
-    hs-source-dirs:       src
-    main-is:              Email.hs
-    ghc-options:          -main-is Email
-
-    Build-depends:
-                    base,
-                    HaskellNet,
-                    HaskellNet-SSL
+--    Build-depends:
+--                    base,
+--                    HaskellNet,
+--                    HaskellNet-SSL
 
 Executable GenTestData
     hs-source-dirs:       src
@@ -235,43 +247,43 @@ Executable RunTestData
       secp256k1,
       optparse-applicative
 
-Library
-  exposed-modules:      SettlementService.Interface
-
-  ghc-options:          -O2 -threaded -with-rtsopts=-N
-
-  build-depends:        base                      >= 4     && < 5,
-                        bytestring                >= 0.9.1 && < 0.11,
-                        MonadCatchIO-transformers >= 0.2.1 && < 0.4,
-                        mtl                       >= 2     && < 3,
-                        snap-core                 >= 0.9   && < 0.10,
-                        snap-server               >= 0.9   && < 0.10,
-                        snap,
-                        blaze-builder,
-                        bitcoin-payment-channel   >= 0.1.1.0 && < 0.3,
-                        haskoin-core              >= 0.3.0 && < 1.0.0,
-                        secp256k1,
-                        transformers,
-                        aeson, vector,
-                        base16-bytestring,
-                        scientific,
-                        time,
-                        wreq,
-                        lens,
-                        aeson-pretty,
-                        stm-containers, stm, list-t,
-                        configurator,
-                        binary, cereal,
-                        hashable,
-                        string-conversions,
-                        errors,
-                        hexstring,
-                        http-client,
-                        bitcoin-api, bitcoin-tx,
-                        case-insensitive,
-                        unix,
-                        exceptions,
-                        filepath
+--Library
+--  exposed-modules:      SettlementService.Interface
+--
+--  ghc-options:          -O2 -threaded -with-rtsopts=-N
+--
+--  build-depends:        base                      >= 4     && < 5,
+--                        bytestring                >= 0.9.1 && < 0.11,
+--                        MonadCatchIO-transformers >= 0.2.1 && < 0.4,
+--                        mtl                       >= 2     && < 3,
+--                        snap-core                 >= 0.9   && < 0.10,
+--                        snap-server               >= 0.9   && < 0.10,
+--                        snap,
+--                        blaze-builder,
+--                        bitcoin-payment-channel   >= 0.1.1.0 && < 0.3,
+--                        haskoin-core              >= 0.3.0 && < 1.0.0,
+--                        secp256k1,
+--                        transformers,
+--                        aeson, vector,
+--                        base16-bytestring,
+--                        scientific,
+--                        time,
+--                        wreq,
+--                        lens,
+--                        aeson-pretty,
+--                        stm-containers, stm, list-t,
+--                        configurator,
+--                        binary, cereal,
+--                        hashable,
+--                        string-conversions,
+--                        errors,
+--                        hexstring,
+--                        http-client,
+--                        bitcoin-api, bitcoin-tx,
+--                        case-insensitive,
+--                        unix,
+--                        exceptions,
+--                        filepath
 
   hs-source-dirs:       src
   default-language:     Haskell2010
