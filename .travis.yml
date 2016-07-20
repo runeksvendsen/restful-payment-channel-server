@@ -1,16 +1,3 @@
-# Here, we test with both stack and cabal. The reasons to test with cabal are
-# twofold:
-#
-# 1. We want to ensure that the bootstrapping case works
-#
-# 2. Building with stack would be too easy a test, since it guarantees us a
-# sane build environment. In CI, we want to make our life more difficult, so we
-# use cabal without any Stackage snapshots.
-#
-
-language: c
-sudo: false
-
 #deploy:
 #  provider: releases
 #  api_key:
@@ -24,6 +11,12 @@ sudo: false
 #    repo: runeksvendsen/restful-payment-channel-server
 #  overwrite: true
 
+language: c
+
+#sudo: false
+# use Trusty image
+sudo: required
+dist: trusty
 
 cache:
     directories:
@@ -45,9 +38,7 @@ matrix:
 #  allow_failures:
 #    - env: BUILD=cabal CABALVER=head GHCVER=head
 
-# Note: the distinction between `before_install` and `install` is not important.
-# - in before_install we install build tools
-# - in install we install (haskell) dependencies
+
 before_install:
  - unset CC
  - case "$BUILD" in

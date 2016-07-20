@@ -7,7 +7,8 @@ DiskMap,
 newDiskMap,
 addItem, getItem, updateStoredItem, deleteStoredItem,
 getFilteredItems,
-mapGetItemCount
+mapGetItemCount,
+mapGetState
 
 
 -- TMP
@@ -112,6 +113,8 @@ mapGetItemCount :: DiskMap k v -> IO Integer
 mapGetItemCount (DiskMap dbPath) =
     runDontCreateLevelDB dbPath $ scan "" queryCount
 
+mapGetState :: DiskMap k v -> (v -> v) -> k -> IO (Maybe v)
+mapGetState = undefined
 
 -- mapQuery :: (Serializable k, Serializable v) =>
 --     (BS.ByteString, BS.ByteString) -> (k,v)

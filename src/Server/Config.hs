@@ -5,7 +5,7 @@ module Server.Config
 loadConfig,configLookupOrFail,getSettleConfig,getBitcoindConf,
 BitcoinNet,
 setBitcoinNetwork,toPathString,
-getDBConf,connFromDBConf,
+getDBConf,connFromDBConf,getLevelDBFilePath,
 -- re-exports
 Config
 
@@ -46,6 +46,11 @@ configLookupOrFail conf name =
 
 connFromDBConf :: DBConf -> IO ConnManager
 connFromDBConf (DBConf host port) = newConnManager host port
+
+getLevelDBFilePath :: Config -> IO FilePath
+getLevelDBFilePath cfg = do
+    dir <- configLookupOrFail cfg "storage.stateDir"
+    return $ dir ++ "/db/channels.db"
 
 getDBConf :: Config -> IO DBConf
 getDBConf cfg = DBConf <$>

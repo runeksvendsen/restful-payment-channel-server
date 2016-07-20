@@ -199,7 +199,7 @@ diskGetStateFiles :: ToFileName k => FilePath -> IO [(k,FilePath)]
 diskGetStateFiles baseDir = do
     maybeHashPathL <- map (getHashAndFilePath baseDir) <$> getFileList baseDir
     let dirList = [fromJust t | t <- maybeHashPathL, isJust t]
-    filterM (doesFileExist . snd) dirList
+    filterM (doesFileExist . snd) dirList   -- remove directories from list
 
 getFileList :: FilePath -> IO [FilePath]
 getFileList dir = do --filter (\f -> f /= "." && f /= "..") <$> getDirectoryContents dir

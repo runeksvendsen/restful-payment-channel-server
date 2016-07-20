@@ -9,7 +9,7 @@ import           Server.ChanStore.Types
 import           Server.ChanStore.ChanStore
 import           Server.Main (wrapArg)
 import           Server.Config (Config, loadConfig, configLookupOrFail, getSettleConfig,
-                                getBitcoindConf, setBitcoinNetwork)
+                                getBitcoindConf, setBitcoinNetwork, getLevelDBFilePath)
 import           Server.Util (reqBoundedData, writeBinary,
                               internalError, userError, getPathArg, getQueryArg, getOptionalQueryArg,
                               errorWithDescription)
