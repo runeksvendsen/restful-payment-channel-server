@@ -35,11 +35,11 @@ matrix:
     ## -STACK
     - env: BUILD=stack GHCVER=7.10.3 STACK_YAML=stack.yaml
       compiler: ": #stack 7.10.3"
-      addons: {apt: {packages: [cabal-install-head,ghc-7.10.3], sources: [hvr-ghc]}}
+      addons: {apt: {packages: [cabal-install-head,ghc-7.10.3,libssl-dev,libleveldb-dev], sources: [hvr-ghc]}}
 
-    - env: BUILD=stack STACK_YAML=stack.yaml
-      compiler: ": #stack 7.10.3 osx"
-      os: osx
+    #- env: BUILD=stack STACK_YAML=stack.yaml
+    #  compiler: ": #stack 7.10.3 osx"
+    #  os: osx
 
 #  allow_failures:
 #    - env: BUILD=cabal CABALVER=head GHCVER=head
