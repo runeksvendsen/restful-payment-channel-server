@@ -20,7 +20,7 @@ where
 
 
 ---old---
-import System.Directory (getCurrentDirectory, getDirectoryContents, removeFile)
+import System.Directory (getCurrentDirectory, getDirectoryContents, removeFile, doesFileExist)
 import System.IO.Error (isDoesNotExistError)
 import qualified ListT as LT
 import Data.Hashable
@@ -34,7 +34,7 @@ import qualified Data.Foldable as F
 import Control.Monad.STM
 import Control.Exception (IOException)
 import Control.Monad.Catch (bracket, finally, try)
-import Control.Monad (guard, forM, unless, forM_)
+import Control.Monad (guard, forM, unless, forM_, filterM)
 import Control.Arrow (second)
 import Control.Concurrent (threadDelay)
 import qualified  STMContainers.Map as Map
@@ -198,7 +198,8 @@ channelMapFromStateFiles baseDir l = do
 diskGetStateFiles :: ToFileName k => FilePath -> IO [(k,FilePath)]
 diskGetStateFiles baseDir = do
     maybeHashPathL <- map (getHashAndFilePath baseDir) <$> getFileList baseDir
-    return [fromJust t | t <- maybeHashPathL, isJust t]
+    let dirList = [fromJust t | t <- maybeHashPathL, isJust t]
+    filterM (doesFileExist . snd) dirList
 
 getFileList :: FilePath -> IO [FilePath]
 getFileList dir = do --filter (\f -> f /= "." && f /= "..") <$> getDirectoryContents dir

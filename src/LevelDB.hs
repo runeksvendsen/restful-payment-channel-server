@@ -6,8 +6,8 @@ module LevelDB
 DiskMap,
 newDiskMap,
 addItem, getItem, updateStoredItem, deleteStoredItem,
-getFilteredItems
-
+getFilteredItems,
+mapGetItemCount
 
 
 -- TMP
@@ -86,7 +86,7 @@ deleteStoredItem (DiskMap dbPath) key =
     let
         keyBS = serialize key
     in
-        runCreateLevelDB dbPath "" (delete keyBS) >> return True
+        runDontCreateLevelDB dbPath (delete keyBS) >> return True
 
 getFilteredItems :: (Serializable k, Serializable v) =>
     DiskMap k v -> (v -> Bool) -> IO [(k,v)] -- [(BS.ByteString,BS.ByteString)] --[(k,v)]
@@ -99,8 +99,7 @@ getFilteredItems (DiskMap dbPath) f =
           }
     in
         map (mapTuple parseOrError parseOrError) <$>
-            (runCreateLevelDB dbPath "" $ scan "" scanQuery)
-
+            (runDontCreateLevelDB dbPath $ scan "" scanQuery)
 
 filterQuery :: (Serializable v) =>
     (v -> Bool) -> (BS.ByteString, BS.ByteString) -> Bool
@@ -109,6 +108,9 @@ filterQuery f (_,vBS) = f (parseOrError vBS)
 mapTuple :: (a -> c) -> (b -> d) -> (a,b) -> (c,d)
 mapTuple f1 f2 (a,b) = (f1 a, f2 b)
 
+mapGetItemCount :: DiskMap k v -> IO Integer
+mapGetItemCount (DiskMap dbPath) =
+    runDontCreateLevelDB dbPath $ scan "" queryCount
 
 
 -- mapQuery :: (Serializable k, Serializable v) =>

@@ -32,12 +32,12 @@ import qualified Control.Exception as E
 main :: IO ()
 main = wrapArg $ \cfg _ -> do
     configLookupOrFail cfg "bitcoin.network" >>= setBitcoinNetwork
-
-    map <- init_chanMap =<< configLookupOrFail cfg "storage.stateDir"
     port <- configLookupOrFail cfg "network.port"
-
     let conf = setPort (fromIntegral (port :: Word)) defaultConfig
-    httpServe conf $ site map
+    bracket
+        (init_chanMap =<< configLookupOrFail cfg "storage.stateDir")
+        (const $ return ())
+        (\map -> httpServe conf $ site map)
 
 
 site :: ChannelMap -> Snap ()
