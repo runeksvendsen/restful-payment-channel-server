@@ -43,8 +43,7 @@ pushTx = do
     eitherStates <- reqBoundedData 512
     case eitherStates of
         Right chanStateList -> forM chanStateList (\chanState ->
-            liftIO (settleChan chanState)) >>= either internalError writeBinary >>
-            tryDBRequest (DBConn.chanDelete chanMap chanId settlementTxId)
+            liftIO (settleChan chanState)) >>= either internalError writeBinary
         Left e -> userError $ "Failed to parse ReceiverPaymentChannel from body: " ++ e
 
 init :: Conf.Config -> SnapletInit AppConf AppConf
