@@ -35,7 +35,7 @@ main = wrapArg $ \cfg _ -> do
     port <- configLookupOrFail cfg "network.port"
     let conf = setPort (fromIntegral (port :: Word)) defaultConfig
     bracket
-        (init_chanMap =<< configLookupOrFail cfg "storage.stateDir")
+        (init_chanMap =<< getLevelDBFilePath cfg)
         (const $ return ())
         (\map -> httpServe conf $ site map)
 
