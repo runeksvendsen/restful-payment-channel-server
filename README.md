@@ -1,6 +1,6 @@
 # RESTful Bitcoin payment channel server
-## Server implementation of the [RESTful Bitcoin payment channel protocol](http://paychandoc.runeks.me/)
-
+[![Build Status](https://api.travis-ci.org/runeksvendsen/restful-payment-channel-server.svg?branch=master)](https://travis-ci.org/runeksvendsen/restful-payment-channel-server)
+#### Server implementation of the [RESTful Bitcoin payment channel protocol](http://paychandoc.runeks.me/)
 ---
 
 ### Build instructions
@@ -21,7 +21,7 @@ Pass the desired listening port to the server via the `PORT` environment variabl
     PORT=43617 PayChanServer /home/rune/paychan/test.cfg 
 
 ### Stability
-Experimental. Should work as intended, more or less, but there are some bugs and unhandled corner cases that I'm aware of, and perhaps some that I haven't found yet.
+Under development.
 
 ### Documentation
 See [http://paychandoc.runeks.me/](http://paychandoc.runeks.me/).
