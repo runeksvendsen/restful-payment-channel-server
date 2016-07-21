@@ -113,9 +113,19 @@ mapGetItemCount :: DiskMap k v -> IO Integer
 mapGetItemCount (DiskMap dbPath) =
     runDontCreateLevelDB dbPath $ scan "" queryCount
 
-mapGetState :: DiskMap k v -> (v -> v) -> k -> IO (Maybe v)
-mapGetState = undefined
+-- |Atomically: get a value for a key,
+--  apply a function to old value to obtain new value,
+--  store and then return the new value.
+mapGetState :: (Serializable k, Serializable v) =>
+    DiskMap k v -> (v -> v) -> k -> IO (Maybe v)
+mapGetState (DiskMap dbPath) f key =
+    let
+        keyBS = serialize key
+    in runDontCreateLevelDB dbPath $ do
+         maybeVal <- fmap parseOrError <$> get keyBS
+         let newMaybeVal = fmap f maybeVal
+         case newMaybeVal of
+            Just val -> put keyBS (serialize val)
+            Nothing -> return ()
+         return newMaybeVal
 
--- mapQuery :: (Serializable k, Serializable v) =>
---     (BS.ByteString, BS.ByteString) -> (k,v)
--- mapQuery (kBS,vBS) = (parseOrError kBS, parseOrError vBS)
