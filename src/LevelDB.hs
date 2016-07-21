@@ -10,6 +10,7 @@ getFilteredItems,
 mapGetItemCount,
 mapGetState
 
+,Serializable(..)
 
 -- TMP
 ,main
@@ -115,7 +116,7 @@ mapGetItemCount (DiskMap dbPath) =
 
 -- |Atomically: get a value for a key,
 --  apply a function to old value to obtain new value,
---  store and then return the new value.
+--  store and return the new value.
 mapGetState :: (Serializable k, Serializable v) =>
     DiskMap k v -> (v -> v) -> k -> IO (Maybe v)
 mapGetState (DiskMap dbPath) f key =

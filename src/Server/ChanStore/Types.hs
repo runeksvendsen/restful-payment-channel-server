@@ -1,6 +1,7 @@
 module Server.ChanStore.Types where
 
-import           DiskStore
+-- import           DiskStore
+import           LevelDB
 
 import           Data.Bitcoin.PaymentChannel.Types (ReceiverPaymentChannel, Payment)
 import qualified Network.Haskoin.Transaction as HT

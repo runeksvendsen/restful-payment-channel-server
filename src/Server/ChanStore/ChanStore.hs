@@ -3,11 +3,13 @@
 module Server.ChanStore.ChanStore where
 
 
-import           DiskStore (newDiskMap, addItem, getItem, updateStoredItem, -- deleteStoredItem,
-                            getAllItems,
-                            mapGetItemCount, getFilteredItems,
-                            DiskMap(..), Serializable(..), ToFileName(..), Hashable(..),
-                            itemContent, mapDiskSyncThread, syncToDisk)
+-- import           DiskStore (newDiskMap, addItem, getItem, updateStoredItem, -- deleteStoredItem,
+--                             getAllItems,
+--                             mapGetItemCount, getFilteredItems,
+--                             DiskMap(..), Serializable(..), ToFileName(..), Hashable(..),
+--                             itemContent, mapDiskSyncThread, syncToDisk)
+
+import           LevelDB
 
 import           Server.ChanStore.Types
 import           Data.Bitcoin.PaymentChannel.Types
@@ -39,14 +41,14 @@ markAsSettlingAndGetIfOpen m k = do
 --      TODO: figure out if we even want to accept 'LockTimeBlockHeight' as an expiration date at all
 -- Get keys for all channel states with an expiration date later than the specified 'UTCTime'
 channelsExpiringBefore :: UTCTime -> ChannelMap -> STM [Key]
-channelsExpiringBefore currentTimeIsh (DiskMap _ m) =
-    map getKey .
-    filter (chanExpiresBefore . csState . getItem) .
-    filter (isOpen . getItem)
-    <$> LT.toList (Map.stream m) where
-        chanExpiresBefore = expiresEarlierThan currentTimeIsh . getExpirationDate
-        getItem = itemContent . snd
-        getKey = fst
+channelsExpiringBefore currentTimeIsh m = undefined
+--     map getKey .
+--     filter (chanExpiresBefore . csState . getItem) .
+--     filter (isOpen . getItem)
+--     <$> LT.toList (Map.stream m) where
+--         chanExpiresBefore = expiresEarlierThan currentTimeIsh . getExpirationDate
+--         getItem = itemContent . snd
+--         getKey = fst
 
 expiresEarlierThan :: UTCTime -> BitcoinLockTime -> Bool
 expiresEarlierThan _        (LockTimeBlockHeight _) = error "LockTimeBlockHeight not supported"
@@ -86,48 +88,11 @@ deleteChanState :: ChannelMap -> Key -> HT.TxHash -> IO Bool
 deleteChanState chanMap key settlementTxId =
     updateStoredItem chanMap key (ChannelSettled settlementTxId)
 
-getAllChanStates :: ChannelMap -> IO [ChanState]
-getAllChanStates = getAllItems
-
-getFilteredChanStates :: ChannelMap -> (ChanState -> Bool) -> IO [ChanState]
+getFilteredChanStates :: ChannelMap -> (ChanState -> Bool) -> IO [(Key,ChanState)]
 getFilteredChanStates = getFilteredItems
 
 mapLen = mapGetItemCount
 
-mapGetState :: ChannelMap -> (ChanState -> ChanState) -> Key -> IO (Maybe ChanState)
-mapGetState m f k  = do
-    maybeCS <- getChanState m k
-    case maybeCS of
-        Nothing -> return Nothing
-        Just cs -> updateStoredItem m k (f cs) >> return (Just cs)
-
-
-diskSyncThread ::
-    (ToFileName k, Serializable v) =>
-    DiskMap k v
-    -> Int -- ^Sync interval in seconds
-    -> IO ()
-diskSyncThread m i = putStrLn "Started disk sync thread." >> mapDiskSyncThread m (i * round 1e6)
-
-diskSyncNow ::
-    (ToFileName k, Serializable v) =>
-    DiskMap k v
-    -> IO ()
-diskSyncNow = syncToDisk
-
-instance ToFileName HT.OutPoint
-instance ToFileName HT.TxHash
-instance ToFileName HC.Address
-
-instance Hashable HT.OutPoint where
-    hashWithSalt salt (HT.OutPoint h i) =
-        salt `hashWithSalt` serialize h `hashWithSalt` i
-
-instance Hashable HT.TxHash where
-    hashWithSalt salt txid = hashWithSalt salt (serialize txid)
-
-instance Hashable HC.Address where
-    hashWithSalt salt addr = hashWithSalt salt (serialize addr)
 
 instance Serializable HT.OutPoint where
     serialize   = BL.toStrict . Bin.encode

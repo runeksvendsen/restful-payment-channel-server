@@ -6,8 +6,8 @@ import qualified Server.ChanStore.Connection as DB
 import           Server.Config -- (Config, loadConfig, configLookupOrFail, getSettleConfig, getBitcoindConf, getDBConf)
 import           Server.Init (appInit, installHandlerKillThreadOnSig)
 import           Server.ChanStore.Types (ConnManager)
-import           Server.ChanStore (newChanMap, mapLen, diskSyncThread, diskSyncNow,
-                                    sync_chanMap, init_chanMap)
+import           Server.ChanStore (newChanMap, mapLen, -- diskSyncThread, diskSyncNow, sync_chanMap,
+                                    init_chanMap)
 import           Server.TimeSettlement (settlementThread)
 
 import           Snap (serveSnaplet)
@@ -24,7 +24,7 @@ import           Control.Concurrent (forkIO, throwTo, myThreadId)
 import qualified Control.Exception as E
 import qualified System.Posix.Signals as Sig
 import           Control.Concurrent (ThreadId, forkIO, killThread, threadDelay)
-import           DiskStore (syncMapToDisk)
+-- import           DiskStore (syncMapToDisk)
 import qualified System.FilePath as F
 
 
@@ -46,7 +46,7 @@ main = wrapArg $ \cfg cfgFilePath -> do
 
     mainThread <- myThreadId
     _ <- installHandlerKillThreadOnSig Sig.sigTERM mainThread
-    --       1. first do this                         3. at the end always do this
+    --       1. first do this            3. at the end always do this
     bracket  (connFromDBConf dbConf)     handleShutdown $
              runApp (F.dropExtension cfgFilePath) cfg --- <--- 2. do this in-between
 
