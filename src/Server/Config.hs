@@ -50,7 +50,7 @@ connFromDBConf (DBConf host port) = newConnManager host port
 getLevelDBFilePath :: Config -> IO FilePath
 getLevelDBFilePath cfg = do
     dir <- configLookupOrFail cfg "storage.stateDir"
-    return $ dir ++ "/db/channels.db"
+    return $ dir ++ "/db/"
 
 getDBConf :: Config -> IO DBConf
 getDBConf cfg = DBConf <$>
