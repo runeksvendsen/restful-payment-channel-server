@@ -1,7 +1,6 @@
 # RESTful Bitcoin payment channel server
-[![Build Status](https://api.travis-ci.org/runeksvendsen/restful-payment-channel-server.png)](https://travis-ci.org/runeksvendsen/restful-payment-channel-server)
-### Server implementation of the [RESTful Bitcoin payment channel protocol](http://paychandoc.runeks.me/)
-
+[![Build Status](https://api.travis-ci.org/runeksvendsen/restful-payment-channel-server.svg?branch=master)](https://travis-ci.org/runeksvendsen/restful-payment-channel-server)
+#### Server implementation of the [RESTful Bitcoin payment channel protocol](http://paychandoc.runeks.me/)
 ---
 
 ### Build instructions
