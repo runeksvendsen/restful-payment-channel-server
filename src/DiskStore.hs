@@ -35,6 +35,7 @@ import Control.Monad.Catch (bracket, finally, try)
 import Control.Monad (guard, forM, unless, forM_, filterM)
 import Control.Arrow (second)
 import Control.Concurrent (threadDelay)
+import Control.Concurrent.Spawn (parMapIO)
 import qualified  STMContainers.Map as Map
 
 
@@ -189,7 +190,7 @@ channelMapFromStateFiles ::
     -> IO (DiskMap k v)
 channelMapFromStateFiles baseDir l = do
     m <- atomically Map.new
-    readRes <- forM l tryReadStateFile
+    readRes <- parMapIO tryReadStateFile l
     mapRes <- atomically $ forM readRes
         (either error (\(h,s) -> insertDiskSyncedChannel h s m))
     return $ DiskMap (MapConfig baseDir) m
