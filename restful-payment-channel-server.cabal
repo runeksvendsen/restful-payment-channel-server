@@ -98,12 +98,13 @@ Executable ChanStore
     case-insensitive,
     unix,
     exceptions,
-    filepath
+    filepath,
+    spawn
 
-Executable SettlementService
+Executable SigningService
   hs-source-dirs: src
-  main-is: SettlementService/Main.hs
-  ghc-options: -W -O2 -threaded -with-rtsopts=-N -main-is SettlementService.Main
+  main-is: SigningService/Main.hs
+  ghc-options: -W -O2 -threaded -with-rtsopts=-N -main-is SigningService.Main
 
   build-depends:
     base                      >= 4     && < 5,
@@ -248,7 +249,7 @@ Executable RunTestData
       optparse-applicative
 
 --Library
---  exposed-modules:      SettlementService.Interface
+--  exposed-modules:      SigningService.Interface
 --
 --  ghc-options:          -O2 -threaded -with-rtsopts=-N
 --

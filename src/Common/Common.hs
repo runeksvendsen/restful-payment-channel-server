@@ -9,7 +9,7 @@ module Common.Common where
 import           Common.Types
 
 import           Data.Bitcoin.PaymentChannel
-import           Data.Bitcoin.PaymentChannel.Types (Payment, ChannelParameters(..), b64Encode)
+import           Data.Bitcoin.PaymentChannel.Types (BitcoinAmount, Payment, ChannelParameters(..), b64Encode)
 
 
 import           Control.Monad (mzero)
@@ -45,68 +45,73 @@ import qualified Data.Binary as Bin
 
 
 
--- |Types that can be encoded to fit in a URI
-class PathParamEncode a where
+-- |Types that can be encoded to fit in a URL parameter
+class URLParamEncode a where
     pathParamEncode :: a -> BS.ByteString
 
-instance PathParamEncode HC.PubKey where
+instance URLParamEncode HC.PubKey where
     pathParamEncode = HU.encodeHex . cs . Bin.encode
 
-instance PathParamEncode HT.TxHash where
+instance URLParamEncode HT.TxHash where
     pathParamEncode = HT.txHashToHex
 
-instance PathParamEncode BitcoinLockTime where
+instance URLParamEncode BitcoinLockTime where
     pathParamEncode = cs . encode
 
-instance PathParamEncode Integer where
+instance URLParamEncode Integer where
     pathParamEncode = cs . show
 
-instance PathParamEncode Word32 where
+instance URLParamEncode Word32 where
     pathParamEncode = cs . show
 
-instance PathParamEncode HC.Address where
+instance URLParamEncode HC.Address where
     pathParamEncode = HC.addrToBase58
 
-instance PathParamEncode Payment where
+instance URLParamEncode Payment where
     pathParamEncode = b64Encode
 
-instance PathParamEncode HT.OutPoint where
+instance URLParamEncode HT.OutPoint where
     pathParamEncode = HU.encodeHex . cs . Bin.encode
 
+instance URLParamEncode Bool where
+    pathParamEncode b = if b then "true" else "false"
+
+instance URLParamEncode BitcoinAmount where
+    pathParamEncode = cs . encode
 
 ----
 
 ----
--- |Types that can be decoded from a URI component
-class PathParamDecode a where
+-- |Types that can be decoded from an URL parameter
+class URLParamEncode a => URLParamDecode a where
     pathParamDecode :: BS.ByteString -> Either String a
 
 decodeHex bs = maybe (Left "invalid hex string") Right (HU.decodeHex bs)
 
-instance PathParamDecode HC.PubKey where
+instance URLParamDecode HC.PubKey where
     pathParamDecode bs =
         decodeHex bs >>=
         fmapL ("failed to decode public key: " ++) . HU.decodeToEither
 
-instance PathParamDecode HT.TxHash where
+instance URLParamDecode HT.TxHash where
     pathParamDecode bs =
         maybe (Left $ "failed to decode transaction hash: " ++ cs bs)
             Right (HT.hexToTxHash bs)
 
-instance PathParamDecode HT.OutPoint where
+instance URLParamDecode HT.OutPoint where
     pathParamDecode bs =
         decodeHex bs >>=
         fmapL ("failed to decode outpoint: " ++) . HU.decodeToEither
 
-instance PathParamDecode BitcoinLockTime where
+instance URLParamDecode BitcoinLockTime where
     pathParamDecode bs = maybe
         (Left "expiration time parse failure") Right (decode . cs $ bs)
 
-instance PathParamDecode HC.Address where
+instance URLParamDecode HC.Address where
     pathParamDecode bs = maybe
         (Left $ "Bitcoin address parse failure: " ++ show bs) Right (HC.base58ToAddr bs)
 
-instance PathParamDecode Payment where
+instance URLParamDecode Payment where
     pathParamDecode bs =
         case fromJSON . String . cs $ bs of
             Error e -> Left $ "payment parse failure: " ++ e
@@ -116,18 +121,22 @@ decodeVout :: (Num a, FromJSON a) => BS.ByteString -> Either String a
 decodeVout bs = maybe
     (Left "failed to decode funding tx vout") Right (decode . cs $ bs)
 
-instance PathParamDecode Integer where
+instance URLParamDecode Integer where
     pathParamDecode = decodeVout
 
-instance PathParamDecode Word32 where
+instance URLParamDecode Word32 where
     pathParamDecode = decodeVout
 
-instance PathParamDecode Bool where
+instance URLParamDecode Bool where
     pathParamDecode bs =
         case bs of
             "true" -> Right True
             "false" -> Right False
             _       -> Left "boolean must be either \"true\" or \"false\""
+
+instance URLParamDecode BitcoinAmount where
+    pathParamDecode bs = maybe
+         (Left "bitcoin amount parse failure") Right (decode . cs $ bs)
 ----
 
 

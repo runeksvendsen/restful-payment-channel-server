@@ -8,7 +8,7 @@ import           Server.ChanStore
 import           Server.ChanStore.Types
 import           Server.ChanStore.ChanStore
 import           Server.Main (wrapArg)
-import           Server.Config (Config, loadConfig, configLookupOrFail, getSettleConfig,
+import           Server.Config (Config, loadConfig, configLookupOrFail,
                                 getBitcoindConf, setBitcoinNetwork, getLevelDBFilePath)
 import           Server.Util (reqBoundedData, writeBinary,
                               internalError, userError, getPathArg, getQueryArg, getOptionalQueryArg,
@@ -88,16 +88,10 @@ settle map = do
     unless itemExisted $
         errorWithDescription 404 "No such channel"
 
-getAll :: ChannelMap -> Snap ()
-getAll m = do
-    expirationDate <- getPathArg "exp_time"
---     maybeMarkAsSettling <- getOptionalQueryArg "begin_settlement"
-    let filterFunc = \chan ->
-            if isOpen chan then
-                    expiresBefore expirationDate (csState chan)
-                else
-                    False
-    liftIO (getFilteredChanStates m filterFunc) >>= writeBinary
+getForSettlement :: ChannelMap -> Snap ()
+getForSettlement map = do
+    hey <- g "h"
+    markAsSettlingAndGetIfOpen
 
 updateWithPayment :: MonadSnap m => ChannelMap -> HT.OutPoint -> Payment -> m ()
 updateWithPayment  map chanId payment = do
@@ -107,3 +101,17 @@ updateWithPayment  map chanId payment = do
 
 errorOnException :: MonadSnap m => E.IOException -> m ()
 errorOnException = internalError . show
+
+
+
+getAll :: ChannelMap -> Snap ()
+getAll m = do
+    expirationDate <- getPathArg "exp_time"
+--     maybeMarkAsSettling <- getOptionalQueryArg "begin_settlement"
+    let filterFunc = \chan ->
+            if isOpen chan then
+                    expiresBefore expirationDate (csState chan)
+                else
+                    False
+    undefined
+--     liftIO (getFilteredChanStates m filterFunc) >>= writeBinary

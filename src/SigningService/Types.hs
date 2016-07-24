@@ -2,18 +2,18 @@
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE FlexibleInstances #-}
 
-module SettlementService.Types where
+module SigningService.Types where
 
 import           Server.Types
 import           Snap (Snap)
-import           Data.Bitcoin.PaymentChannel.Types (ReceiverPaymentChannel)
+import           Data.Bitcoin.PaymentChannel.Types (ReceiverPaymentChannel, BitcoinAmount, PayChanError)
 import qualified Network.Haskoin.Transaction as HT
 import           Control.Lens.TH (makeLenses)
 
 type SettlementTxId = HT.TxHash
 
 data AppConf = AppConf
- { _settleChannelFunc    :: ReceiverPaymentChannel -> IO (Either String SettlementTxId)
+ { _makeSettlementTxFunc    :: (ReceiverPaymentChannel, BitcoinAmount) -> Either PayChanError HT.Tx
  }
 
 -- Template Haskell magic

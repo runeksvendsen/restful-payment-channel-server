@@ -44,6 +44,9 @@ main :: IO ()
 main = wrapArg $ \cfg cfgFilePath -> do
     dbConf <- getDBConf cfg
 
+    settleConfig <- getServerSettleConfig cfg
+    settleConn <- getSigningServiceConn cfg
+
     mainThread <- myThreadId
     _ <- installHandlerKillThreadOnSig Sig.sigTERM mainThread
     --       1. first do this            3. at the end always do this

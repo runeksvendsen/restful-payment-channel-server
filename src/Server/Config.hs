@@ -2,7 +2,9 @@
 
 module Server.Config
 (
-loadConfig,configLookupOrFail,getSettleConfig,getBitcoindConf,
+loadConfig,configLookupOrFail,
+getServerSettleConfig,getSigningSettleConfig,
+getBitcoindConf,getSigningServiceConn,
 BitcoinNet,
 setBitcoinNetwork,toPathString,
 getDBConf,connFromDBConf,getLevelDBFilePath,
@@ -22,6 +24,7 @@ import qualified Network.Haskoin.Crypto as HC
 import qualified Network.Haskoin.Constants as HCC
 import qualified Crypto.Secp256k1 as Secp
 
+import           Control.Applicative (liftA2)
 import           Control.Lens.TH (makeLenses)
 import qualified Data.ByteString as BS
 import           Data.Ratio
@@ -52,17 +55,27 @@ getLevelDBFilePath cfg = do
     dir <- configLookupOrFail cfg "storage.stateDir"
     return $ dir ++ "/db/"
 
+getSigningServiceConn :: Config -> IO ConnManager
+getSigningServiceConn cfg = do
+    host <- (configLookupOrFail cfg "settlement.signingService.host")
+    port <- (configLookupOrFail cfg "settlement.signingService.port")
+    newConnManager host port
+
 getDBConf :: Config -> IO DBConf
 getDBConf cfg = DBConf <$>
     configLookupOrFail cfg "chanStore.host" <*>
     configLookupOrFail cfg "chanStore.port"
 
-getSettleConfig :: Config -> IO ChanSettleConfig
-getSettleConfig cfg = SettleConfig <$>
-        configLookupOrFail cfg "settlement.privKeySeed" <*>
-        configLookupOrFail cfg "settlement.fundsDestinationAddress" <*>
+getServerSettleConfig :: Config -> IO ServerSettleConfig
+getServerSettleConfig cfg = ServerSettleConfig <$>
         fmap calcSettlementFeeSPB (configLookupOrFail cfg "settlement.txFeeSatoshiPerByte") <*>
         configLookupOrFail cfg "settlement.settlementPeriodHours"
+
+-- |For SigningService
+getSigningSettleConfig :: Config -> IO SigningSettleConfig
+getSigningSettleConfig cfg = SigningSettleConfig <$>
+        configLookupOrFail cfg "settlement.privKeySeed" <*>
+        configLookupOrFail cfg "settlement.fundsDestinationAddress"
 
 getBitcoindConf :: Config -> IO BTCRPCInfo
 getBitcoindConf cfg = BTCRPCInfo <$>
@@ -71,8 +84,9 @@ getBitcoindConf cfg = BTCRPCInfo <$>
     configLookupOrFail cfg "bitcoin.bitcoindRPC.user" <*>
     configLookupOrFail cfg "bitcoin.bitcoindRPC.pass"
 
+-- | Roughly accurate (±10%-ish)
 calcSettlementFeeSPB :: BitcoinAmount -> BitcoinAmount
-calcSettlementFeeSPB satoshisPerByte = 331 * satoshisPerByte -- 346 2 outputs
+calcSettlementFeeSPB satoshisPerByte = 331 * satoshisPerByte
 
 setBitcoinNetwork :: BitcoinNet -> IO ()
 setBitcoinNetwork Mainnet = return ()

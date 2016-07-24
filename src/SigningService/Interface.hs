@@ -1,5 +1,5 @@
 {-|
-Module      : SettlementService.Interface
+Module      : SigningService.Interface
 Description : Publish settlement transactions when given payment channel states
 Copyright   : (c) Rune K. Svendsen, 2016
 License     : PublicDomain
@@ -17,19 +17,19 @@ This file describes the server interface (currently comprising 'settleChannel' o
 -}
 
 
-module SettlementService.Interface
+module SigningService.Interface
 (
     settleChannel
 )
 where
 
-import           SettlementService.Spec (SettleChan(..))
+import           SigningService.Spec (SettleChan(..))
 import           Server.ChanStore.Types (ConnManager)
 import           Server.ChanStore.RequestRunner (runRequest)
 
-import           Data.Bitcoin.PaymentChannel.Types (ReceiverPaymentChannel)
--- import qualified Network.Haskoin.Transaction as HT
+import           Data.Bitcoin.PaymentChannel.Types (ReceiverPaymentChannel, BitcoinAmount)
+import qualified Network.Haskoin.Transaction as HT
 
--- |Publish settlement transaction by POSTing a list of states to the endpoint /settle_channel
-settleChannel :: ConnManager -> [ReceiverPaymentChannel] -> IO ()
-settleChannel conn rpc = runRequest conn $ SettleChan rpc
+-- |Produce settlement transaction(s) by POSTing a list of states to the endpoint /settle_channel
+settleChannel :: ConnManager -> ReceiverPaymentChannel -> BitcoinAmount -> IO HT.Tx
+settleChannel conn rpc txFee = runRequest conn $ SettleChan rpc txFee

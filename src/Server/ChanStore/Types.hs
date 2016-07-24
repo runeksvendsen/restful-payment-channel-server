@@ -1,9 +1,9 @@
 module Server.ChanStore.Types where
 
--- import           DiskStore
-import           LevelDB
+import           DiskStore
+-- import           LevelDB
 
-import           Data.Bitcoin.PaymentChannel.Types (ReceiverPaymentChannel, Payment)
+import           Data.Bitcoin.PaymentChannel.Types (ReceiverPaymentChannel)
 import qualified Network.Haskoin.Transaction as HT
 import qualified Data.ByteString as BS
 import           Network.HTTP.Client (Manager)
@@ -30,6 +30,7 @@ data ChanState =
     SettlementInProgress {
         csSettlingState     :: ReceiverPaymentChannel
     }
+
 
 -- Needed for Binary instance non-overlap
 newtype MaybeChanState = MaybeChanState (Maybe ChanState)

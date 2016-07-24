@@ -1,21 +1,22 @@
 {-# LANGUAGE OverloadedStrings #-}
 
-module SettlementService.Main where
+module SigningService.Main where
 
 import           Prelude hiding (init, userError)
 
-import           SettlementService.Types
-import qualified SettlementService.Spec as Spec (basePath)
+import           SigningService.Types
+import qualified SigningService.Spec as Spec (basePath)
 
 import           Server.Main (wrapArg)
-import           Server.Config (loadConfig, configLookupOrFail, getSettleConfig,
+import           Server.Config (loadConfig, configLookupOrFail, getSigningSettleConfig,
                                 getBitcoindConf, setBitcoinNetwork)
 import qualified Server.Config as Conf (Config)
 import           Server.Util (reqBoundedData, writeBinary,
                               internalError, userError, getPathArg, getQueryArg, getOptionalQueryArg,
                               errorWithDescription)
-import           Server.ChanStore.Settlement (settleChannelEither)
+import           Server.ChanStore.Settlement (produceSettlementTx)
 
+import           Data.Bitcoin.PaymentChannel ()
 import           Data.Bitcoin.PaymentChannel.Types (ReceiverPaymentChannel, PaymentChannel(..), Payment)
 
 import           Bitcoind
@@ -26,7 +27,7 @@ import           Snap.Http.Server (defaultConfig, httpServe)
 import           Control.Applicative ((<|>))
 
 import           Control.Lens (use)
-import           Control.Monad (unless, forM)
+import           Control.Monad (unless, forM_)
 import           Control.Monad.IO.Class (liftIO, MonadIO)
 import           Control.Monad.Catch (bracket, finally, try)
 import qualified System.FilePath as F
@@ -35,22 +36,27 @@ import qualified Control.Exception as E
 
 site :: Handler AppConf AppConf ()
 site = route [
-    (Spec.basePath, method POST pushTx) ]
+        (Spec.basePath, method POST $ parseRequest >>= writeResponse)
+    ]
 
-pushTx :: Handler AppConf AppConf ()
-pushTx = do
-    settleChan <- use settleChannelFunc
-    eitherStates <- reqBoundedData 512
-    case eitherStates of
-        Right chanStateList -> forM chanStateList (\chanState ->
-            liftIO (settleChan chanState)) >>= either internalError writeBinary
+parseRequest :: Handler AppConf AppConf (ReceiverPaymentChannel,BitcoinAmount)
+parseRequest = do
+    eitherState <- reqBoundedData 1024
+    txFee <- getQueryArg "tx_fee"
+    case eitherState of
         Left e -> userError $ "Failed to parse ReceiverPaymentChannel from body: " ++ e
+        Right chanState -> return (chanState,txFee)
+
+writeResponse :: (ReceiverPaymentChannel,BitcoinAmount) -> Handler AppConf AppConf ()
+writeResponse (chanState,txFee) = do
+    mkSettlementTx <- use makeSettlementTxFunc
+    let writeSettlementTx = either (internalError . show) writeBinary
+    writeSettlementTx $ mkSettlementTx (chanState,txFee)
 
 init :: Conf.Config -> SnapletInit AppConf AppConf
-init cfg = makeSnaplet "SettlementService" "Push Bitcoin tx to the network" Nothing $ do
-    settleConfig <- liftIO $ getSettleConfig cfg
-    bitcoindRPCConf <- liftIO $ getBitcoindConf cfg
-    return $ AppConf $ settleChannelEither bitcoindRPCConf settleConfig
+init cfg = makeSnaplet "SigningService" "Settlement transaction producer" Nothing $ do
+    settleConfig <- liftIO $ getSigningSettleConfig cfg
+    return $ AppConf $ produceSettlementTx settleConfig
 
 main :: IO ()
 main = wrapArg $ \cfg cfgFilePath -> do

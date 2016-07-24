@@ -3,13 +3,14 @@
 module Server.ChanStore.ChanStore where
 
 
--- import           DiskStore (newDiskMap, addItem, getItem, updateStoredItem, -- deleteStoredItem,
---                             getAllItems,
---                             mapGetItemCount, getFilteredItems,
---                             DiskMap(..), Serializable(..), ToFileName(..), Hashable(..),
---                             itemContent, mapDiskSyncThread, syncToDisk)
+import           DiskStore (newDiskMap, addItem, getItem, updateStoredItem, -- deleteStoredItem,
+                            getAllItems,
+                            mapGetItem,
+                            getItemCount, getFilteredKeys,
+                            DiskMap(..), Serializable(..), ToFileName(..), Hashable(..),
+                            mapDiskSyncThread, syncToDisk)
 
-import           LevelDB
+-- import           LevelDB
 
 import           Server.ChanStore.Types
 import           Data.Bitcoin.PaymentChannel.Types
@@ -24,31 +25,31 @@ import qualified Data.Binary.Put as BinPut
 
 import qualified STMContainers.Map as Map
 import qualified ListT as LT
-import           Control.Concurrent.STM (STM)
+import           Control.Concurrent.STM (STM, atomically)
+import           Control.Exception.Base     (Exception, throw)
 import           Data.Time.Clock (UTCTime)
 
+markAsSettlingAndGetIfOpen :: ChannelMap -> Key -> STM (Maybe ReceiverPaymentChannel)
 markAsSettlingAndGetIfOpen m k = do
-    maybeItem <- mapGetState m markIt k
+    maybeItem <- mapGetItem m markIt k
     case maybeItem of
-        Nothing -> error "Tried to mark non-existing channel state item as settling"
+        Nothing -> error "Tried to mark non-existing channel state item as settling"    -- TODO: throw
         Just (ReadyForPayment cs) -> return $ Just cs
-        _ -> return Nothing
+        Just (SettlementInProgress _) -> return Nothing
+        Just (ChannelSettled _) -> return Nothing
     where markIt (ReadyForPayment cs) = SettlementInProgress cs
           markIt s@(SettlementInProgress _) = s
           markIt s@(ChannelSettled _) = s
 
 -- | Important note: does not support 'LockTimeBlockHeight'
---      TODO: figure out if we even want to accept 'LockTimeBlockHeight' as an expiration date at all
 -- Get keys for all channel states with an expiration date later than the specified 'UTCTime'
 channelsExpiringBefore :: UTCTime -> ChannelMap -> STM [Key]
-channelsExpiringBefore currentTimeIsh m = undefined
---     map getKey .
---     filter (chanExpiresBefore . csState . getItem) .
---     filter (isOpen . getItem)
---     <$> LT.toList (Map.stream m) where
---         chanExpiresBefore = expiresEarlierThan currentTimeIsh . getExpirationDate
---         getItem = itemContent . snd
---         getKey = fst
+channelsExpiringBefore currentTimeIsh m = getFilteredKeys m isOpenAndExpiresBefore
+    where
+        isOpenAndExpiresBefore (ReadyForPayment cs)     = chanExpiresBefore cs
+        isOpenAndExpiresBefore (SettlementInProgress _) = False
+        isOpenAndExpiresBefore (ChannelSettled _)       = False
+        chanExpiresBefore = expiresEarlierThan currentTimeIsh . getExpirationDate
 
 expiresEarlierThan :: UTCTime -> BitcoinLockTime -> Bool
 expiresEarlierThan _        (LockTimeBlockHeight _) = error "LockTimeBlockHeight not supported"
@@ -81,6 +82,8 @@ updateChanState chanMap key payment = getItem chanMap key >>=
             updateStoredItem chanMap key (ReadyForPayment newState) >>
             return True
                 where newState = unsafeUpdateRecvState oldState payment
+        Just (SettlementInProgress s) -> undefined
+        Just (ChannelSettled settleTxId) -> undefined
         _ ->
             return False
 
@@ -88,11 +91,22 @@ deleteChanState :: ChannelMap -> Key -> HT.TxHash -> IO Bool
 deleteChanState chanMap key settlementTxId =
     updateStoredItem chanMap key (ChannelSettled settlementTxId)
 
-getFilteredChanStates :: ChannelMap -> (ChanState -> Bool) -> IO [(Key,ChanState)]
-getFilteredChanStates = getFilteredItems
 
-mapLen = mapGetItemCount
+mapLen = getItemCount
 
+instance ToFileName HT.OutPoint
+instance ToFileName HT.TxHash
+instance ToFileName HC.Address
+
+instance Hashable HT.OutPoint where
+    hashWithSalt salt (HT.OutPoint h i) =
+        salt `hashWithSalt` serialize h `hashWithSalt` i
+
+instance Hashable HT.TxHash where
+    hashWithSalt salt txid = hashWithSalt salt (serialize txid)
+
+instance Hashable HC.Address where
+    hashWithSalt salt addr = hashWithSalt salt (serialize addr)
 
 instance Serializable HT.OutPoint where
     serialize   = BL.toStrict . Bin.encode

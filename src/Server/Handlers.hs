@@ -108,13 +108,13 @@ chanSettle (StdConfig chanMap chanId payment) settleChannel valRecvd = do
 
 chanPay :: MonadSnap m => ChanPayConfig -> m (BitcoinAmount, ReceiverPaymentChannel)
 chanPay (PayConfig (StdConfig chanMap chanId payment) maybeNewAddr) = do
-    existingChanState <- maybeUpdateChangeAddress maybeNewAddr =<<
-            getChannelStateOr404 chanMap chanId
+    existingChanState <- getChannelStateOr404 chanMap chanId
     (valRecvd,newChanState) <- either
             (userError . show)
             return
             (recvPayment existingChanState payment)
-
+    -- TODO: chanState can have changed to Settled or SettlementInProgress inbetween
+    --  fetching and updating
     tryDBRequest $ DBConn.chanUpdate chanMap chanId payment
 
     modifyResponse $ setResponseStatus 200 (C.pack "Payment accepted")

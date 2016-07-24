@@ -99,6 +99,7 @@ channelIDFromPathArgs =
        getPathArg "funding_txid" <*>
        getPathArg "funding_vout"
 
+-- TODO: move to Common
 --- Get parameters with built-in error handling
 failOnError :: MonadSnap m => String -> Either String a -> m a
 failOnError msg = either (userError . (msg ++)) return
@@ -109,17 +110,17 @@ failOnNothingWith s = maybe (userError s) return
 handleQueryDecodeFail :: MonadSnap m => BS.ByteString -> Either String a -> m a
 handleQueryDecodeFail bs = failOnError ("failed to decode query arg \"" ++ cs bs ++ "\": ")
 
-getPathArg :: (MonadSnap m, PathParamDecode a) => BS.ByteString -> m a
+getPathArg :: (MonadSnap m, URLParamDecode a) => BS.ByteString -> m a
 getPathArg bs = failOnError (cs bs ++ ": failed to decode path arg: ") . pathParamDecode =<<
     failOnNothingWith ("Missing " ++ C.unpack bs ++ " path parameter") =<<
         getParam bs
 
-getQueryArg :: (MonadSnap m, PathParamDecode a) => BS.ByteString -> m a
+getQueryArg :: (MonadSnap m, URLParamDecode a) => BS.ByteString -> m a
 getQueryArg bs = handleQueryDecodeFail bs . pathParamDecode =<<
     failOnNothingWith ("Missing " ++ C.unpack bs ++ " query parameter") =<<
         getQueryParam bs
 
-getOptionalQueryArg :: (MonadSnap m, PathParamDecode a) => BS.ByteString -> m (Maybe a)
+getOptionalQueryArg :: (MonadSnap m, URLParamDecode a) => BS.ByteString -> m (Maybe a)
 getOptionalQueryArg bs = do
     maybeParam <- getQueryParam bs
     case maybeParam of

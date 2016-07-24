@@ -13,8 +13,8 @@ import           Network.HTTP.Client (HttpException (..))
 tryDBRequest :: MonadSnap m => IO a -> m a
 tryDBRequest = tryRequestOfType "Database"
 
-trySettlementRequest :: MonadSnap m => IO a -> m a
-trySettlementRequest = tryRequestOfType "Settlement service"
+trySigningRequest :: MonadSnap m => IO a -> m a
+trySigningRequest = tryRequestOfType "Signing service"
 
 tryRequestOfType :: MonadSnap m => String -> IO a -> m a
 tryRequestOfType descr ioa = do

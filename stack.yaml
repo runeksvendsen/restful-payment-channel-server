@@ -7,7 +7,7 @@ packages:
 - '.'
 - location:
     git: https://github.com/runeksvendsen/bitcoin-payment-channel.git
-    commit: ca09347392e186ef95e7497f10424fc588c2a1cc
+    commit: c2dbb8a1c31a65e88d5507e8b9bf67ff916a5bd4
   extra-dep: true
 - location:
     git: https://github.com/runeksvendsen/haskell-bitcoin-api.git
@@ -30,5 +30,7 @@ extra-deps:
 - stack-prism-0.1.5
 - snap-cors-1.2.9
 - higher-leveldb-0.3.1.0
+- spawn-0.3
+
 
 resolver: lts-5.2

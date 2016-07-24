@@ -7,14 +7,15 @@ import           Server.App  (mainRoutes)
 
 import           Server.Config
 import           Server.Config.Types
-import           Server.Types (OpenConfig(..), ChanSettleConfig(..))
+import           Server.Types (OpenConfig(..), ServerSettleConfig(..))
 
 import           Common.Common (pathParamEncode)
 import           Data.String.Conversions (cs)
 
 import           Server.ChanStore.Types (ConnManager)
-import           Server.ChanStore.Settlement (settleChannelEither)
-
+-- import           Server.ChanStore.Settlement (settleChannelEither)
+import           SigningService.Interface (settleChannel)
+import           Server.DB (trySigningRequest)
 
 import qualified Network.Haskoin.Crypto as HC
 import           Snap (SnapletInit, makeSnaplet, addRoutes)
@@ -31,15 +32,18 @@ appInit cfg chanOpenMap = makeSnaplet "PayChanServer" "RESTful Bitcoin payment c
     bitcoinNetwork <- liftIO (configLookupOrFail cfg "bitcoin.network")
     liftIO $ setBitcoinNetwork bitcoinNetwork
 
-    cfgSettleConfig@(SettleConfig _ _ settleFee _) <- liftIO $ getSettleConfig cfg
+    cfgSettleConfig@(ServerSettleConfig _ _ settleFee _) <- liftIO $ getServerSettleConfig cfg
 
     (OpenConfig minConf basePrice addSettleFee) <- OpenConfig <$>
             liftIO (configLookupOrFail cfg "open.fundingTxMinConf") <*>
             liftIO (configLookupOrFail cfg "open.basePrice") <*>
             liftIO (configLookupOrFail cfg "open.priceAddSettlementFee")
 
+    signingServiceConn <- liftIO $ getSigningServiceConn cfg
+    let signSettleFunc = trySigningRequest . settleChannel signingServiceConn
+
     bitcoindRPCConf <- liftIO $ getBitcoindConf cfg
-    let settleChanFunc = settleChannelEither bitcoindRPCConf cfgSettleConfig
+    let pushTxFunc = bitcoindNetworkSumbitTx bitcoindRPCConf
 
     let confPubKey = HC.derivePubKey $ confSettlePrivKey cfgSettleConfig
     let confOpenPrice = if addSettleFee then basePrice + settleFee else basePrice
@@ -51,7 +55,7 @@ appInit cfg chanOpenMap = makeSnaplet "PayChanServer" "RESTful Bitcoin payment c
 
     return $ App chanOpenMap cfgSettleConfig
                  confPubKey confOpenPrice minConf
-                 basePathVersion settleChanFunc
+                 basePathVersion settleChanFunc pushTxFunc
 
 installHandlerKillThreadOnSig :: Sig.Signal -> ThreadId -> IO Sig.Handler
 installHandlerKillThreadOnSig sig tid =
