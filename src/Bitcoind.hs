@@ -32,10 +32,9 @@ bitcoindNetworkSumbitTx (BTCRPCInfo ip port user pass) tx =
     withClient ip port user pass
         (tryBitcoindSubmitToNetwork tx)
 
-tryBitcoindSubmitToNetwork ::
-    MonadIO m =>
-    HT.Tx ->
-    Client
+tryBitcoindSubmitToNetwork :: MonadIO m =>
+    HT.Tx
+    -> Client
     -> m (Either String HT.TxHash)
 tryBitcoindSubmitToNetwork tx conn = do
     res <- liftIO $ try $ send conn $ Btc.decode . fromBytes $ serialize tx
@@ -50,6 +49,15 @@ tryBitcoindSubmitToNetwork tx conn = do
                 (Left $ "BUG: failed to parse transaction ID returned by bitcoind: " ++ show txid)
                 Right
                 (HT.hexToTxHash (B16.encode $ toBytes txid))
+
+-- Not done yet
+bitcoindSubmitToNetwork :: MonadIO m =>
+    HT.Tx
+    -> Client
+    -> m HexString
+bitcoindSubmitToNetwork tx conn =
+    liftIO $ send conn $ Btc.decode . fromBytes $ serialize tx
+
 
 serialize :: Bin.Binary a => a -> BS.ByteString
 serialize = BL.toStrict . Bin.encode

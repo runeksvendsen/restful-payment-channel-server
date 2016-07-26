@@ -1,10 +1,11 @@
 module DiskStore
 (
 DiskMap(..),
-newDiskMap, addItem, getItem, updateStoredItem, -- deleteStoredItem,
-mapGetItem,
+newDiskMap, addItem, getItem, updateStoredItem,
+CreateResult(..),
+mapGetItem, mapGetItems, MapItemResult(..),
 getAllItems, getItemCount,
-getFilteredItems, getFilteredKeys,
+getFilteredItems, getFilteredKeys, getFilteredKV,
 
 Serializable(..),
 ToFileName(..),
@@ -54,11 +55,13 @@ data MapConfig = MapConfig {
     syncDir :: FilePath
 }
 
+data CreateResult = Created | AlreadyExists
 
-data MapUpdateResult k v =
-    Updated k v |
+
+data MapItemResult k v =
+    ItemUpdated k v |
     NotUpdated |
-    DoesntExist
+    NoSuchItem
 
 class Serializable a where
     serialize   :: a -> BS.ByteString
@@ -73,6 +76,8 @@ class (Serializable k, Eq k, Hashable k) => ToFileName k where
 
 
 type ItemExists = Bool
+-- |Represents a map update action, affecting value "v" at key "k"
+data ComposableUpdate k v = ComposableUpdate (STM [MapItemResult k v])
 
 getSyncDir = syncDir . mapConf
 
@@ -85,44 +90,40 @@ newDiskMap syncDir = diskGetStateFiles syncDir >>= channelMapFromStateFiles sync
 
     -- User --
 getItem :: ToFileName k =>
+    DiskMap k v -> k -> IO (Maybe v)
+getItem m = atomically . getItem' m
+
+getItem' :: ToFileName k =>
     DiskMap k v -> k -> STM (Maybe v)
-getItem (DiskMap _ m) k =
+getItem' (DiskMap _ m) k =
     fmap itemContent <$> fetchItem m k
 
 addItem :: (ToFileName k, Serializable v) =>
-    DiskMap k v -> k -> v -> IO ()
+    DiskMap k v -> k -> v -> IO CreateResult
 addItem dm@(DiskMap _ m) k v = do
-    _updateMapItem (getSyncDir dm) $
-        insertItem k v m >> return (Updated k v)
-    return ()
+    res <- fmap head $ _updateMapItem (getSyncDir dm) $
+        getItem' dm k >>= maybe
+            (insertItem k v m >> return [ItemUpdated k v])  -- Doesn't already exist
+            (const $ return [NotUpdated])                 -- Already exists
+    case res of
+        ItemUpdated _ _ -> return Created
+        NotUpdated  -> return AlreadyExists
+        _           -> error "BUG 20:56:49"
 
 updateStoredItem :: (ToFileName k, Serializable v) =>
-    DiskMap k v -> k -> v -> IO ItemExists
+    DiskMap k v -> k -> v -> IO (MapItemResult k v)
 updateStoredItem m k v =
-    mapGetItem m (const . Just $ v) k >>= transformReturnVal
-        where transformReturnVal res =
-                case res of
-                    (Updated _ _) -> return True
-                    _             -> return False
-
-mapStoredItem :: (ToFileName k, Serializable v) =>
-    DiskMap k v -> (v -> Maybe v) -> k -> STM (MapUpdateResult k v)
-mapStoredItem dm@(DiskMap _ m) f k = do
-    maybeItem <- getItem dm k
-    case maybeItem of
-        Nothing -> return DoesntExist
-        Just val -> maybeUpdate
-            where maybeUpdate =
-                    case f val of
-                        Just newVal ->
-                            updateItem m k newVal >>
-                            return (Updated k newVal)
-                        Nothing ->
-                            return NotUpdated
+    mapGetItem m (const . Just $ v) k
 
 mapGetItem :: (ToFileName k, Serializable v) =>
-    DiskMap k v -> (v -> Maybe v) -> k -> IO (MapUpdateResult k v)
-mapGetItem dm f k = _updateMapItem (getSyncDir dm) $ mapStoredItem dm f k
+    DiskMap k v -> (v -> Maybe v) -> k -> IO (MapItemResult k v)
+mapGetItem dm f k = head <$> mapGetItems dm f ( return [k] )
+
+mapGetItems :: (ToFileName k, Serializable v) =>
+    DiskMap k v -> (v -> Maybe v) -> STM [k] -> IO [MapItemResult k v]
+mapGetItems dm f stmKeys = _updateMapItem (getSyncDir dm) $ do
+    keys <- stmKeys
+    forM keys (mapStoredItem dm f)
 
 getAllItems :: (ToFileName k, Serializable v) => DiskMap k v -> IO [v]
 getAllItems (DiskMap _ m) =
@@ -151,17 +152,45 @@ getFilteredKV (DiskMap _ m) filterBy =
             where mapSnd f (a,b)= (a,f b)
 
 
+-- |If 'f' applied to the value at 'k' in the map returns a Just, then update the value
+--  to this. Return information about what happened.
+mapStoredItem :: (ToFileName k, Serializable v) =>
+    DiskMap k v -> (v -> Maybe v) -> k -> STM (MapItemResult k v)
+mapStoredItem dm@(DiskMap _ m) f k = do
+    maybeItem <- getItem' dm k
+    case maybeItem of
+        Nothing  -> return NoSuchItem
+        Just val -> maybeUpdate
+            where maybeUpdate =
+                    case f val of
+                        Just newVal ->
+                            updateItem m k newVal >>
+                            return (ItemUpdated k newVal)
+                        Nothing ->
+                            return NotUpdated
+
+-- mkComposableUpdate :: (ToFileName k, Serializable v) =>
+--     DiskMap k v -> (v -> Maybe v) -> k -> ComposableUpdate k v
+-- mkComposableUpdate dm f k = ComposableUpdate dm $ mapStoredItem dm f k
+--
+-- atomicallyDoUpdates :: (ToFileName k, Serializable v) =>
+--     [ComposableUpdate k v] -> IO [MapItemResult k v]
+-- atomicallyDoUpdates actions = _updateMapItem (getSyncDir dm)
+
+
 -- Disk sync -- {
 
 -- |Once the map has been initialized, this should be the only function that updates item contents
 _updateMapItem :: (ToFileName k, Serializable v) =>
-    String -> STM (MapUpdateResult k v) -> IO (MapUpdateResult k v)
-_updateMapItem dir updateAction = do
-    updateRes <- atomically $ do updateAction
-    case updateRes of
-        Updated key val -> writeEntryToFile dir (key,val)
-        _ -> return ()
-    return updateRes
+    String -> STM [MapItemResult k v] -> IO [MapItemResult k v]
+_updateMapItem dir updateActions = do
+    updateResults <- atomically $ do updateActions
+    let syncToDisk res =
+            case res of
+                ItemUpdated key val -> writeEntryToFile dir (key,val)
+                _ -> return ()
+    forM updateResults syncToDisk
+    return updateResults
 
 _deleteMapItem :: (ToFileName k) =>
     DiskMap k v -> k -> IO Bool
@@ -174,7 +203,7 @@ _deleteMapItem dm@(DiskMap _ m) k = do
             atomically $ Map.delete k m
             return True
 
-data Action = Sync | Delete | Ignore
+-- data Action = Sync | Delete | Ignore
 --
 -- itemToAction :: MapItem v -> Action
 -- itemToAction Item { deleteFromDisk = True } = Delete
@@ -188,12 +217,18 @@ channelMapFromStateFiles ::
     FilePath
     -> [(k,FilePath)]
     -> IO (DiskMap k v)
-channelMapFromStateFiles baseDir l = do
-    m <- atomically Map.new
-    readRes <- parMapIO tryReadStateFile l
-    mapRes <- atomically $ forM readRes
-        (either error (\(h,s) -> insertDiskSyncedChannel h s m))
-    return $ DiskMap (MapConfig baseDir) m
+channelMapFromStateFiles baseDir l =
+    let
+        forSequential = forM
+        -- It may be problematic to open all files in parallel (due to max open files limit),
+        --  so this is turned off  by default.
+        forParallel = flip parMapIO
+    in do
+        m <- atomically Map.new
+        readRes <- forSequential l tryReadStateFile
+        atomically $ forM readRes
+            (either error (\(h,s) -> insertDiskSyncedChannel h s m))
+        return $ DiskMap (MapConfig baseDir) m
 
 diskGetStateFiles :: ToFileName k => FilePath -> IO [(k,FilePath)]
 diskGetStateFiles baseDir = do

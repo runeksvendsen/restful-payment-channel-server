@@ -4,8 +4,7 @@
 
 module Server.Config.Types where
 
-import           Server.ChanStore.Types (ConnManager)
-import           Server.Types
+import           ChanStoreServer.ChanStore.Types (ConnManager)
 import           Data.Bitcoin.PaymentChannel.Types (ReceiverPaymentChannel, BitcoinAmount)
 
 import qualified Network.Haskoin.Transaction as HT
@@ -21,12 +20,13 @@ import           Data.String.Conversions (cs)
 
 
 data App = App
- { _channelStateMap :: ConnManager
+ { _dbConn :: ConnManager
  , _pubKey          :: HC.PubKey
  , _openPrice       :: BitcoinAmount
+ , _settlePeriod    :: Int
  , _fundingMinConf  :: Int
  , _basePath        :: BS.ByteString
- , _settleTools     :: SettlementToolbox
+ , _settleChanFunc  :: ReceiverPaymentChannel -> IO HT.TxHash
  }
 
 -- Template Haskell magic

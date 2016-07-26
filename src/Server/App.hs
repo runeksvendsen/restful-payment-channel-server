@@ -12,7 +12,7 @@ import           Server.Util (getPathArg, getQueryArg, getOptionalQueryArg, getA
 import           Server.Config
 import           Server.Config.Types
 import           Server.Types ( ChanOpenConfig(..),ChanPayConfig(..),
-                                StdConfig(..), ChanSettleConfig(..))
+                                StdConfig(..), ServerSettleConfig(..))
 import           Server.Handlers
 
 import           Control.Applicative ((<|>))
@@ -43,13 +43,12 @@ mainRoutes basePath' =
         ] :: [(BS.ByteString, Handler App App ())]
 
 
-
 fundingInfoHandler :: Handler App App ()
 fundingInfoHandler =
     mkFundingInfo <$>
     use openPrice <*>
     use fundingMinConf <*>
-    fmap confSettlePeriod (use settleConfig) <*>
+    use settlePeriod <*>
     use pubKey <*>
     getQueryArg "client_pubkey" <*>
     getQueryArg "exp_time" <*>
@@ -61,7 +60,7 @@ newChannelHandler = applyCORS' >>
     ChanOpenConfig <$>
         use openPrice <*>
         use pubKey <*>
-        use channelStateMap <*>
+        use dbConn <*>
         tEST_blockchainGetFundingInfo <*>
         use basePath <*>
         getQueryArg "client_pubkey" <*>
@@ -74,7 +73,7 @@ paymentHandler :: Handler App App (BitcoinAmount, ReceiverPaymentChannel)
 paymentHandler = applyCORS' >>
     PayConfig <$>
         (StdConfig <$>
-            use channelStateMap <*>
+            use dbConn <*>
             channelIDFromPathArgs <*>
             getQueryArg "payment") <*>
         getOptionalQueryArg "change_address"
@@ -86,7 +85,7 @@ settlementHandler valueReceived = do
 
     settleChanFunc <- use settleChanFunc
     stdConf <- StdConfig <$>
-            use channelStateMap <*>
+            use dbConn <*>
             channelIDFromPathArgs <*>
             getQueryArg "payment"
     chanSettle stdConf settleChanFunc valueReceived

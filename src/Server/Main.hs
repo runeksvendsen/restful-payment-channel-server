@@ -2,13 +2,11 @@
 
 module Server.Main where
 
-import qualified Server.ChanStore.Connection as DB
+import qualified ConnManager.Connection as DB
 import           Server.Config -- (Config, loadConfig, configLookupOrFail, getSettleConfig, getBitcoindConf, getDBConf)
 import           Server.Init (appInit, installHandlerKillThreadOnSig)
-import           Server.ChanStore.Types (ConnManager)
-import           Server.ChanStore (newChanMap, mapLen, -- diskSyncThread, diskSyncNow, sync_chanMap,
-                                    init_chanMap)
-import           Server.TimeSettlement (settlementThread)
+import           ChanStoreServer.ChanStore.Types (ConnManager)
+import           Server.Settlement (startSettlementThread)
 
 import           Snap (serveSnaplet)
 import           Snap.Snaplet (runSnaplet)
@@ -43,31 +41,27 @@ wrapArg main' = do
 main :: IO ()
 main = wrapArg $ \cfg cfgFilePath -> do
     dbConf <- getDBConf cfg
-
+    dbConn <- connFromDBConf dbConf
     settleConfig <- getServerSettleConfig cfg
     settleConn <- getSigningServiceConn cfg
-
+    bitcoindConf <- getBitcoindConf cfg
+    --  Start thread which settles channels before expiration (config: settlement.settlementPeriodHours)
+    _ <- forkIO $ startSettlementThread
+            dbConn settleConn settleConfig bitcoindConf (60 * 5)  -- run every 5 minutes
+    -- Shut down on TERM signal
     mainThread <- myThreadId
     _ <- installHandlerKillThreadOnSig Sig.sigTERM mainThread
-    --       1. first do this            3. at the end always do this
-    bracket  (connFromDBConf dbConf)     handleShutdown $
-             runApp (F.dropExtension cfgFilePath) cfg --- <--- 2. do this in-between
-
-handleShutdown :: ConnManager -> IO ()
-handleShutdown conn = return ()
---     DB.closeConnection conn
---     killThread syncThread
---     sync_chanMap map
+    runApp (F.dropExtension cfgFilePath) cfg dbConn
 
 runApp :: String -> Config -> ConnManager -> IO ()
 runApp env cfg chanMapConn = do
     (_, app, _) <- runSnaplet (Just env) (appInit cfg chanMapConn)
+    --  Get port from PORT environment variable, if it contains a valid port number
     maybePort <- return . maybe Nothing readMaybe =<< lookupEnv "PORT"
-
     let conf = case maybePort :: Maybe Word of
             Nothing     -> defaultConfig
             Just port   -> setPort (fromIntegral port) defaultConfig
-
+    --  Start app
     httpServe conf app
 
 

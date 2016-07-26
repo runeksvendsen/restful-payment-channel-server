@@ -15,7 +15,7 @@ import           Snap
 import           Snap.Iteratee (Enumerator, enumBuilder)
 
 import           Data.Bitcoin.PaymentChannel.Types (PaymentChannel(..), ReceiverPaymentChannel,
-                                                    ChannelParameters(..), PayChanError(..)
+                                                    ChannelParameters(..), PayChanError(..), FundingTxInfo
                                                     ,getChannelState, BitcoinAmount, Payment)
 import           Data.Bitcoin.PaymentChannel.Util (setSenderChangeAddress)
 
@@ -156,13 +156,19 @@ writeJSON json = do
     overwriteResponseBody $ encodeJSON json
     writeBS "\n"
 
-writeBinary :: (MonadSnap m, Bin.Binary a) => a -> m ()
-writeBinary obj = do
+writeResponseBody :: (MonadSnap m, Bin.Binary a) => a -> m ()
+writeResponseBody obj = do
     modifyResponse $ setContentType "application/octet-stream"
     overwriteResponseBody $ Bin.encode obj
 
 reqBoundedData :: (MonadSnap m, Bin.Binary a) => Int64 -> m (Either String a)
 reqBoundedData n = fmap decodeEither (readRequestBody n)
+
+decodeFromBody :: (MonadSnap m, Bin.Binary a) => Int64 -> m a
+decodeFromBody n = either
+    (userError . ("Failed to decode object from body: " ++))
+    return
+        =<< reqBoundedData n
 
 decodeEither :: Bin.Binary a => BL.ByteString -> Either String a
 decodeEither bs = case Bin.decodeOrFail bs of
@@ -213,8 +219,8 @@ maybeUpdateChangeAddress maybeAddr state =
 
 
 --- Funding ---
-tEST_blockchainGetFundingInfo :: Handler App App TxInfo
-tEST_blockchainGetFundingInfo = do
+tEST_blockchainGetFundingInfo :: Handler App App FundingTxInfo
+tEST_blockchainGetFundingInfo = fmap toFundingTxInfo $ do
     pubKeyServer <- use pubKey
     minConf <- use fundingMinConf
     testArgTrue <- fmap (== Just True) $ getOptionalQueryArg "test"

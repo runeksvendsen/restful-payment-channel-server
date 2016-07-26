@@ -7,7 +7,7 @@ getServerSettleConfig,getSigningSettleConfig,
 getBitcoindConf,getSigningServiceConn,
 BitcoinNet,
 setBitcoinNetwork,toPathString,
-getDBConf,connFromDBConf,getLevelDBFilePath,
+getDBConf,connFromDBConf,getDBPath,
 -- re-exports
 Config
 
@@ -15,7 +15,7 @@ Config
 where
 
 import           Server.Config.Types
-import           Server.ChanStore.Connection (newConnManager)
+import           ConnManager.Connection (newConnManager)
 import           Common.Common (fromHexString)
 import           Data.Bitcoin.PaymentChannel.Types (BitcoinAmount)
 
@@ -31,7 +31,7 @@ import           Data.Ratio
 import           Data.Configurator.Types
 import qualified Data.Configurator as Conf
 import           Data.String.Conversions (cs)
-import           Server.ChanStore.Types (ConnManager)
+import           ChanStoreServer.ChanStore.Types (ConnManager)
 import           Server.Types
 import           Bitcoind (BTCRPCInfo(..))
 
@@ -50,10 +50,8 @@ configLookupOrFail conf name =
 connFromDBConf :: DBConf -> IO ConnManager
 connFromDBConf (DBConf host port) = newConnManager host port
 
-getLevelDBFilePath :: Config -> IO FilePath
-getLevelDBFilePath cfg = do
-    dir <- configLookupOrFail cfg "storage.stateDir"
-    return $ dir ++ "/db/"
+getDBPath :: Config -> IO FilePath
+getDBPath cfg = configLookupOrFail cfg "storage.stateDir"
 
 getSigningServiceConn :: Config -> IO ConnManager
 getSigningServiceConn cfg = do

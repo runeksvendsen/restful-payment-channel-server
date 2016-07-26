@@ -12,12 +12,10 @@ import           Server.Types (OpenConfig(..), ServerSettleConfig(..))
 import           Common.Common (pathParamEncode)
 import           Data.String.Conversions (cs)
 
-import           Server.ChanStore.Types (ConnManager)
--- import           Server.ChanStore.Settlement (settleChannelEither)
-import           SigningService.Interface (settleChannel)
-import           Server.DB (trySigningRequest)
+import           ChanStoreServer.ChanStore.Types (ConnManager)
+import           Server.Settlement (settleChannel)
+import           SigningService.Interface (getPubKey)
 
-import qualified Network.Haskoin.Crypto as HC
 import           Snap (SnapletInit, makeSnaplet, addRoutes)
 
 import           Control.Monad.IO.Class (liftIO)
@@ -27,35 +25,34 @@ import           Control.Concurrent (throwTo)
 import qualified Control.Exception as E
 
 appInit :: Config -> ConnManager -> SnapletInit App App
-appInit cfg chanOpenMap = makeSnaplet "PayChanServer" "RESTful Bitcoin payment channel server" Nothing $ do
+appInit cfg databaseConn = makeSnaplet "PayChanServer" "RESTful Bitcoin payment channel server" Nothing $ do
 
     bitcoinNetwork <- liftIO (configLookupOrFail cfg "bitcoin.network")
     liftIO $ setBitcoinNetwork bitcoinNetwork
 
-    cfgSettleConfig@(ServerSettleConfig _ _ settleFee _) <- liftIO $ getServerSettleConfig cfg
+    (ServerSettleConfig settleFee settlePeriod) <- liftIO $ getServerSettleConfig cfg
 
-    (OpenConfig minConf basePrice addSettleFee) <- OpenConfig <$>
+    (OpenConfig minConfOpen basePrice addSettleFee) <- OpenConfig <$>
             liftIO (configLookupOrFail cfg "open.fundingTxMinConf") <*>
             liftIO (configLookupOrFail cfg "open.basePrice") <*>
             liftIO (configLookupOrFail cfg "open.priceAddSettlementFee")
-
-    signingServiceConn <- liftIO $ getSigningServiceConn cfg
-    let signSettleFunc = trySigningRequest . settleChannel signingServiceConn
-
-    bitcoindRPCConf <- liftIO $ getBitcoindConf cfg
-    let pushTxFunc = bitcoindNetworkSumbitTx bitcoindRPCConf
-
-    let confPubKey = HC.derivePubKey $ confSettlePrivKey cfgSettleConfig
     let confOpenPrice = if addSettleFee then basePrice + settleFee else basePrice
 
-    liftIO . putStrLn $ "Server PubKey: " ++ cs (pathParamEncode confPubKey)
+    signingServiceConn <- liftIO $ getSigningServiceConn cfg
+    bitcoindRPCConf <- liftIO $ getBitcoindConf cfg
+    let settleChanFunc = settleChannel databaseConn signingServiceConn bitcoindRPCConf settleFee
+
+    liftIO $ putStr $ "Contacting SigningService to get public key..."
+    pubKey <- liftIO $ getPubKey signingServiceConn
+    liftIO . putStrLn $ "PubKey: " ++ cs (pathParamEncode pubKey)
 
     let basePathVersion = "/v1"
     addRoutes $ mainRoutes basePathVersion
 
-    return $ App chanOpenMap cfgSettleConfig
-                 confPubKey confOpenPrice minConf
-                 basePathVersion settleChanFunc pushTxFunc
+    return $ App databaseConn pubKey
+                 confOpenPrice settlePeriod minConfOpen
+                 basePathVersion settleChanFunc
+
 
 installHandlerKillThreadOnSig :: Sig.Signal -> ThreadId -> IO Sig.Handler
 installHandlerKillThreadOnSig sig tid =

@@ -1,21 +1,16 @@
 module Server.Types where
 
-import           Data.Bitcoin.PaymentChannel.Types (ReceiverPaymentChannel, BitcoinAmount, Payment, BitcoinLockTime)
+import           Data.Bitcoin.PaymentChannel.Types (ReceiverPaymentChannel, BitcoinAmount,
+                                                    Payment, BitcoinLockTime, FundingTxInfo)
 -- import           Data.Bitcoin.PaymentChannel.Util (BitcoinLockTime)
 import qualified Network.Haskoin.Crypto as HC
 import qualified Network.Haskoin.Transaction as HT
 
--- import           Server.ChanStore (ChannelMap)
-import           Server.ChanStore.Types (ConnManager)
+-- import           ChanStoreServer.ChanStore (ChannelMap)
+import           ChanStoreServer.ChanStore.Types (ConnManager)
 import qualified Data.ByteString as BS
 import           BlockchainAPI.Types (TxInfo)
 
-
-data SettlementToolbox = SettlementToolbox
-    {   settleConfig    :: ServerSettleConfig
-    ,   signSettleFunc  :: ReceiverPaymentChannel -> IO HT.Tx
-    ,   pushTxFunc      :: HT.Tx -> IO (Either String HT.TxHash)
-    }
 
 type Vout = Integer     -- Output index
 
@@ -28,8 +23,8 @@ data StdConfig = StdConfig {
 data ChanOpenConfig = ChanOpenConfig {
     ocOpenPrice     :: BitcoinAmount
    ,ocServerPubKey  :: HC.PubKey
-   ,ocChanMap       :: ConnManager
-   ,ocFundingInfo   :: TxInfo
+   ,ocDBConn        :: ConnManager
+   ,ocFundingInfo   :: FundingTxInfo
    ,ocBasePath      :: BS.ByteString
    ,ocClientPubKey  :: HC.PubKey
    ,ocClientChange  :: HC.Address

@@ -5,58 +5,52 @@ module SigningService.Main where
 import           Prelude hiding (init, userError)
 
 import           SigningService.Types
-import qualified SigningService.Spec as Spec (basePath)
+import           SigningService.Util (produceSettlementTx)
 
 import           Server.Main (wrapArg)
 import           Server.Config (loadConfig, configLookupOrFail, getSigningSettleConfig,
                                 getBitcoindConf, setBitcoinNetwork)
 import qualified Server.Config as Conf (Config)
-import           Server.Util (reqBoundedData, writeBinary,
+import           Server.Util (reqBoundedData, writeResponseBody,
                               internalError, userError, getPathArg, getQueryArg, getOptionalQueryArg,
                               errorWithDescription)
-import           Server.ChanStore.Settlement (produceSettlementTx)
+import           Server.Types (SigningSettleConfig(..))
+import           Data.Bitcoin.PaymentChannel.Types (ReceiverPaymentChannel, BitcoinAmount)
 
-import           Data.Bitcoin.PaymentChannel ()
-import           Data.Bitcoin.PaymentChannel.Types (ReceiverPaymentChannel, PaymentChannel(..), Payment)
-
-import           Bitcoind
 import qualified Network.Haskoin.Transaction as HT
-
-import           Snap -- (serveSnaplet, makeSnaplet, SnapletInit, Snap, Method(..))
-import           Snap.Http.Server (defaultConfig, httpServe)
-import           Control.Applicative ((<|>))
-
-import           Control.Lens (use)
-import           Control.Monad (unless, forM_)
-import           Control.Monad.IO.Class (liftIO, MonadIO)
-import           Control.Monad.Catch (bracket, finally, try)
+import qualified Network.Haskoin.Crypto as HC
 import qualified System.FilePath as F
-import qualified Control.Exception as E
+import           Snap
+import           Snap.Http.Server (defaultConfig, httpServe)
+import           Control.Lens (use)
+import           Control.Monad.IO.Class (liftIO, MonadIO)
+
 
 
 site :: Handler AppConf AppConf ()
 site = route [
-        (Spec.basePath, method POST $ parseRequest >>= writeResponse)
+        ("/settle_channel", method POST $ parseSigningRequest >>= writeResponseBody)
+    ,   ("/get_pubkey",     method GET $  use pubKey >>= writeResponseBody)
     ]
 
-parseRequest :: Handler AppConf AppConf (ReceiverPaymentChannel,BitcoinAmount)
-parseRequest = do
+parseSigningRequest :: Handler AppConf AppConf (ReceiverPaymentChannel,BitcoinAmount)
+parseSigningRequest = do
     eitherState <- reqBoundedData 1024
     txFee <- getQueryArg "tx_fee"
     case eitherState of
         Left e -> userError $ "Failed to parse ReceiverPaymentChannel from body: " ++ e
         Right chanState -> return (chanState,txFee)
 
-writeResponse :: (ReceiverPaymentChannel,BitcoinAmount) -> Handler AppConf AppConf ()
-writeResponse (chanState,txFee) = do
+writeSigningResponse :: (ReceiverPaymentChannel,BitcoinAmount) -> Handler AppConf AppConf HT.Tx
+writeSigningResponse (chanState,txFee) = do
     mkSettlementTx <- use makeSettlementTxFunc
-    let writeSettlementTx = either (internalError . show) writeBinary
-    writeSettlementTx $ mkSettlementTx (chanState,txFee)
+    return $ mkSettlementTx (chanState,txFee)
 
 init :: Conf.Config -> SnapletInit AppConf AppConf
 init cfg = makeSnaplet "SigningService" "Settlement transaction producer" Nothing $ do
-    settleConfig <- liftIO $ getSigningSettleConfig cfg
-    return $ AppConf $ produceSettlementTx settleConfig
+    settleConfig@(SigningSettleConfig privKey _) <- liftIO $ getSigningSettleConfig cfg
+    let confPubKey = HC.derivePubKey privKey
+    return $ AppConf confPubKey $ produceSettlementTx settleConfig
 
 main :: IO ()
 main = wrapArg $ \cfg cfgFilePath -> do
@@ -68,10 +62,3 @@ run :: Word -> String -> Conf.Config -> IO ()
 run port env cfg = do
     (_, app, _) <- runSnaplet (Just env) (init cfg)
     setPort (fromIntegral port) defaultConfig `httpServe` app
-
-
-
-
-
-errorOnException :: MonadSnap m => E.IOException -> m ()
-errorOnException = internalError . show

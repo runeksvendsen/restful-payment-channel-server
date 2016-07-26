@@ -35,15 +35,14 @@ import qualified Network.Haskoin.Util as HU
 import qualified Data.ByteString as BS
 import qualified Data.ByteString.Char8 as C
 import qualified Data.ByteString.Base16 as B16
-import Data.Word (Word8, Word32, Word64)
-import Data.List (filter)
-import Data.Maybe (listToMaybe)
-import Data.EitherR (fmapL)
-import Data.String.Conversions (cs)
-import Text.Printf (printf)
+import           Data.Word (Word8, Word32, Word64)
+import           Data.Maybe (listToMaybe)
+import           Data.EitherR (fmapL)
+import           Data.String.Conversions (cs)
+import           Text.Printf (printf)
 import qualified Data.Binary as Bin
-
-
+import           Data.Time.Clock (UTCTime)
+import           Data.Time.Clock.POSIX (utcTimeToPOSIXSeconds, posixSecondsToUTCTime)
 
 -- |Types that can be encoded to fit in a URL parameter
 class URLParamEncode a where
@@ -79,6 +78,9 @@ instance URLParamEncode Bool where
 instance URLParamEncode BitcoinAmount where
     pathParamEncode = cs . encode
 
+instance URLParamEncode UTCTime where
+    pathParamEncode t = pathParamEncode
+        (round $ utcTimeToPOSIXSeconds t :: Integer)
 ----
 
 ----
@@ -137,6 +139,11 @@ instance URLParamDecode Bool where
 instance URLParamDecode BitcoinAmount where
     pathParamDecode bs = maybe
          (Left "bitcoin amount parse failure") Right (decode . cs $ bs)
+
+instance URLParamDecode UTCTime where
+    pathParamDecode bs = (posixSecondsToUTCTime . fromIntegral)
+        <$> (decodeVout bs :: Either String Integer)
+
 ----
 
 

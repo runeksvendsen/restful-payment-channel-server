@@ -13,23 +13,28 @@ A service that runs somewhere safe, although reachable from the outside, which k
  counterpart is advertized by PayChanServer, as well as a funds destination address,
  and will only produce settlement transactions paying to this pre-defined address.
 
-This file describes the server interface (currently comprising 'settleChannel' only).
+This file describes the server interface (currently comprising 'signSettlementTx' only).
 -}
 
 
 module SigningService.Interface
 (
-    settleChannel
+    signSettlementTx
+,   getPubKey
 )
 where
 
-import           SigningService.Spec (SettleChan(..))
-import           Server.ChanStore.Types (ConnManager)
-import           Server.ChanStore.RequestRunner (runRequest)
+import           SigningService.Spec
+import           ChanStoreServer.ChanStore.Types (ConnManager)
+import           ConnManager.RequestRunner (runRequest)
 
 import           Data.Bitcoin.PaymentChannel.Types (ReceiverPaymentChannel, BitcoinAmount)
 import qualified Network.Haskoin.Transaction as HT
+import qualified Network.Haskoin.Crypto as HC
+
+getPubKey :: ConnManager -> IO HC.PubKey
+getPubKey conn = runRequest conn GetPubKey
 
 -- |Produce settlement transaction(s) by POSTing a list of states to the endpoint /settle_channel
-settleChannel :: ConnManager -> ReceiverPaymentChannel -> BitcoinAmount -> IO HT.Tx
-settleChannel conn rpc txFee = runRequest conn $ SettleChan rpc txFee
+signSettlementTx :: ConnManager -> BitcoinAmount -> ReceiverPaymentChannel -> IO HT.Tx
+signSettlementTx conn txFee rpc = runRequest conn $ SettleChan rpc txFee

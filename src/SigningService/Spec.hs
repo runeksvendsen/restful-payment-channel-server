@@ -2,9 +2,9 @@
 
 module SigningService.Spec where
 
-import           Server.ChanStore.RequestRunner (ReqParams(..))
-import           Server.ChanStore.Types
-import           Server.ChanStore.Connection
+import           ConnManager.RequestRunner (ReqParams(..))
+import           ChanStoreServer.ChanStore.Types
+import           ConnManager.Connection
 import           Server.Util (decodeEither)
 import           Common.Common (pathParamEncode)
 
@@ -20,13 +20,20 @@ import           Data.Monoid ((<>))
 import qualified Control.Exception as E
 import           Control.Monad.Catch (SomeException(..))
 
+
+data GetPubKey  = GetPubKey
 data SettleChan = SettleChan ReceiverPaymentChannel BitcoinAmount
 
+
 basePath :: BS.ByteString
-basePath = "/settle_channel"
+basePath = "/"
+
+instance ReqParams GetPubKey where
+    rPath       = const $ basePath <> "get_pubkey"
+    rMethod     = const "GET"
 
 instance ReqParams SettleChan where
-    rPath       = const $ basePath <> "/"
+    rPath       = const $ basePath <> "settle_channel"
     rMethod     = const "POST"
     rQueryStr (SettleChan _ txFee) = Just $ "tx_fee=" <> pathParamEncode txFee
     rBody (SettleChan rpc _) =

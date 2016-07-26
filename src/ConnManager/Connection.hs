@@ -1,7 +1,7 @@
-module Server.ChanStore.Connection where --TODO: move
+module ConnManager.Connection where --TODO: move
 
-import           Server.ChanStore.Types
-import Server.ChanStore.ChanStore
+import           ChanStoreServer.ChanStore.Types
+import ChanStoreServer.ChanStore.ChanStore
 -- import Server.Config.Types
 
 import Control.Concurrent.STM (STM, atomically, throwSTM)
@@ -15,11 +15,6 @@ import           Text.Printf        (printf)
 import           Network.HTTP.Client
 
 
-
-
--- isOpen :: Connection -> Bool
--- isOpen (OpenConnection _) = True
--- isOpen ClosedConnection   = False
 
 newConnManager :: BS.ByteString -> Word -> IO ConnManager
 newConnManager host port =

@@ -1,9 +1,9 @@
 {-# LANGUAGE OverloadedStrings #-}
 
-module Server.ChanStore.RequestRunner where
+module ConnManager.RequestRunner where
 
-import           Server.ChanStore.Types
-import           Server.ChanStore.Connection
+import           ChanStoreServer.ChanStore.Types
+import           ConnManager.Connection
 import           Server.Util (decodeEither)
 import           Common.Common (pathParamEncode)
 
@@ -29,34 +29,6 @@ class ReqParams a where
     rQueryStr    = const Nothing
     rStatusErr   = const Nothing
 
-
-data Create = Create ReceiverPaymentChannel
-data Get    = Get    HT.OutPoint
-data Update = Update HT.OutPoint Payment
-data Delete = Delete HT.OutPoint HT.TxHash
-
-basePath :: BS.ByteString
-basePath = "/channels/by_id/"
-
-instance ReqParams Create where
-    rPath              = const basePath
-    rMethod            = const "POST"
-    rBody (Create rpc) = Just . BL.toStrict $ Bin.encode rpc
-
-instance ReqParams Get where
-    rPath (Get key)    = basePath <> pathParamEncode key
-    rMethod            = const "GET"
-    rStatusErr         = const $ Just notFoundMeansNothing -- ignore 404
-
-instance ReqParams Update where
-    rPath (Update key _)  = basePath <> pathParamEncode key
-    rMethod               = const "PUT"
-    rBody (Update _ paym) = Just . BL.toStrict $ Bin.encode paym
-
-instance ReqParams Delete where
-    rPath (Delete key _)     = basePath <> pathParamEncode key
-    rMethod                  = const "DELETE"
-    rQueryStr (Delete _ tid) = Just $ "settlement_txid=" <> pathParamEncode tid
 
 requestFromParams :: ReqParams a => ConnManager -> a -> IO Request
 requestFromParams conn rp =
@@ -95,19 +67,6 @@ notFoundMeansNothing s h c
             Just . SomeException $ StatusCodeException s h c
         else
             Nothing
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 
 
