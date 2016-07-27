@@ -13,7 +13,7 @@ import           ChanStore.Lib.Settlement (beginSettlingExpiringChannels, beginS
 import           PayChanServer.Main (wrapArg)
 import           PayChanServer.Config.Util (Config, loadConfig, configLookupOrFail,
                                             setBitcoinNetwork, getDBPath)
-import           PayChanServer.Util (decodeFromBody, writeResponseBody,
+import           PayChanServer.Util (decodeFromBody, writeBinary,
                               internalError, userError, getPathArg, getQueryArg, getOptionalQueryArg,
                               errorWithDescription)
 import           PayChanServer.Init (installHandlerKillThreadOnSig)
@@ -51,22 +51,24 @@ main = wrapArg $ \cfg _ -> do
 
 site :: ChannelMap -> Snap ()
 site map =
-    route [ ("/channels/"
-             ,      method POST   $ create map >>= writeResponseBody)
+    route [
+            -- store/db
+            ("/store/by_id/"
+             ,      method POST   $ create map >>= writeBinary)
 
-          , ("/channels/by_id/:funding_outpoint"
-             ,      method GET    ( get map    >>= writeResponseBody)
-                <|> method PUT    ( update map >>= writeResponseBody) )
+          , ("/store/by_id/:funding_outpoint"
+             ,      method GET    ( get map    >>= writeBinary)
+                <|> method PUT    ( update map >>= writeBinary) )
 --                 <|> method DELETE ( settle map >>= writeResponse) )
 
             -- expiring channels management/settlement interface
           , ("/settlement/begin/by_exp/:expiring_before"
-             ,      method PUT    ( settleByExp map >>= writeResponseBody ))
+             ,      method PUT    ( settleByExp map >>= writeBinary ))
           , ("/settlement/begin/by_id/:funding_outpoint"
-             ,      method PUT    ( settleByKey map >>= writeResponseBody ))
+             ,      method PUT    ( settleByKey map >>= writeBinary ))
 
           , ("/settlement/finish/by_id/:funding_outpoint"
-             ,      method PUT    ( settleFin map >>= writeResponseBody ))]
+             ,      method POST   ( settleFin map >>= writeBinary ))]
 
 create :: ChannelMap -> Snap CreateResult
 create map = do
@@ -107,7 +109,10 @@ settleByExp m = do
 settleFin :: ChannelMap -> Snap ()
 settleFin m = do
     key <- getPathArg "funding_outpoint"
+--     bs <- readRequestBody 2048
+--     liftIO $ print bs
     settleTxId <- decodeFromBody 32
+    liftIO $ print (settleTxId :: HT.TxHash)
     res <- tryDBRequest $ finishSettlingChannel m (key,settleTxId)
     case res of
         (ItemUpdated _ _) -> return ()

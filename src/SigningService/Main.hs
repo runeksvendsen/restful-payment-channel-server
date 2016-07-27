@@ -10,7 +10,7 @@ import           SigningService.Util (produceSettlementTx)
 import           PayChanServer.Main (wrapArg)
 import           PayChanServer.Config.Util (loadConfig, configLookupOrFail, setBitcoinNetwork, getSigningSettleConfig)
 import qualified PayChanServer.Config.Util as Conf (Config)
-import           PayChanServer.Util (writeResponseBody, decodeFromBody, userError, getQueryArg)
+import           PayChanServer.Util (writeBinary, decodeFromBody, userError, getQueryArg)
 import           PayChanServer.Types (SigningSettleConfig(..))
 import           Data.Bitcoin.PaymentChannel.Types (ReceiverPaymentChannel, BitcoinAmount)
 
@@ -28,18 +28,18 @@ import           Control.Monad.IO.Class (liftIO)
 
 site :: [(BS.ByteString, Handler AppConf AppConf ())]
 site = [
-        ("/settle_channel", method POST $ parseSigningRequest >>= writeResponseBody)
-    ,   ("/get_pubkey",     method GET  $ use pubKey          >>= writeResponseBody)
+        ("/settle_channel", method POST $ parseRequest >>= createSignTx >>= writeBinary)
+    ,   ("/get_pubkey",     method GET  $ use pubKey   >>= writeBinary)
     ]
 
-parseSigningRequest :: Handler AppConf AppConf (ReceiverPaymentChannel,BitcoinAmount)
-parseSigningRequest = do
+parseRequest :: Handler AppConf AppConf (ReceiverPaymentChannel,BitcoinAmount)
+parseRequest = do
     chanState <- decodeFromBody 1024
     txFee <- getQueryArg "tx_fee"
     return (chanState,txFee)
 
-writeSigningResponse :: (ReceiverPaymentChannel,BitcoinAmount) -> Handler AppConf AppConf HT.Tx
-writeSigningResponse (chanState,txFee) = do
+createSignTx :: (ReceiverPaymentChannel,BitcoinAmount) -> Handler AppConf AppConf HT.Tx
+createSignTx (chanState,txFee) = do
     mkSettlementTx <- use makeSettlementTxFunc
     return $ mkSettlementTx (chanState,txFee)
 

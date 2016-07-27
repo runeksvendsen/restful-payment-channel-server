@@ -157,8 +157,8 @@ writeJSON json = do
     overwriteResponseBody $ encodeJSON json
     writeBS "\n"
 
-writeResponseBody :: (MonadSnap m, Bin.Binary a) => a -> m ()
-writeResponseBody obj = do
+writeBinary :: (MonadSnap m, Bin.Binary a) => a -> m ()
+writeBinary obj = do
     modifyResponse $ setContentType "application/octet-stream"
     overwriteResponseBody $ Bin.encode obj
 

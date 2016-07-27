@@ -24,33 +24,35 @@ data ByIdSettleBegin  = ByIdSettleBegin Key
 data SettleFin = SettleFin HT.OutPoint HT.TxHash
 
 
-basePath :: BS.ByteString
-basePath = "/channels/"
+-- basePath :: BS.ByteString
+-- basePath = "/channels/"
+
+-- TODO: Tie the knot: create routing table ('ChanStore.Main.site') from instances below
 
 instance ReqParams Create where
-    rPath              = const $ basePath <> "by_id/"
-    rMethod            = const "POST"
-    rBody (Create rpc) = Just . BL.toStrict $ Bin.encode rpc
+    rPath _                 = "/store/by_id/"
+    rMethod                 = const "POST"
+    rBody (Create rpc)      = Just . BL.toStrict $ Bin.encode rpc
 
 instance ReqParams Get where
-    rPath (Get key)    = basePath <> "by_id/" <> pathParamEncode key
-    rMethod            = const "GET"
-    rStatusErr         = const $ Just notFoundMeansNothing -- ignore 404
+    rPath (Get key)         = "/store/by_id/" <> pathParamEncode key
+    rMethod                 = const "GET"
+    rStatusErr              = const $ Just notFoundMeansNothing -- ignore 404
 
 instance ReqParams Update where
-    rPath (Update key _)  = basePath <> "by_id/" <> pathParamEncode key
-    rMethod               = const "PUT"
-    rBody (Update _ paym) = Just . BL.toStrict $ Bin.encode paym
+    rPath (Update key _)    = "/store/by_id/" <> pathParamEncode key
+    rMethod                 = const "PUT"
+    rBody (Update _ paym)   = Just . BL.toStrict $ Bin.encode paym
 
 instance ReqParams ByIdSettleBegin where
-    rMethod                       = const "PUT"
-    rPath (ByIdSettleBegin key) =         "/settlement/begin/by_id/" <> pathParamEncode key
+    rPath (ByIdSettleBegin key)     = "/settlement/begin/by_id/" <> pathParamEncode key
+    rMethod                         = const "PUT"
 
 instance ReqParams ByExpSettleBegin where
-    rMethod                            = const "PUT"
-    rPath (ByExpSettleBegin expDate) =    "/settlement/begin/by_exp/" <> pathParamEncode expDate
+    rPath (ByExpSettleBegin expDate)= "/settlement/begin/by_exp/" <> pathParamEncode expDate
+    rMethod                         = const "PUT"
 
 instance ReqParams SettleFin where
-    rMethod                     = const "POST"
-    rPath (SettleFin key _) = basePath <> "/settlement/finish/by_id/" <> pathParamEncode key
-    rBody (SettleFin _ settleTxId) = Just . BL.toStrict $ Bin.encode settleTxId
+    rPath (SettleFin key _)         = "/settlement/finish/by_id/" <> pathParamEncode key
+    rMethod                         = const "POST"
+    rBody (SettleFin _ settleTxId)  = Just . BL.toStrict $ Bin.encode settleTxId
