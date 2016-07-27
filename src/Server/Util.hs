@@ -1,4 +1,5 @@
 {-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE ScopedTypeVariables #-}
 
 module Server.Util where
 
@@ -17,7 +18,7 @@ import           Snap.Iteratee (Enumerator, enumBuilder)
 import           Data.Bitcoin.PaymentChannel.Types (PaymentChannel(..), ReceiverPaymentChannel,
                                                     ChannelParameters(..), PayChanError(..), FundingTxInfo
                                                     ,getChannelState, BitcoinAmount, Payment)
-import           Data.Bitcoin.PaymentChannel.Util (setSenderChangeAddress)
+import           Data.Bitcoin.PaymentChannel.Util (deserEither, setSenderChangeAddress)
 
 import qualified Network.Haskoin.Constants as HCC
 import           Control.Monad.IO.Class
@@ -34,20 +35,17 @@ import Data.Int (Int64)
 import Text.Printf (printf)
 import Data.String.Conversions (cs)
 import Data.Aeson.Encode.Pretty (encodePretty)
-import           Data.Monoid ((<>))
+
 import qualified Data.Binary as Bin (Binary, encode, decodeOrFail)
 
 import           Control.Lens (use)
-
-
 import           Server.Config.Types (App, pubKey, fundingMinConf)
-
-
 import           BlockchainAPI.Impl.ChainSo (chainSoAddressInfo, toEither)
+import           Test.GenData (deriveMockFundingInfo, convertMockFundingInfo)
+import           Data.Typeable
 
-import Test.GenData (deriveMockFundingInfo, convertMockFundingInfo)
-
-
+dummyKey :: HT.OutPoint
+dummyKey = HT.OutPoint "0000000000000000000000000000000000000000000000000000000000000000" 0
 
 getAppRootURL :: MonadSnap m => BS.ByteString -> m String
 getAppRootURL basePath = do
@@ -161,19 +159,16 @@ writeResponseBody obj = do
     modifyResponse $ setContentType "application/octet-stream"
     overwriteResponseBody $ Bin.encode obj
 
-reqBoundedData :: (MonadSnap m, Bin.Binary a) => Int64 -> m (Either String a)
-reqBoundedData n = fmap decodeEither (readRequestBody n)
+decodeFromBody :: (MonadSnap m, Typeable a, Bin.Binary a) => Int64 -> m a
+decodeFromBody n =
+    fmap (deserEither . cs) (readRequestBody n) >>=
+     \eitherRes -> case eitherRes of
+         Left e -> userError $ "Failed to decode from body: " ++ e
+         Right val -> return val
 
-decodeFromBody :: (MonadSnap m, Bin.Binary a) => Int64 -> m a
-decodeFromBody n = either
-    (userError . ("Failed to decode object from body: " ++))
-    return
-        =<< reqBoundedData n
+showType :: Typeable a => a -> String
+showType t = show (typeOf t)
 
-decodeEither :: Bin.Binary a => BL.ByteString -> Either String a
-decodeEither bs = case Bin.decodeOrFail bs of
-       Left (_,_,e)    -> Left e
-       Right (_,_,val) -> Right val
 
 
 --- Util ---

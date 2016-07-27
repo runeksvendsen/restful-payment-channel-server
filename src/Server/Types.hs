@@ -12,6 +12,7 @@ import qualified Data.ByteString as BS
 import           BlockchainAPI.Types (TxInfo)
 
 
+
 type Vout = Integer     -- Output index
 
 data StdConfig = StdConfig {

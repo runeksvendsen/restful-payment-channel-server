@@ -8,21 +8,25 @@ import           Server.App  (mainRoutes)
 import           Server.Config
 import           Server.Config.Types
 import           Server.Types (OpenConfig(..), ServerSettleConfig(..))
-
-import           Common.Common (pathParamEncode)
-import           Data.String.Conversions (cs)
-
-import           ChanStoreServer.ChanStore.Types (ConnManager)
+import           Server.Util (dummyKey)
 import           Server.Settlement (settleChannel)
+
+import           Server.DB (tryDBRequest)
+import           ChanStoreServer.Interface  as DBConn
 import           SigningService.Interface (getPubKey)
 
-import           Snap (SnapletInit, makeSnaplet, addRoutes)
+import           Common.Common (pathParamEncode)
+import           ChanStoreServer.ChanStore.Types (ConnManager)
 
+import           Snap (SnapletInit, makeSnaplet, addRoutes)
+import           Data.String.Conversions (cs)
 import           Control.Monad.IO.Class (liftIO)
 import qualified System.Posix.Signals as Sig
 import           Control.Concurrent (ThreadId)
 import           Control.Concurrent (throwTo)
 import qualified Control.Exception as E
+import           Data.Maybe (isNothing)
+
 
 appInit :: Config -> ConnManager -> SnapletInit App App
 appInit cfg databaseConn = makeSnaplet "PayChanServer" "RESTful Bitcoin payment channel server" Nothing $ do
@@ -42,9 +46,13 @@ appInit cfg databaseConn = makeSnaplet "PayChanServer" "RESTful Bitcoin payment 
     bitcoindRPCConf <- liftIO $ getBitcoindConf cfg
     let settleChanFunc = settleChannel databaseConn signingServiceConn bitcoindRPCConf settleFee
 
-    liftIO $ putStr $ "Contacting SigningService to get public key..."
+    maybeRes <- liftIO $ DBConn.chanGet databaseConn dummyKey
+    liftIO $ putStr $ "Testing database connection... "
+    liftIO $ putStrLn $ if isNothing maybeRes then "success." else "something is horribly broken"
+
     pubKey <- liftIO $ getPubKey signingServiceConn
-    liftIO . putStrLn $ "PubKey: " ++ cs (pathParamEncode pubKey)
+    liftIO $ putStr $ "Contacting SigningService for public key... "
+    liftIO $ putStrLn $ "success: " ++ cs (pathParamEncode pubKey)
 
     let basePathVersion = "/v1"
     addRoutes $ mainRoutes basePathVersion
@@ -59,7 +67,7 @@ installHandlerKillThreadOnSig sig tid =
     Sig.installHandler
           sig
           (Sig.CatchInfo $ \ci -> do
-              putStrLn ("Caught signal: " ++
+              putStrLn ("Received signal: " ++
                   show (Sig.siginfoSignal ci) ++
                   ". Killing main thread...")
               throwTo tid E.UserInterrupt)

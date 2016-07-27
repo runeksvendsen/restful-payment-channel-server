@@ -24,7 +24,7 @@ import qualified Data.Binary.Get as BinGet
 import qualified Data.Binary.Put as BinPut
 import qualified Data.ByteString as BS
 import           Network.HTTP.Client (Manager)
-
+import Data.String.Conversions (cs)
 
 -- Connection {
 type Host = BS.ByteString
@@ -85,15 +85,15 @@ instance Hashable HT.OutPoint where
 
 instance Serializable HT.OutPoint where
     serialize   = BL.toStrict . Bin.encode
-    deserialize = deserEither
+    deserialize = deserEither . cs
 
 instance Serializable PaymentChannelState where
     serialize   = BL.toStrict . Bin.encode
-    deserialize = deserEither
+    deserialize = deserEither . cs
 
 instance Serializable ChanState where
     serialize   = BL.toStrict . Bin.encode
-    deserialize = deserEither
+    deserialize = deserEither . cs
 
 instance Bin.Binary ChanState where
     put (ReadyForPayment s) =

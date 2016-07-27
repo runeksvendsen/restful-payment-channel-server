@@ -4,10 +4,11 @@ module ConnManager.RequestRunner where
 
 import           ChanStoreServer.ChanStore.Types
 import           ConnManager.Connection
-import           Server.Util (decodeEither)
 import           Common.Common (pathParamEncode)
 
 import           Data.Bitcoin.PaymentChannel.Types (ReceiverPaymentChannel, Payment)
+import           Data.Bitcoin.PaymentChannel.Util (deserEither)
+
 import qualified Network.Haskoin.Transaction as HT
 import qualified Data.Binary as Bin
 import           Network.HTTP.Client
@@ -18,6 +19,8 @@ import qualified Data.ByteString.Lazy as BL
 import           Data.Monoid ((<>))
 import qualified Control.Exception as E
 import           Control.Monad.Catch (SomeException(..))
+import Data.String.Conversions (cs)
+
 
 class ReqParams a where
     rPath        :: a -> BS.ByteString
@@ -47,7 +50,7 @@ requestFromParams conn rp =
 runRequest :: (ReqParams a, Bin.Binary b) => ConnManager -> a -> IO b
 runRequest conn@(Conn _ _ man) rp =
     requestFromParams conn rp >>= \req -> withResponse (installStatusHandler rp req) man
-        ( \resp -> failOnLeft . decodeEither =<< responseBodyUnless404 resp )
+        ( \resp -> failOnLeft . deserEither . cs =<< responseBodyUnless404 resp )
             where failOnLeft = either (fail . ("failed to parse response: " ++)) return
                   responseBodyUnless404 res =
                        if responseStatus res == notFound404 then return BL.empty

@@ -1,4 +1,5 @@
 {-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE ScopedTypeVariables #-}
 
 module ChanStoreServer.Main where
 
@@ -69,7 +70,7 @@ site map =
 
 create :: ChannelMap -> Snap CreateResult
 create map = do
-    newChanState <- decodeFromBody 256
+    newChanState <- decodeFromBody 1024
     let key = getChannelID newChanState
     tryDBRequest $ addChanState map key newChanState
 
@@ -85,16 +86,13 @@ get map = do
 update :: ChannelMap -> Snap UpdateResult
 update map = do
     outPoint <- getPathArg "funding_outpoint"
-    eitherPayment <- decodeFromBody 80
-    case eitherPayment of
-        Right payment ->
-            liftIO (updateChanState map outPoint payment) >>=
-            (\exists -> case exists of
-                    ItemUpdated _ _  -> return WasUpdated
-                    NotUpdated       -> return WasNotUpdated
-                    NoSuchItem       -> errorWithDescription 404 "No such channel"
-            )
-        Left e -> userError e
+    payment <- decodeFromBody 128
+    liftIO (updateChanState map outPoint payment) >>=
+        (\exists -> case exists of
+                ItemUpdated _ _  -> return WasUpdated
+                NotUpdated       -> return WasNotUpdated
+                NoSuchItem       -> errorWithDescription 404 "No such channel"
+        )
 
 settleByKey :: ChannelMap -> Snap ReceiverPaymentChannel
 settleByKey m = do
@@ -109,7 +107,7 @@ settleByExp m = do
 settleFin :: ChannelMap -> Snap ()
 settleFin m = do
     key <- getPathArg "funding_outpoint"
-    settleTxId <- decodeFromBody 80
+    settleTxId <- decodeFromBody 32
     res <- tryDBRequest $ finishSettlingChannel m (key,settleTxId)
     case res of
         (ItemUpdated _ _) -> return ()

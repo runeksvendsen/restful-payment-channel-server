@@ -5,7 +5,7 @@ module SigningService.Spec where
 import           ConnManager.RequestRunner (ReqParams(..))
 import           ChanStoreServer.ChanStore.Types
 import           ConnManager.Connection
-import           Server.Util (decodeEither)
+-- import           Data.Bitcoin.PaymentChannel.Util (deserEither)
 import           Common.Common (pathParamEncode)
 
 import           Data.Bitcoin.PaymentChannel.Types (ReceiverPaymentChannel, BitcoinAmount)

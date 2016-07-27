@@ -12,8 +12,6 @@ import           ChanStoreServer.ChanStore.Types hiding (CreateResult(..), Updat
 import           Data.Bitcoin.PaymentChannel.Types
 import           Data.Bitcoin.PaymentChannel.Util (unsafeUpdateRecvState)
 
-import qualified Network.Haskoin.Transaction as HT
-
 
 isSettled :: ChanState -> Bool
 isSettled (ChannelSettled _ _ _) = True

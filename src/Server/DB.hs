@@ -51,7 +51,7 @@ getChannelStateForPayment chanMap chanId =
     getChannelStateForSettlement chanMap chanId >>=
     -- When the channel has changed from ReadyForPayment to
     --  SettlementInProgress, the "/pay" resource is gone
-    either (const $ errorWithDescription 404 "No such payment resource") undefined
+    either (const $ errorWithDescription 404 "No such payment resource") return
 
 -- |Return either open ChanState or settlement txid and most recent payment in case
 --      the channel is closed
