@@ -2,7 +2,7 @@
 
 module ConnManager.RequestRunner where
 
-import           ChanStoreServer.ChanStore.Types
+import           ChanStore.Lib.Types
 import           ConnManager.Connection
 import           Common.Common (pathParamEncode)
 

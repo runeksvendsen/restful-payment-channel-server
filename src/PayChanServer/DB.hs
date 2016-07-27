@@ -1,7 +1,7 @@
 module  PayChanServer.DB where
 
 import           PayChanServer.Util
-import qualified ChanStoreServer.Interface as DBConn
+import qualified ChanStore.Interface as DBConn
 import           Data.Bitcoin.PaymentChannel.Types (ReceiverPaymentChannel, Payment,
                                                     PaymentChannel(getNewestPayment))
 import qualified Network.Haskoin.Transaction as HT

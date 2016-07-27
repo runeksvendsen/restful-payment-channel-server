@@ -19,8 +19,8 @@ import           BlockchainAPI.Impl.ChainSo (chainSoAddressInfo, toEither)
 import           BlockchainAPI.Types (toFundingTxInfo,
                                 TxInfo(..), OutInfo(..))
 
-import qualified ChanStoreServer.Interface as DBConn
-import           ChanStoreServer.ChanStore.Types (UpdateResult(..))
+import qualified ChanStore.Interface as DBConn
+import           ChanStore.Lib.Types (UpdateResult(..))
 
 import           Control.Monad.IO.Class (liftIO)
 import           Control.Monad (unless, when)
@@ -82,11 +82,12 @@ mkFundingInfo openPrice' minConf settleHours recvPK sendPK lockTime rootURL =
 
 
 chanSettle :: MonadSnap m =>
-    StdConfig
+    Bool
+    -> StdConfig
     -> (ReceiverPaymentChannel -> IO HT.TxHash)
     -> BitcoinAmount
     -> m ()
-chanSettle (StdConfig chanMap chanId clientPayment) settleChannel valRecvd = do
+chanSettle debug (StdConfig chanMap chanId clientPayment) settleChannel valRecvd = do
     chanState <- getChannelStateOr404 chanMap chanId
 
     let confirmClientPayment storedPayment =
@@ -98,7 +99,8 @@ chanSettle (StdConfig chanMap chanId clientPayment) settleChannel valRecvd = do
                 errorWithDescription 410 "Channel is being closed"
             (DBConn.ReadyForPayment rpc) -> do
                 confirmClientPayment $ getNewestPayment rpc
-                settleTxId <- liftIO $ settleChannel rpc
+                -- Testing: don't submit Tx if we're debugging
+                settleTxId <- if not debug then liftIO (settleChannel rpc) else return dummyTxId
                 return (settleTxId, channelValueLeft rpc)
             (DBConn.ChannelSettled settleTxId _ rpc) -> do
                 confirmClientPayment $ getNewestPayment rpc

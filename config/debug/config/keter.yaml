@@ -1,0 +1,17 @@
+stanzas:
+    - type: webapp
+      exec: ../PayChanServer
+      args:
+        - /home/rune/paychan/test.cfg
+      host: paychantest.runeks.me
+      ssl:
+        key: /opt/keter/etc/testpay.key
+        certificate: /opt/keter/etc/testpay.pem
+        chain-certificates:
+          - /opt/keter/etc/comodo.pem
+    - type: background
+      exec: ../ChanStore
+      args:
+        - /home/rune/code/restful-payment-channel-server/config/test/config/store.cfg
+      restart-count: 999999999
+      restart-delay-seconds: 5

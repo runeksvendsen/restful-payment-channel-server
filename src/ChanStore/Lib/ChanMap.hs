@@ -1,14 +1,14 @@
 {-# LANGUAGE FlexibleInstances #-}
 
-module ChanStoreServer.ChanStore.ChanStore where
+module ChanStore.Lib.ChanMap where
 
 
-import           DiskStore (newDiskMap, addItem, getItem, updateStoredItem,
+import           DiskStore (newDiskMap, addItem, getItem,
                             CreateResult,
-                            mapGetItem, MapItemResult(..),
+                            mapGetItem,
                             getItemCount)
 
-import           ChanStoreServer.ChanStore.Types hiding (CreateResult(..), UpdateResult(..), CloseResult(..))
+import           ChanStore.Lib.Types hiding (CreateResult(..), UpdateResult(..), CloseResult(..))
 import           Data.Bitcoin.PaymentChannel.Types
 import           Data.Bitcoin.PaymentChannel.Util (unsafeUpdateRecvState)
 
@@ -24,7 +24,6 @@ isOpen _ = False
 newChanMap :: FilePath -> IO ChannelMap
 newChanMap = newDiskMap
 
-
 getChanState :: ChannelMap -> Key -> IO (Maybe ChanState)
 getChanState = getItem
 
@@ -37,7 +36,8 @@ updateChanState chanMap key payment =
     let
         updateIfOpen (ReadyForPayment rpc) =
             Just $ ReadyForPayment (unsafeUpdateRecvState rpc payment)
-        updateIfOpen _ = Nothing
+        updateIfOpen _ =
+            Nothing
     in
         mapGetItem chanMap updateIfOpen key
 

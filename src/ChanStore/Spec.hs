@@ -1,8 +1,8 @@
 {-# LANGUAGE OverloadedStrings #-}
 
-module ChanStoreServer.Spec where
+module ChanStore.Spec where
 
-import ChanStoreServer.ChanStore.Types
+import ChanStore.Lib.Types
 import ConnManager.RequestRunner
 
 import           Common.Common (pathParamEncode)

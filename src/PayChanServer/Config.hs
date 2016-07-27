@@ -8,6 +8,7 @@ getBitcoindConf,getSigningServiceConn,
 BitcoinNet,
 setBitcoinNetwork,toPathString,
 getDBConf,connFromDBConf,getDBPath,
+configDebugIsEnabled,
 -- re-exports
 Config
 
@@ -31,11 +32,14 @@ import           Data.Ratio
 import           Data.Configurator.Types
 import qualified Data.Configurator as Conf
 import           Data.String.Conversions (cs)
-import           ChanStoreServer.ChanStore.Types (ConnManager)
+import           ChanStore.Lib.Types (ConnManager)
 import           PayChanServer.Types
 import           Bitcoind (BTCRPCInfo(..))
 
-
+-- |If set to True, bypasses funding/settlement to enable testing
+configDebugIsEnabled :: Config -> IO Bool
+configDebugIsEnabled cfg =
+    configLookupOrFail cfg "debug.enable"
 
 loadConfig :: String -> IO Config
 loadConfig confFile = Conf.load [Conf.Required confFile]

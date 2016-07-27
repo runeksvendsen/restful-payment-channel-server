@@ -1,7 +1,7 @@
 module ConnManager.Connection where --TODO: move
 
-import           ChanStoreServer.ChanStore.Types
-import ChanStoreServer.ChanStore.ChanStore
+import           ChanStore.Lib.Types
+import ChanStore.Lib.ChanMap
 -- impor  PayChanServer.Config.Types
 
 import Control.Concurrent.STM (STM, atomically, throwSTM)

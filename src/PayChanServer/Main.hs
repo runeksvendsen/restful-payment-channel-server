@@ -4,8 +4,8 @@ module  PayChanServer.Main where
 
 import           PayChanServer.Config -- (Config, loadConfig, configLookupOrFail, getSettleConfig, getBitcoindConf, getDBConf)
 import           PayChanServer.Init (appInit, installHandlerKillThreadOnSig)
-import           ChanStoreServer.ChanStore.Types (ConnManager)
-import           PayChanServer.Settlement (startSettlementThread)
+import           ChanStore.Lib.Types (ConnManager)
+import           PayChanServer.Settlement (settlementThread)
 
 import           Snap (serveSnaplet)
 import           Snap.Snaplet (runSnaplet)
@@ -33,23 +33,19 @@ wrapArg main' = do
             putStrLn $ "Usage: " ++ prog ++ " /path/to/config.cfg"
         else do
             let cfgFile = head args
-            putStrLn $ "Using config file " ++ show cfgFile ++ ". Reading..."
+            putStrLn $ "Using config file " ++ show cfgFile
             cfg <- loadConfig cfgFile
             main' cfg cfgFile
 
 main :: IO ()
 main = wrapArg $ \cfg cfgFilePath -> do
-    dbConf <- getDBConf cfg
-    dbConn <- connFromDBConf dbConf
-    settleConfig <- getServerSettleConfig cfg
-    settleConn <- getSigningServiceConn cfg
-    bitcoindConf <- getBitcoindConf cfg
-    --  Start thread which settles channels before expiration (config: settlement.settlementPeriodHours)
-    _ <- forkIO $ startSettlementThread
-            dbConn settleConn settleConfig bitcoindConf (60 * 5)  -- run every 5 minutes
+    dbConn <- connFromDBConf =<< getDBConf cfg
+    --  Start thread that settles channels before expiration date
+    _ <- forkIO $ startSettlementThread cfg dbConn (60 * 5)  -- run every 5 minutes
     -- Shut down on TERM signal
     mainThread <- myThreadId
     _ <- installHandlerKillThreadOnSig Sig.sigTERM mainThread
+    -- Start server
     runApp (F.dropExtension cfgFilePath) cfg dbConn
 
 runApp :: String -> Config -> ConnManager -> IO ()
@@ -63,4 +59,12 @@ runApp env cfg chanMapConn = do
     --  Start app
     httpServe conf app
 
-
+-- |Close payment channels before we reach the expiration date,
+--  because if we don't, the client can reclaim all the funds sent to us,
+--  leaving us with nothing.
+startSettlementThread cfg dbConn i = do
+    settleConf <- getServerSettleConfig cfg
+    signConn <- getSigningServiceConn cfg
+    bitcoindConf <- getBitcoindConf cfg
+    putStrLn "Started settlement thread." >>
+        settlementThread dbConn signConn settleConf bitcoindConf i

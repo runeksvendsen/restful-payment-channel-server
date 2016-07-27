@@ -96,7 +96,7 @@ getSessionData (ChannelSession endPoint cp fundAddr initPay payList) =
                 (cpLockTime cp) ++ mkOpenQueryParams mockChangeAddress initPay
     in
         PaySessionData
-            (cs openURL `mappend` "&test=true")
+            (cs openURL)
 --             (map (mappend endPoint . cs . mkPaymentURL txid (fromIntegral vout) Nothing) payList)
             (map (cs . mkPaymentURL False (cs endPoint) "/v1" chanId) payList)
 

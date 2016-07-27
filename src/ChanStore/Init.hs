@@ -1,11 +1,11 @@
-module ChanStoreServer.Init
+module ChanStore.Init
 (
     init_chanMap
 )
 where
 
-import           ChanStoreServer.ChanStore.Types
-import           ChanStoreServer.ChanStore.ChanStore
+import           ChanStore.Lib.Types
+import           ChanStore.Lib.ChanMap
 
 
 init_chanMap :: String -> IO ChannelMap

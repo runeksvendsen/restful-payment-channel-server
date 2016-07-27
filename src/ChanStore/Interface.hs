@@ -1,5 +1,5 @@
 {-|
-Module      : ChanStoreServer.Interface
+Module      : Lib.Interface
 Description : ChannelStore client interface
 Copyright   : Rune K. Svendsen
 License     : PublicDomain
@@ -10,7 +10,7 @@ Portability : POSIX
 Potato
 -}
 
-module ChanStoreServer.Interface
+module ChanStore.Interface
 (
     chanGet,
     chanAdd,
@@ -28,9 +28,9 @@ where
 
 import           ConnManager.RequestRunner (runRequest)
 
-import           ChanStoreServer.ChanStore.ChanStore (isSettled)
-import           ChanStoreServer.ChanStore.Types
-import           ChanStoreServer.Spec
+import           ChanStore.Lib.ChanMap (isSettled)
+import           ChanStore.Lib.Types
+import           ChanStore.Spec
 
 import           Data.Bitcoin.PaymentChannel.Types (ReceiverPaymentChannel, Payment)
 import           Data.Time.Clock (UTCTime)

@@ -3,7 +3,7 @@
 module  PayChanServer.Settlement
 (
     settleChannel,
-    startSettlementThread
+    settlementThread
 )
 
 where
@@ -12,7 +12,7 @@ where
 import           PayChanServer.Types (ServerSettleConfig(..))
 import           PayChanServer.DB (tryHTTPRequestOfType)
 
-import           ChanStoreServer.Interface  as DBConn
+import           ChanStore.Interface  as DBConn
 import           Data.Bitcoin.PaymentChannel.Types (ReceiverPaymentChannel, BitcoinAmount,
                                                     PaymentChannel(getChannelID))
 import           Bitcoind (BTCRPCInfo, bitcoindNetworkSumbitTx)
@@ -57,12 +57,6 @@ finishSettleChannel dbConn signConn rpcInfo txFee rpc = do
     return settlementTxId
 ---
 
-
--- |Close payment channels before we reach the expiration date,
---  because if we don't, the client can reclaim all the funds sent to us,
---  leaving us with nothing.
-startSettlementThread dbC sigC settleConf btcRpcInfo i =
-    putStrLn "Started settlement thread." >> settlementThread dbC sigC settleConf btcRpcInfo i
 
 -- |
 settlementThread ::

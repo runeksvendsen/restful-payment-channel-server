@@ -12,7 +12,7 @@ type File = String
 
 projectDir = "/Users/rune/IdeaProjects/restful-payment-channel-server/"
 stackCmd = "stack exec -- ghc-mod check "
-testFile = "src/Server/Handlers.hs" -- "ChanStoreServer.hs"
+testFile = "src/Server/Handlers.hs" -- "Lib.hs"
 
 main :: IO ()
 main = do

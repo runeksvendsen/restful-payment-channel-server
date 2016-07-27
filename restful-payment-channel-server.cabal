@@ -64,8 +64,8 @@ Executable PayChanServer
 
 Executable ChanStore
   hs-source-dirs: src
-  main-is: ChanStoreServer/Main.hs
-  ghc-options: -W -O2 -threaded -with-rtsopts=-N -main-is ChanStoreServer.Main
+  main-is: ChanStore/Main.hs
+  ghc-options: -W -O2 -threaded -with-rtsopts=-N -main-is ChanStore.Main
   default-extensions: OverloadedStrings
   build-depends:
     base                      >= 4     && < 5,

@@ -1,14 +1,14 @@
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 
-module ChanStoreServer.Main where
+module ChanStore.Main where
 
 import           Prelude hiding (userError)
 
-import           ChanStoreServer.ChanStore.Types
-import           ChanStoreServer.Init (init_chanMap)
-import           ChanStoreServer.ChanStore.ChanStore
-import           ChanStoreServer.ChanStore.Settlement (beginSettlingExpiringChannels, beginSettlingChannel,
+import           ChanStore.Lib.Types
+import           ChanStore.Init (init_chanMap)
+import           ChanStore.Lib.ChanMap
+import           ChanStore.Lib.Settlement (beginSettlingExpiringChannels, beginSettlingChannel,
                                                        finishSettlingChannel)
 import           PayChanServer.Main (wrapArg)
 import           PayChanServer.Config (Config, loadConfig, configLookupOrFail,

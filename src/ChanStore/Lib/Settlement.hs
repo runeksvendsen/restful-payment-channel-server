@@ -1,6 +1,6 @@
-module ChanStoreServer.ChanStore.Settlement where --TODO: move
+module ChanStore.Lib.Settlement where --TODO: move
 
-import           ChanStoreServer.ChanStore.Types hiding (UpdateResult(..))
+import           ChanStore.Lib.Types hiding (UpdateResult(..))
 import           DiskStore (getAllItems,
                             mapGetItem, mapGetItems, MapItemResult(..),
                             getFilteredKV, getFilteredItems,

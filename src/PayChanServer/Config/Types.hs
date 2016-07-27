@@ -4,7 +4,7 @@
 
 module  PayChanServer.Config.Types where
 
-import           ChanStoreServer.ChanStore.Types (ConnManager)
+import           ChanStore.Lib.Types (ConnManager)
 import           Data.Bitcoin.PaymentChannel.Types (ReceiverPaymentChannel, BitcoinAmount)
 
 import qualified Network.Haskoin.Transaction as HT

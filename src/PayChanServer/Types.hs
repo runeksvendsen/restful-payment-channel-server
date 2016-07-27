@@ -6,8 +6,8 @@ import           Data.Bitcoin.PaymentChannel.Types (ReceiverPaymentChannel, Bitc
 import qualified Network.Haskoin.Crypto as HC
 import qualified Network.Haskoin.Transaction as HT
 
--- import           ChanStoreServer.ChanStore (ChannelMap)
-import           ChanStoreServer.ChanStore.Types (ConnManager)
+-- import           Lib.Lib (ChannelMap)
+import           ChanStore.Lib.Types (ConnManager)
 import qualified Data.ByteString as BS
 import           BlockchainAPI.Types (TxInfo)
 

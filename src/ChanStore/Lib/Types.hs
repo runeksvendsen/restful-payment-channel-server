@@ -1,4 +1,4 @@
-module ChanStoreServer.ChanStore.Types
+module ChanStore.Lib.Types
 (
 ConnManager(..), Host, Port,
 ChanState(..),

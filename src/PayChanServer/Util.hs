@@ -45,7 +45,10 @@ import           Test.GenData (deriveMockFundingInfo, convertMockFundingInfo)
 import           Data.Typeable
 
 dummyKey :: HT.OutPoint
-dummyKey = HT.OutPoint "0000000000000000000000000000000000000000000000000000000000000000" 0
+dummyKey = HT.OutPoint dummyTxId 0
+
+dummyTxId :: HT.TxHash
+dummyTxId = HT.TxHash "0000000000000000000000000000000000000000000000000000000000000000"
 
 getAppRootURL :: MonadSnap m => BS.ByteString -> m String
 getAppRootURL basePath = do
@@ -209,13 +212,12 @@ maybeUpdateChangeAddress maybeAddr state =
 
 
 --- Funding ---
-tEST_blockchainGetFundingInfo :: Handler App App FundingTxInfo
-tEST_blockchainGetFundingInfo = fmap toFundingTxInfo $ do
+blockchainGetFundingInfo :: Bool -> Handler App App FundingTxInfo
+blockchainGetFundingInfo debug = fmap toFundingTxInfo $ do
     pubKeyServer <- use pubKey
     minConf <- use fundingMinConf
-    testArgTrue <- fmap (== Just True) $ getOptionalQueryArg "test"
 
-    if (HCC.getNetworkName HCC.getNetwork == "testnet") && testArgTrue then
+    if (HCC.getNetworkName HCC.getNetwork == "testnet") && debug then
             test_GetDerivedFundingInfo pubKeyServer
         else
             fundingAddressFromParams pubKeyServer >>=
