@@ -29,16 +29,14 @@ import           Control.Monad.IO.Class (liftIO)
 site :: [(BS.ByteString, Handler AppConf AppConf ())]
 site = [
         ("/settle_channel", method POST $ parseSigningRequest >>= writeResponseBody)
-    ,   ("/get_pubkey",     method GET $  use pubKey >>= writeResponseBody)
+    ,   ("/get_pubkey",     method GET  $ use pubKey          >>= writeResponseBody)
     ]
 
 parseSigningRequest :: Handler AppConf AppConf (ReceiverPaymentChannel,BitcoinAmount)
 parseSigningRequest = do
-    eitherState <- decodeFromBody 1024
+    chanState <- decodeFromBody 1024
     txFee <- getQueryArg "tx_fee"
-    case eitherState of
-        Left e -> userError $ "Failed to parse ReceiverPaymentChannel from body: " ++ e
-        Right chanState -> return (chanState,txFee)
+    return (chanState,txFee)
 
 writeSigningResponse :: (ReceiverPaymentChannel,BitcoinAmount) -> Handler AppConf AppConf HT.Tx
 writeSigningResponse (chanState,txFee) = do

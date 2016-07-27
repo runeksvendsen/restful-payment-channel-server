@@ -36,13 +36,13 @@ mainRoutes debug basePath' =
 
        , (basePath' <> "/channels/new" -- ?client_pubkey&exp_time&change_address
            ,   method POST (handleChannelOpen >>= writePaymentResult >>=
-                               proceedIfExhausted >>= handleChannelSettlement)
+                               proceedIfExhausted >>= settlementHandler)
                <|> method OPTIONS applyCORS') --CORS
 
        , (basePath' <> "/channels/:funding_txid/:funding_vout"
            ,   method PUT    (paymentHandler >>= writePaymentResult >>=
-                               proceedIfExhausted >>= handleChannelSettlement)
-           <|> method DELETE (handleChannelSettlement 0)
+                               proceedIfExhausted >>= settlementHandler)
+           <|> method DELETE (settlementHandler 0)
            <|> method OPTIONS applyCORS') --CORS
         ] :: [(BS.ByteString, Handler App App ())]
 
