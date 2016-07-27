@@ -1,6 +1,6 @@
 {-# LANGUAGE OverloadedStrings #-}
 
-module  PayChanServer.Config
+module  PayChanServer.Config.Util
 (
 loadConfig,configLookupOrFail,
 getServerSettleConfig,getSigningSettleConfig,
@@ -16,6 +16,7 @@ Config
 where
 
 import           PayChanServer.Config.Types
+import           PayChanServer.Util
 import           ConnManager.Connection (newConnManager)
 import           Common.Common (fromHexString)
 import           Data.Bitcoin.PaymentChannel.Types (BitcoinAmount)
@@ -84,7 +85,8 @@ getBitcoindConf cfg = BTCRPCInfo <$>
     configLookupOrFail cfg "bitcoin.bitcoindRPC.ip" <*>
     configLookupOrFail cfg "bitcoin.bitcoindRPC.port" <*>
     configLookupOrFail cfg "bitcoin.bitcoindRPC.user" <*>
-    configLookupOrFail cfg "bitcoin.bitcoindRPC.pass"
+    configLookupOrFail cfg "bitcoin.bitcoindRPC.pass" <*>
+    configDebugIsEnabled cfg
 
 -- | Roughly accurate (±10%-ish)
 calcSettlementFeeSPB :: BitcoinAmount -> BitcoinAmount

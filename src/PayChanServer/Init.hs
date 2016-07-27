@@ -5,8 +5,9 @@ module  PayChanServer.Init where
 
 import           PayChanServer.App  (mainRoutes)
 
-import           PayChanServer.Config
+import           PayChanServer.Util
 import           PayChanServer.Config.Types
+import           PayChanServer.Config.Util
 import           PayChanServer.Types (OpenConfig(..), ServerSettleConfig(..))
 import           PayChanServer.Util (dummyKey)
 import           PayChanServer.Settlement (settleChannel)
@@ -20,7 +21,7 @@ import           ChanStore.Lib.Types (ConnManager)
 
 import           Snap (SnapletInit, makeSnaplet, addRoutes)
 import           Data.String.Conversions (cs)
-import           Control.Monad          (unless)
+import           Control.Monad          (when)
 import           Control.Monad.IO.Class (liftIO)
 import qualified System.Posix.Signals as Sig
 import           Control.Concurrent (ThreadId)
@@ -33,6 +34,10 @@ appInit :: Config -> ConnManager -> SnapletInit App App
 appInit cfg databaseConn = makeSnaplet "PayChanServer" "RESTful Bitcoin payment channel server" Nothing $ do
     -- Debug
     debug <- liftIO $ configDebugIsEnabled cfg
+    when debug $ liftIO $
+        putStrLn ("############# RUNNING IN DEBUG MODE #############") >>
+        putStrLn ("## Fake funding accepted & settlement disabled ##") >>
+        putStrLn ("#################################################")
 
     bitcoinNetwork <- liftIO (configLookupOrFail cfg "bitcoin.network")
     liftIO $ setBitcoinNetwork bitcoinNetwork

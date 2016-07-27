@@ -41,9 +41,9 @@ sample = Config
      <> help "Generate data for Bitcoin testnet3" )
 
 runGen :: Config -> IO ()
-runGen (Config endpoint pubKey numPayments onTestnet) = do
-    unless (not onTestnet)
-        HCC.switchToTestnet3
+runGen (Config endpoint pubKey numPayments _) = do
+--     unless (not onTestnet)
+    HCC.switchToTestnet3
     genData (cs endpoint) (fromIntegral numPayments) pubKey
 
 

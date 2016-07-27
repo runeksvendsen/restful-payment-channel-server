@@ -52,7 +52,7 @@ finishSettleChannel ::
     -> IO HT.TxHash
 finishSettleChannel dbConn signConn rpcInfo txFee rpc = do
     settlementTx   <- tryRequest "Signing" (signSettlementTx signConn txFee rpc)
-    settlementTxId <- tryBitcoind =<< bitcoindNetworkSumbitTx rpcInfo settlementTx
+    settlementTxId <- tryBitcoind =<< bitcoindNetworkSumbitTx rpcInfo settlementTx -- HEY
     tryRequest "FinishSettle" (DBConn.settleFin dbConn (getChannelID rpc) settlementTxId)
     return settlementTxId
 ---

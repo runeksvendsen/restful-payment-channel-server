@@ -82,12 +82,11 @@ mkFundingInfo openPrice' minConf settleHours recvPK sendPK lockTime rootURL =
 
 
 chanSettle :: MonadSnap m =>
-    Bool
-    -> StdConfig
+    StdConfig
     -> (ReceiverPaymentChannel -> IO HT.TxHash)
     -> BitcoinAmount
     -> m ()
-chanSettle debug (StdConfig chanMap chanId clientPayment) settleChannel valRecvd = do
+chanSettle (StdConfig chanMap chanId clientPayment) settleChannel valRecvd = do
     chanState <- getChannelStateOr404 chanMap chanId
 
     let confirmClientPayment storedPayment =
@@ -99,8 +98,7 @@ chanSettle debug (StdConfig chanMap chanId clientPayment) settleChannel valRecvd
                 errorWithDescription 410 "Channel is being closed"
             (DBConn.ReadyForPayment rpc) -> do
                 confirmClientPayment $ getNewestPayment rpc
-                -- Testing: don't submit Tx if we're debugging
-                settleTxId <- if not debug then liftIO (settleChannel rpc) else return dummyTxId
+                settleTxId <- liftIO (settleChannel rpc)
                 return (settleTxId, channelValueLeft rpc)
             (DBConn.ChannelSettled settleTxId _ rpc) -> do
                 confirmClientPayment $ getNewestPayment rpc

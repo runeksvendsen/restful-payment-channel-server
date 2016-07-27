@@ -216,7 +216,6 @@ blockchainGetFundingInfo :: Bool -> Handler App App FundingTxInfo
 blockchainGetFundingInfo debug = fmap toFundingTxInfo $ do
     pubKeyServer <- use pubKey
     minConf <- use fundingMinConf
-
     if (HCC.getNetworkName HCC.getNetwork == "testnet") && debug then
             test_GetDerivedFundingInfo pubKeyServer
         else

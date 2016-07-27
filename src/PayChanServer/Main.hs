@@ -2,10 +2,11 @@
 
 module  PayChanServer.Main where
 
-import           PayChanServer.Config -- (Config, loadConfig, configLookupOrFail, getSettleConfig, getBitcoindConf, getDBConf)
+import           PayChanServer.Util -- (Config, loadConfig, configLookupOrFail, getSettleConfig, getBitcoindConf, getDBConf)
 import           PayChanServer.Init (appInit, installHandlerKillThreadOnSig)
 import           ChanStore.Lib.Types (ConnManager)
 import           PayChanServer.Settlement (settlementThread)
+import           PayChanServer.Config.Util
 
 import           Snap (serveSnaplet)
 import           Snap.Snaplet (runSnaplet)

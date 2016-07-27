@@ -8,12 +8,9 @@ import           SigningService.Types
 import           SigningService.Util (produceSettlementTx)
 
 import           PayChanServer.Main (wrapArg)
-import           PayChanServer.Config (loadConfig, configLookupOrFail, getSigningSettleConfig,
-                                getBitcoindConf, setBitcoinNetwork)
-import qualified PayChanServer.Config as Conf (Config)
-import           PayChanServer.Util (writeResponseBody, decodeFromBody,
-                              internalError, userError, getPathArg, getQueryArg, getOptionalQueryArg,
-                              errorWithDescription)
+import           PayChanServer.Config.Util (loadConfig, configLookupOrFail, setBitcoinNetwork, getSigningSettleConfig)
+import qualified PayChanServer.Config.Util as Conf (Config)
+import           PayChanServer.Util (writeResponseBody, decodeFromBody, userError, getQueryArg)
 import           PayChanServer.Types (SigningSettleConfig(..))
 import           Data.Bitcoin.PaymentChannel.Types (ReceiverPaymentChannel, BitcoinAmount)
 
@@ -25,10 +22,8 @@ import qualified Network.Haskoin.Crypto as HC
 import qualified System.FilePath as F
 import qualified System.Posix.Signals as Sig
 import           Snap
-import           Snap.Http.Server (defaultConfig, httpServe)
 import           Control.Lens (use)
-import           Control.Monad.IO.Class (liftIO, MonadIO)
-
+import           Control.Monad.IO.Class (liftIO)
 
 
 site :: [(BS.ByteString, Handler AppConf AppConf ())]

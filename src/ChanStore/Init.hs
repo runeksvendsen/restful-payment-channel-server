@@ -11,6 +11,6 @@ import           ChanStore.Lib.ChanMap
 init_chanMap :: String -> IO ChannelMap
 init_chanMap storageDirectory  = do
     map <- newChanMap storageDirectory
-    chanMapLen <- mapLen map
-    putStrLn $ "Restored " ++ show chanMapLen ++ " open channel states from " ++ show storageDirectory
+    openCount <- openChannelCount map
+    putStrLn $ "Restored " ++ show openCount ++ " open channel states from " ++ show storageDirectory
     return map

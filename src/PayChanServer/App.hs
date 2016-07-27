@@ -9,7 +9,7 @@ import           PayChanServer.Util (getPathArg, getQueryArg, getOptionalQueryAr
                               channelIDFromPathArgs, writePaymentResult, proceedIfExhausted,
                               blockchainGetFundingInfo,
                               applyCORS')
-import           PayChanServer.Config
+import           PayChanServer.Util
 import           PayChanServer.Config.Types
 import           PayChanServer.Types ( ChanOpenConfig(..),ChanPayConfig(..),
                                 StdConfig(..), ServerSettleConfig(..))
@@ -28,7 +28,6 @@ mainRoutes :: Debug -> BS.ByteString -> [(BS.ByteString, Handler App App ())]
 mainRoutes debug basePath' =
     let
         -- Testing: Bypass Blockchain lookup/submit in case we're debugging
-        handleChannelSettlement = settlementHandler debug
         handleChannelOpen       = newChannelHandler debug
     in
         [
@@ -84,8 +83,8 @@ paymentHandler = applyCORS' >>
         getOptionalQueryArg "change_address"
     >>= chanPay
 
-settlementHandler :: Debug -> BitcoinAmount -> Handler App App ()
-settlementHandler debug valueReceived = do
+settlementHandler :: BitcoinAmount -> Handler App App ()
+settlementHandler valueReceived = do
     applyCORS'
 
     settleChanFunc <- use settleChanFunc
@@ -93,5 +92,5 @@ settlementHandler debug valueReceived = do
             use dbConn <*>
             channelIDFromPathArgs <*>
             getQueryArg "payment"
-    chanSettle debug stdConf settleChanFunc valueReceived
+    chanSettle stdConf settleChanFunc valueReceived
 

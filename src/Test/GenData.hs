@@ -36,10 +36,10 @@ genData :: T.Text -> Int -> String -> IO ()
 genData endpoint numPayments pubKeyServerStr = do
     pubKeyServer <- either (const $ fail "failed to parse server pubkey") return
         (pathParamDecode $ cs pubKeyServerStr)
+    -- Generate fresh private key
     privSeed <- getEntropy 32
-    prvKey <- case fmap HC.makePrvKey (secKey privSeed) of
-            Nothing -> fail "couldn't derive secret key from seed"
-            Just k -> return k
+    prvKey <- maybe (fail "couldn't derive secret key from seed") return $
+            fmap HC.makePrvKey (secKey privSeed)
     expTime <- fmap round getPOSIXTime
     let sess = genChannelSession endpoint numPayments prvKey pubKeyServer
             (parseBitcoinLocktime $ fromIntegral $ expTime + cHAN_DURATION)
@@ -74,16 +74,21 @@ genChannelSession endPoint numPayments privClient pubServer expTime =
 
 data PaySessionData = PaySessionData {
     openURL     :: T.Text,
-    payURLList  :: [T.Text]
+    payURLList  :: [T.Text],
+    closeURL    :: T.Text
 }
 
 instance ToJSON PaySessionData where
-    toJSON (PaySessionData oURL pURLs) =
-        object [ "open_url" .= oURL, "payment_urls" .= pURLs ]
+    toJSON (PaySessionData openURL payURLs closeURL) =
+        object [
+            "open_url"      .= openURL,
+            "payment_urls"  .= payURLs,
+             "close_url"    .= closeURL
+         ]
 
 instance FromJSON PaySessionData where
     parseJSON (Object v) = PaySessionData <$>
-                v .: "open_url" <*> v .: "payment_urls"
+                v .: "open_url" <*> v .: "payment_urls" <*> v .: "close_url"
     parseJSON _ = mzero
 
 
@@ -94,11 +99,12 @@ getSessionData (ChannelSession endPoint cp fundAddr initPay payList) =
         chanId = HT.OutPoint txid (fromIntegral vout)
         openURL = channelOpenURL False (cs endPoint) "/v1" (cpSenderPubKey cp)
                 (cpLockTime cp) ++ mkOpenQueryParams mockChangeAddress initPay
+        payURLs = map (cs . mkPaymentURL False (cs endPoint) "/v1" chanId) payList
     in
         PaySessionData
             (cs openURL)
---             (map (mappend endPoint . cs . mkPaymentURL txid (fromIntegral vout) Nothing) payList)
-            (map (cs . mkPaymentURL False (cs endPoint) "/v1" chanId) payList)
+            payURLs
+            (last payURLs)
 
 
 

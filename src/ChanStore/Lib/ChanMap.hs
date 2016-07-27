@@ -6,12 +6,13 @@ module ChanStore.Lib.ChanMap where
 import           DiskStore (newDiskMap, addItem, getItem,
                             CreateResult,
                             mapGetItem,
-                            getItemCount)
+                            getItemCount,
+                            getFilteredKeys)
 
 import           ChanStore.Lib.Types hiding (CreateResult(..), UpdateResult(..), CloseResult(..))
 import           Data.Bitcoin.PaymentChannel.Types
 import           Data.Bitcoin.PaymentChannel.Util (unsafeUpdateRecvState)
-
+import           Control.Concurrent.STM (STM, atomically)
 
 isSettled :: ChanState -> Bool
 isSettled (ChannelSettled _ _ _) = True
@@ -42,3 +43,7 @@ updateChanState chanMap key payment =
         mapGetItem chanMap updateIfOpen key
 
 mapLen = getItemCount
+
+openChannelCount :: ChannelMap -> IO Int
+openChannelCount chanMap = atomically $
+    length <$> getFilteredKeys chanMap isOpen

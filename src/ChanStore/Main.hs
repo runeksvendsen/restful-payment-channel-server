@@ -11,8 +11,8 @@ import           ChanStore.Lib.ChanMap
 import           ChanStore.Lib.Settlement (beginSettlingExpiringChannels, beginSettlingChannel,
                                                        finishSettlingChannel)
 import           PayChanServer.Main (wrapArg)
-import           PayChanServer.Config (Config, loadConfig, configLookupOrFail,
-                                getBitcoindConf, setBitcoinNetwork, getDBPath)
+import           PayChanServer.Config.Util (Config, loadConfig, configLookupOrFail,
+                                            setBitcoinNetwork, getDBPath)
 import           PayChanServer.Util (decodeFromBody, writeResponseBody,
                               internalError, userError, getPathArg, getQueryArg, getOptionalQueryArg,
                               errorWithDescription)

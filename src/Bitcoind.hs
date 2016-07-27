@@ -21,16 +21,20 @@ import qualified Data.ByteString.Lazy as BL
 
 
 data BTCRPCInfo = BTCRPCInfo {
-    rpcIP    :: String
-    ,rpcPort :: Int
-    ,rpcUser :: T.Text
-    ,rpcPass :: T.Text
+    rpcIP       :: String
+    ,rpcPort    :: Int
+    ,rpcUser    :: T.Text
+    ,rpcPass    :: T.Text
+    ,rpcDryRun  :: Bool -- Don't actually submit the Tx, just return its txid as if everything went OK
 }
 
 bitcoindNetworkSumbitTx :: BTCRPCInfo -> HT.Tx -> IO (Either String HT.TxHash)
-bitcoindNetworkSumbitTx (BTCRPCInfo ip port user pass) tx =
-    withClient ip port user pass
-        (tryBitcoindSubmitToNetwork tx)
+bitcoindNetworkSumbitTx (BTCRPCInfo ip port user pass dryRun) tx =
+    if not dryRun then
+            withClient ip port user pass
+                (tryBitcoindSubmitToNetwork tx)
+        else
+            return . Right $ HT.txHash tx
 
 tryBitcoindSubmitToNetwork :: MonadIO m =>
     HT.Tx
