@@ -6,8 +6,8 @@ import           DiskStore (getAllItems,
                             getFilteredKV, getFilteredItems,
                             DiskMap(..), Serializable(..), ToFileName(..), Hashable(..))
 
-import           Server.Types (ServerSettleConfig(..), SigningSettleConfig(..))
-import           Server.Util (internalError)
+import           PayChanServer.Types (ServerSettleConfig(..), SigningSettleConfig(..))
+import           PayChanServer.Util (internalError)
 import           Bitcoind (BTCRPCInfo, bitcoindNetworkSumbitTx)
 
 import           Data.Bitcoin.PaymentChannel.Types (ReceiverPaymentChannel, PaymentChannel(..),

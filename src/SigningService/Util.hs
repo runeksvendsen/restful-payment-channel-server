@@ -1,8 +1,8 @@
 module SigningService.Util where
 
 
-import           Server.Types (SigningSettleConfig(..))
-import           Server.Util (internalError)
+import           PayChanServer.Types (SigningSettleConfig(..))
+import           PayChanServer.Util (internalError)
 
 import           Data.Bitcoin.PaymentChannel (getSettlementBitcoinTx)
 import           Data.Bitcoin.PaymentChannel.Types (ReceiverPaymentChannel, PaymentChannel(..),

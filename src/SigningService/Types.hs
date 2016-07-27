@@ -4,7 +4,7 @@
 
 module SigningService.Types where
 
-import           Server.Types
+import           PayChanServer.Types
 import           Snap (Snap)
 import           Data.Bitcoin.PaymentChannel.Types (ReceiverPaymentChannel, BitcoinAmount, PayChanError)
 import qualified Network.Haskoin.Transaction as HT

@@ -7,17 +7,17 @@ import           Prelude hiding (init, userError)
 import           SigningService.Types
 import           SigningService.Util (produceSettlementTx)
 
-import           Server.Main (wrapArg)
-import           Server.Config (loadConfig, configLookupOrFail, getSigningSettleConfig,
+import           PayChanServer.Main (wrapArg)
+import           PayChanServer.Config (loadConfig, configLookupOrFail, getSigningSettleConfig,
                                 getBitcoindConf, setBitcoinNetwork)
-import qualified Server.Config as Conf (Config)
-import           Server.Util (writeResponseBody, decodeFromBody,
+import qualified PayChanServer.Config as Conf (Config)
+import           PayChanServer.Util (writeResponseBody, decodeFromBody,
                               internalError, userError, getPathArg, getQueryArg, getOptionalQueryArg,
                               errorWithDescription)
-import           Server.Types (SigningSettleConfig(..))
+import           PayChanServer.Types (SigningSettleConfig(..))
 import           Data.Bitcoin.PaymentChannel.Types (ReceiverPaymentChannel, BitcoinAmount)
 
-import           Server.Init (installHandlerKillThreadOnSig)
+import           PayChanServer.Init (installHandlerKillThreadOnSig)
 import           Control.Concurrent (myThreadId)
 import qualified Data.ByteString as BS
 import qualified Network.Haskoin.Transaction as HT

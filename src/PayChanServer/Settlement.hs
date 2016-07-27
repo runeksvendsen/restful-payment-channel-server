@@ -1,6 +1,6 @@
 
 
-module Server.Settlement
+module  PayChanServer.Settlement
 (
     settleChannel,
     startSettlementThread
@@ -9,8 +9,8 @@ module Server.Settlement
 where
 
 
-import           Server.Types (ServerSettleConfig(..))
-import           Server.DB (tryHTTPRequestOfType)
+import           PayChanServer.Types (ServerSettleConfig(..))
+import           PayChanServer.DB (tryHTTPRequestOfType)
 
 import           ChanStoreServer.Interface  as DBConn
 import           Data.Bitcoin.PaymentChannel.Types (ReceiverPaymentChannel, BitcoinAmount,

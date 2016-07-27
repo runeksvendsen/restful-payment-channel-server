@@ -38,7 +38,7 @@ parseLine = do
     take 1
     return $ CheckLine (cs file) line col Warning (cs msg)
 
--- src/Server/Handlers.hs:9:1:Warning: The import of ‘Server.Config.Types’ is redundant  except perhaps to import instances from ‘Server.Config.Types’To import instances alone, use: import Server.Config.Types()
+-- src/Server/Handlers.hs:9:1:Warning: The import of ‘Server.Config.Types’ is redundant  except perhaps to import instances from ‘Server.Config.Types’To import instances alone, use: impor  PayChanServer.Config.Types()
 -- src/Server/Handlers.hs:16:1:Warning: The import of ‘BlockchainAPI.Impl.ChainSo’ is redundant  except perhaps to import instances from ‘BlockchainAPI.Impl.ChainSo’To import instances alone, use: import BlockchainAPI.Impl.ChainSo()
 -- src/Server/Handlers.hs:28:1:Warning: The import of ‘Snap’ is redundant  except perhaps to import instances from ‘Snap’To import instances alone, use: import Snap()
 -- src/Server/Handlers.hs:34:1:Warning: The import of ‘setSenderChangeAddress’from module ‘Data.Bitcoin.PaymentChannel.Util’ is redundant

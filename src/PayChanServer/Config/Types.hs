@@ -2,7 +2,7 @@
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE FlexibleInstances #-}
 
-module Server.Config.Types where
+module  PayChanServer.Config.Types where
 
 import           ChanStoreServer.ChanStore.Types (ConnManager)
 import           Data.Bitcoin.PaymentChannel.Types (ReceiverPaymentChannel, BitcoinAmount)

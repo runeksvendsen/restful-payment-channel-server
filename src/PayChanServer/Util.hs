@@ -1,7 +1,7 @@
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 
-module Server.Util where
+module  PayChanServer.Util where
 
 import           Prelude hiding (userError)
 
@@ -39,7 +39,7 @@ import Data.Aeson.Encode.Pretty (encodePretty)
 import qualified Data.Binary as Bin (Binary, encode, decodeOrFail)
 
 import           Control.Lens (use)
-import           Server.Config.Types (App, pubKey, fundingMinConf)
+import           PayChanServer.Config.Types (App, pubKey, fundingMinConf)
 import           BlockchainAPI.Impl.ChainSo (chainSoAddressInfo, toEither)
 import           Test.GenData (deriveMockFundingInfo, convertMockFundingInfo)
 import           Data.Typeable

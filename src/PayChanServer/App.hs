@@ -1,19 +1,19 @@
 {-# LANGUAGE OverloadedStrings #-}
 
-module Server.App where
+module  PayChanServer.App where
 
 
 import           Data.Bitcoin.PaymentChannel.Types (ReceiverPaymentChannel, BitcoinAmount)
 
-import           Server.Util (getPathArg, getQueryArg, getOptionalQueryArg, getAppRootURL,
+import           PayChanServer.Util (getPathArg, getQueryArg, getOptionalQueryArg, getAppRootURL,
                               channelIDFromPathArgs, writePaymentResult, proceedIfExhausted,
                               tEST_blockchainGetFundingInfo,
                               applyCORS')
-import           Server.Config
-import           Server.Config.Types
-import           Server.Types ( ChanOpenConfig(..),ChanPayConfig(..),
+import           PayChanServer.Config
+import           PayChanServer.Config.Types
+import           PayChanServer.Types ( ChanOpenConfig(..),ChanPayConfig(..),
                                 StdConfig(..), ServerSettleConfig(..))
-import           Server.Handlers
+import           PayChanServer.Handlers
 
 import           Control.Applicative ((<|>))
 import           Control.Lens (use)

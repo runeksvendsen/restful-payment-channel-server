@@ -1,6 +1,6 @@
-module Server.DB where
+module  PayChanServer.DB where
 
-import           Server.Util
+import           PayChanServer.Util
 import qualified ChanStoreServer.Interface as DBConn
 import           Data.Bitcoin.PaymentChannel.Types (ReceiverPaymentChannel, Payment,
                                                     PaymentChannel(getNewestPayment))

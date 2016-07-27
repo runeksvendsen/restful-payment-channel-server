@@ -1,17 +1,17 @@
 {-# LANGUAGE OverloadedStrings #-}
 
-module Server.Init where
+module  PayChanServer.Init where
 
 
-import           Server.App  (mainRoutes)
+import           PayChanServer.App  (mainRoutes)
 
-import           Server.Config
-import           Server.Config.Types
-import           Server.Types (OpenConfig(..), ServerSettleConfig(..))
-import           Server.Util (dummyKey)
-import           Server.Settlement (settleChannel)
+import           PayChanServer.Config
+import           PayChanServer.Config.Types
+import           PayChanServer.Types (OpenConfig(..), ServerSettleConfig(..))
+import           PayChanServer.Util (dummyKey)
+import           PayChanServer.Settlement (settleChannel)
 
-import           Server.DB (tryDBRequest)
+import           PayChanServer.DB (tryDBRequest)
 import           ChanStoreServer.Interface  as DBConn
 import           SigningService.Interface (getPubKey)
 

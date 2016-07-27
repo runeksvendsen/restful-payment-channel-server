@@ -1,12 +1,11 @@
 {-# LANGUAGE OverloadedStrings #-}
 
-module Server.Main where
+module  PayChanServer.Main where
 
-import qualified ConnManager.Connection as DB
-import           Server.Config -- (Config, loadConfig, configLookupOrFail, getSettleConfig, getBitcoindConf, getDBConf)
-import           Server.Init (appInit, installHandlerKillThreadOnSig)
+import           PayChanServer.Config -- (Config, loadConfig, configLookupOrFail, getSettleConfig, getBitcoindConf, getDBConf)
+import           PayChanServer.Init (appInit, installHandlerKillThreadOnSig)
 import           ChanStoreServer.ChanStore.Types (ConnManager)
-import           Server.Settlement (startSettlementThread)
+import           PayChanServer.Settlement (startSettlementThread)
 
 import           Snap (serveSnaplet)
 import           Snap.Snaplet (runSnaplet)

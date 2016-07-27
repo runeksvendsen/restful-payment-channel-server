@@ -1,18 +1,18 @@
 {-# LANGUAGE OverloadedStrings #-}
 
-module Server.Handlers where
+module  PayChanServer.Handlers where
 
 import           Prelude hiding (userError)
 
-import           Server.Types (ChanOpenConfig(..),ChanPayConfig(..),
+import           PayChanServer.Types (ChanOpenConfig(..),ChanPayConfig(..),
                                 StdConfig(..))
-import           Server.Config.Types (App, pubKey, fundingMinConf)
+import           PayChanServer.Config.Types (App, pubKey, fundingMinConf)
 
 import           Common.Common
 import           Common.Types
 
-import           Server.Util
-import           Server.DB (tryDBRequest, trySigningRequest,
+import           PayChanServer.Util
+import           PayChanServer.DB (tryDBRequest, trySigningRequest,
                             getChannelStateForPayment, getChannelStateForSettlement,
                             confirmChannelDoesntExistOrAbort, getChannelStateOr404)
 import           BlockchainAPI.Impl.ChainSo (chainSoAddressInfo, toEither)

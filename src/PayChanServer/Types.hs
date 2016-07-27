@@ -1,4 +1,4 @@
-module Server.Types where
+module  PayChanServer.Types where
 
 import           Data.Bitcoin.PaymentChannel.Types (ReceiverPaymentChannel, BitcoinAmount,
                                                     Payment, BitcoinLockTime, FundingTxInfo)

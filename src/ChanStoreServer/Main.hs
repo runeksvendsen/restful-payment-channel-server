@@ -10,13 +10,13 @@ import           ChanStoreServer.Init (init_chanMap)
 import           ChanStoreServer.ChanStore.ChanStore
 import           ChanStoreServer.ChanStore.Settlement (beginSettlingExpiringChannels, beginSettlingChannel,
                                                        finishSettlingChannel)
-import           Server.Main (wrapArg)
-import           Server.Config (Config, loadConfig, configLookupOrFail,
+import           PayChanServer.Main (wrapArg)
+import           PayChanServer.Config (Config, loadConfig, configLookupOrFail,
                                 getBitcoindConf, setBitcoinNetwork, getDBPath)
-import           Server.Util (decodeFromBody, writeResponseBody,
+import           PayChanServer.Util (decodeFromBody, writeResponseBody,
                               internalError, userError, getPathArg, getQueryArg, getOptionalQueryArg,
                               errorWithDescription)
-import           Server.Init (installHandlerKillThreadOnSig)
+import           PayChanServer.Init (installHandlerKillThreadOnSig)
 import           Control.Concurrent (myThreadId)
 import qualified System.Posix.Signals as Sig
 

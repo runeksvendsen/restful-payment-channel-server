@@ -2,7 +2,7 @@ module ConnManager.Connection where --TODO: move
 
 import           ChanStoreServer.ChanStore.Types
 import ChanStoreServer.ChanStore.ChanStore
--- import Server.Config.Types
+-- impor  PayChanServer.Config.Types
 
 import Control.Concurrent.STM (STM, atomically, throwSTM)
 import qualified Control.Concurrent.STM.TVar as TVar

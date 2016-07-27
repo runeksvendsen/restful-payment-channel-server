@@ -15,9 +15,9 @@ Cabal-version:       >= 1.2
 
 Executable PayChanServer
   hs-source-dirs: src
-  main-is: Server/Main.hs
+  main-is: PayChanServer/Main.hs
   ghc-options: -W -O2 -threaded -with-rtsopts=-N
-                -main-is Server.Main
+                -main-is PayChanServer.Main
   default-extensions: OverloadedStrings
   Build-depends:
     base                      >= 4     && < 5,
@@ -58,8 +58,7 @@ Executable PayChanServer
 
 
 
-  other-modules: Server.App,
-                 BlockchainAPI.Impl.BlockrIo,
+  other-modules: PayChanServer.App,
                  Common.Common
 
 

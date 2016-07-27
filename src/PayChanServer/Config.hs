@@ -1,6 +1,6 @@
 {-# LANGUAGE OverloadedStrings #-}
 
-module Server.Config
+module  PayChanServer.Config
 (
 loadConfig,configLookupOrFail,
 getServerSettleConfig,getSigningSettleConfig,
@@ -14,7 +14,7 @@ Config
 )
 where
 
-import           Server.Config.Types
+import           PayChanServer.Config.Types
 import           ConnManager.Connection (newConnManager)
 import           Common.Common (fromHexString)
 import           Data.Bitcoin.PaymentChannel.Types (BitcoinAmount)
@@ -32,7 +32,7 @@ import           Data.Configurator.Types
 import qualified Data.Configurator as Conf
 import           Data.String.Conversions (cs)
 import           ChanStoreServer.ChanStore.Types (ConnManager)
-import           Server.Types
+import           PayChanServer.Types
 import           Bitcoind (BTCRPCInfo(..))
 
 
