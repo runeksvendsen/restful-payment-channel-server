@@ -19,8 +19,8 @@ import qualified Data.ByteString.Lazy as BL
 import           Data.Monoid ((<>))
 import qualified Control.Exception as E
 import           Control.Monad.Catch (SomeException(..))
-import Data.String.Conversions (cs)
-
+import           Data.String.Conversions (cs)
+import           Data.Typeable
 
 class ReqParams a where
     rPath        :: a -> BS.ByteString
@@ -47,7 +47,7 @@ requestFromParams conn rp =
 
 -- runRequest :: (ReqParams a, Bin.Binary b) => BS.ByteString -> Word -> ConnManager -> a -> IO b
 -- runRequest host port conn@(Conn _ _ man) rp =
-runRequest :: (ReqParams a, Bin.Binary b) => ConnManager -> a -> IO b
+runRequest :: (ReqParams a, Typeable b, Bin.Binary b) => ConnManager -> a -> IO b
 runRequest conn@(Conn _ _ man) rp =
     requestFromParams conn rp >>= \req -> withResponse (installStatusHandler rp req) man
         ( \resp -> failOnLeft . deserEither . cs =<< responseBodyUnless404 resp )

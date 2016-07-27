@@ -166,11 +166,6 @@ decodeFromBody n =
          Left e -> userError $ "Failed to decode from body: " ++ e
          Right val -> return val
 
-showType :: Typeable a => a -> String
-showType t = show (typeOf t)
-
-
-
 --- Util ---
 proceedIfExhausted :: MonadSnap m => (ChannelStatus,BitcoinAmount) -> m BitcoinAmount
 proceedIfExhausted (ChannelOpen,_)          = finishWith =<< getResponse
