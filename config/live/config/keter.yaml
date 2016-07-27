@@ -14,3 +14,7 @@ stanzas:
         - /home/rune/code/restful-payment-channel-server/config/live/config/store.cfg
       restart-count: 999999999
       restart-delay-seconds: 5
+    - type: background
+      exec: ../SigningService
+      args:
+        - /home/rune/code/restful-payment-channel-server/config/live/config/signing.cfg

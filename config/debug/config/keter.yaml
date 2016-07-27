@@ -2,7 +2,7 @@ stanzas:
     - type: webapp
       exec: ../PayChanServer
       args:
-        - /home/rune/paychan/test.cfg
+        - /home/rune/code/restful-payment-channel-server/config/debug/config/server.cfg
       host: paychantest.runeks.me
       ssl:
         key: /opt/keter/etc/testpay.key
@@ -12,6 +12,12 @@ stanzas:
     - type: background
       exec: ../ChanStore
       args:
-        - /home/rune/code/restful-payment-channel-server/config/test/config/store.cfg
+        - /home/rune/code/restful-payment-channel-server/config/debug/config/store.cfg
       restart-count: 999999999
       restart-delay-seconds: 5
+  - type: background
+      exec: ../SigningService
+      args:
+        - /home/rune/code/restful-payment-channel-server/config/debug/config/signing.cfg
+
+
