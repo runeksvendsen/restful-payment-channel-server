@@ -61,6 +61,6 @@ This performs 2000 payments using 5 concurrent threads.
 
 ### TODO
 
-* Actually close channel before expiration date (write settlement service)
-* ~~OutPoint as key in chanMap~~
+* Write test for settlement service
+* ~~Actually close channel before expiration date (write settlement service)~~
 
