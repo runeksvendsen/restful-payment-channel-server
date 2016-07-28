@@ -39,14 +39,12 @@ Under development.
 ### Documentation
 See [http://paychandoc.runeks.me/](http://paychandoc.runeks.me/).
 
-### Live test servers
-#### Bitcoin live net
-[https://paychan.runeks.me](https://paychan.runeks.me/v1/fundingInfo?client_pubkey=03a67afebe772b05fcdf2a1f337bdaaf52343d62049793768d866b06194042e0cf&exp_time=1466539800)
-#### Bitcoin testnet3
-[https://paychantest.runeks.me](https://paychantest.runeks.me/v1/fundingInfo?client_pubkey=03a67afebe772b05fcdf2a1f337bdaaf52343d62049793768d866b06194042e0cf&exp_time=1466539800)
+### Testing
+The `benchPayChanServer.sh` script (located in `test/`) tests the server by, in sequence
+* Opening a payment channel
 
 ### Performance
-On my 2015 Macbook Pro I get 800-900 payments per second running the `benchPayChanServer.sh` script (located in `test/`):
+On my 2015 Macbook Pro I get 800-900 payments per second running the `benchPayChanServer.sh` script:
 
     $ time ./benchPayChanServer.sh 2000 5 localhost:8000
     Spawning client 1
@@ -58,6 +56,12 @@ On my 2015 Macbook Pro I get 800-900 payments per second running the `benchPayCh
     sys     0m0.917s
 
 This performs 2000 payments using 5 concurrent threads.
+
+### Live test servers
+#### Bitcoin live net
+[https://paychan.runeks.me](https://paychan.runeks.me/v1/fundingInfo?client_pubkey=03a67afebe772b05fcdf2a1f337bdaaf52343d62049793768d866b06194042e0cf&exp_time=1466539800)
+#### Bitcoin testnet3
+[https://paychantest.runeks.me](https://paychantest.runeks.me/v1/fundingInfo?client_pubkey=03a67afebe772b05fcdf2a1f337bdaaf52343d62049793768d866b06194042e0cf&exp_time=1466539800)
 
 ### TODO
 
