@@ -22,7 +22,6 @@ import           Control.Concurrent (forkIO, throwTo, myThreadId)
 import qualified Control.Exception as E
 import qualified System.Posix.Signals as Sig
 import           Control.Concurrent (ThreadId, forkIO, killThread, threadDelay)
--- import           DiskStore (syncMapToDisk)
 import qualified System.FilePath as F
 
 

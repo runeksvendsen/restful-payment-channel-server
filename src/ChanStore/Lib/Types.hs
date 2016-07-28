@@ -12,7 +12,7 @@ ChannelMap
 where
 
 
-import           DiskStore (DiskMap, CreateResult(..),
+import           DiskMap (DiskMap, CreateResult(..),
                             Serializable(..), ToFileName(..), Hashable(..), MapItemResult(..))
 
 import           Data.Bitcoin.PaymentChannel.Types (ReceiverPaymentChannel, PaymentChannelState, Payment)
