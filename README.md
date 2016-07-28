@@ -14,7 +14,7 @@ The following works with a fresh `ubuntu:16.04` docker image
     cd restful-payment-channel-server/
     stack setup && stack build
     
-For distributions without the `haskell-stack` package available, stack (the build tool) can be easily installed with a single command: [https://docs.haskellstack.org/en/stable/README/#how-to-install](https://docs.haskellstack.org/en/stable/README/#how-to-install).
+For distributions without the `haskell-stack` package available, stack (the build tool) can be installed easily with a single command: [https://docs.haskellstack.org/en/stable/README/#how-to-install](https://docs.haskellstack.org/en/stable/README/#how-to-install).
     
 ### Running
 The payment channel server consists of three executables:
