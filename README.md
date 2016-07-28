@@ -12,13 +12,19 @@ The following works with a fresh `ubuntu:16.04` docker image
     stack setup && stack build
     
 ### Running
-The server executable has one required argument: the path to the config file. Example config files can be found in `config/` as a `server.cfg` file for both Bitcoin livenet and testnet3. Example:
+The payment channel server consists of three executables:
 
-    PayChanServer /etc/paychan/live.cfg
+* `PayChanServer` (client facing; implements payment channel protocol) `server.cfg`
+* `ChanStore` (database; stores open payment channel states) `store.cfg`
+* `SigningService` (private key custodian; signs Bitcoin settlement transactions) `signing.cfg`
     
-Pass the desired listening port to the server via the `PORT` environment variable:
+All executable take a single required argument: the path to the config file.
 
-    PORT=43617 PayChanServer /home/rune/paychan/test.cfg 
+Example config files can be found in `config/`, which has config files for Bitcoin livenet, testnet, and a debug configuration which does not reach out to the Bitcoin network. See `config/live/`, `config/test/` and `config/debug/`, respectively.
+    
+For `PayChanServer`, you can set the desired listening port via the `PORT` environment variable. Eg.:
+
+    PORT=43617 PayChanServer config/live/config/server.cfg
 
 ### Stability
 Under development.
