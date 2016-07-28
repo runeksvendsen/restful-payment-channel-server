@@ -3,6 +3,9 @@
 #### Server implementation of the [RESTful Bitcoin Payment Channel Protocol](http://paychandoc.runeks.me/)
 ---
 
+### Architecture overview
+<img src="/doc/arch.png?raw=true" width="600">
+
 ### Build instructions
 The following works with a fresh `ubuntu:16.04` docker image
 
@@ -25,6 +28,10 @@ Example config files can be found in `config/`, which has config files for Bitco
 For `PayChanServer`, you can set the desired listening port via the `PORT` environment variable. Eg.:
 
     PORT=43617 PayChanServer config/live/config/server.cfg
+    
+The `runEverything.sh` script runs all three components, taking as argument the root path of the config you want to use, eg. `config/debug/`:
+
+    ./runEverything.sh config/debug/
 
 ### Stability
 Under development.
@@ -37,9 +44,6 @@ See [http://paychandoc.runeks.me/](http://paychandoc.runeks.me/).
 [https://paychan.runeks.me](https://paychan.runeks.me/v1/fundingInfo?client_pubkey=03a67afebe772b05fcdf2a1f337bdaaf52343d62049793768d866b06194042e0cf&exp_time=1466539800)
 #### Bitcoin testnet3
 [https://paychantest.runeks.me](https://paychantest.runeks.me/v1/fundingInfo?client_pubkey=03a67afebe772b05fcdf2a1f337bdaaf52343d62049793768d866b06194042e0cf&exp_time=1466539800)
-
-### Architecture
-<img src="/doc/arch.png?raw=true" width="600">
 
 ### Performance
 On my 2015 Macbook Pro I get 800-900 payments per second running the `benchPayChanServer.sh` script (located in `test/`):
