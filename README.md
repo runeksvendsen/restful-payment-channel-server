@@ -40,8 +40,12 @@ Under development.
 See [http://paychandoc.runeks.me/](http://paychandoc.runeks.me/).
 
 ### Testing
-The `benchPayChanServer.sh` script (located in `test/`) tests the server by, in sequence
-* Opening a payment channel
+The `benchPayChanServer.sh` script (located in `test/`) executes a payment session (open,pay,close), performing a specified number of payments, for each thread. Usage:
+
+    # First start server, in separate terminal (note pubkey):
+    ./runEverything.sh config/debug/
+    # Then execute test threads (1000 payments, 10 threads), passing the server pubkey as the last argument:
+    ./benchPayChanServer.sh 1000 10 localhost:8000 0225b3aaf58992a8cc909522c2ec859ef218fd29fda0a6723cfb4e0529f80cc8f3
 
 ### Performance
 On my 2015 Macbook Pro I get 800-900 payments per second running the `benchPayChanServer.sh` script:
