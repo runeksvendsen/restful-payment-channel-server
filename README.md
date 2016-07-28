@@ -14,9 +14,9 @@ The following works with a fresh `ubuntu:16.04` docker image
 ### Running
 The payment channel server consists of three executables:
 
-* PayChanServer (client facing; implements payment channel protocol) `server.cfg`
-* ChanStore (database; stores open payment channel states) `store.cfg`
-* SigningService (private key custodian; signs Bitcoin settlement transactions) `signing.cfg`
+* `PayChanServer` (client facing; implements payment channel protocol) `server.cfg`
+* `ChanStore` (database; stores open payment channel states) `store.cfg`
+* `SigningService` (private key custodian; signs Bitcoin settlement transactions) `signing.cfg`
     
 All executable take a single required argument: the path to the config file.
 
