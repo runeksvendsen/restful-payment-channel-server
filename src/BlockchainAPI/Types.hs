@@ -10,6 +10,8 @@ import           Data.String.Conversions (cs)
 import           Data.Scientific (Scientific)
 
 
+-- TODO: Provide generic interface
+
 toFundingTxInfo :: TxInfo -> FundingTxInfo
 toFundingTxInfo (TxInfo txId _ (OutInfo _ chanVal idx)) =
     CFundingTxInfo txId (fromIntegral idx) (fromIntegral chanVal)
@@ -26,8 +28,6 @@ data TxInfo = TxInfo {
     txOutInfo   ::  OutInfo
 } deriving Show
 
-test :: T.Text -> Scientific
-test = read . cs
 
 parseBTCAmount :: Value -> Parser Integer
 parseBTCAmount = withScientific "bitcoin amount" $

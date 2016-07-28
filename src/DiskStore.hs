@@ -1,3 +1,19 @@
+{-|
+Module      : DiskStore
+Description : A small wrapper around an STM map which adds persistence
+Copyright   : (c) Rune K. Svendsen, 2016
+License     : PublicDomain
+Maintainer  : runesvend@gmail.com
+Stability   : experimental
+Portability : POSIX
+
+An STM 'STMContainers.Map' which syncs each map operation to disk,
+ from which the map can be restored later. Each key is stored as a
+ file with the content being the serialized item. So this is optimized
+ for access to relatively large state objects, where storing a file for
+ each object on disk is not an issue.
+-}
+
 module DiskStore
 (
 DiskMap(..),

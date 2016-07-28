@@ -10,6 +10,6 @@ ChanStore "$1/config/store.cfg" > /dev/null &
 
 # STOREPID=$!
 
-sleep 1
+sleep 0.5
 PayChanServer "$1/config/server.cfg" 
 
