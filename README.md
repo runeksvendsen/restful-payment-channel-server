@@ -9,10 +9,12 @@
 ### Build instructions
 The following works with a fresh `ubuntu:16.04` docker image
 
-    apt-get update && apt-get install -y libssl-dev autoconf autogen libtool xz-utils git-core haskell-stack libleveldb-dev
+    apt-get update && apt-get install -y libssl-dev autoconf autogen libtool xz-utils git-core haskell-stack
     git clone https://github.com/runeksvendsen/restful-payment-channel-server.git
     cd restful-payment-channel-server/
     stack setup && stack build
+    
+For distributions without the `haskell-stack` package available, stack (the build tool) can be installed easily with a single command: [https://docs.haskellstack.org/en/stable/README/#how-to-install](https://docs.haskellstack.org/en/stable/README/#how-to-install).
     
 ### Running
 The payment channel server consists of three executables:
