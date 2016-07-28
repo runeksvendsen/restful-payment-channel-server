@@ -22,7 +22,7 @@ All executable take a single required argument: the path to the config file.
 
 Example config files can be found in `config/`, which has config files for Bitcoin livenet, testnet, and a debug configuration which does not reach out to the Bitcoin network. See `config/live/`, `config/test/` and `config/debug/`, respectively.
     
-Pass the desired listening port to `PayChanServer` via the `PORT` environment variable. Eg.:
+For `PayChanServer`, you can set the desired listening port via the `PORT` environment variable. Eg.:
 
     PORT=43617 PayChanServer config/live/config/server.cfg
 
