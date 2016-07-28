@@ -12,12 +12,17 @@ category:            Bitcoin, Finance, Network
 Build-type:          Simple
 Cabal-version:       >= 1.2
 
+--Test-Suite test-all
+--    type:       exitcode-stdio-1.0
+--    main-is:    Test/RunData.hs
+--    build-depends: base
 
 Executable PayChanServer
   hs-source-dirs: src
   main-is: PayChanServer/Main.hs
   ghc-options: -W -O2 -threaded -with-rtsopts=-N
-                -main-is PayChanServer.Main
+               -main-is PayChanServer.Main
+
   default-extensions: OverloadedStrings
   Build-depends:
     base                      >= 4     && < 5,
@@ -177,8 +182,8 @@ Library
 
 Executable GenTestData
     hs-source-dirs:       src
-    main-is:              Test/Main.hs
-    ghc-options:          -W -O2 -main-is Test.Main
+    main-is:              Test/GenDataExe.hs
+    ghc-options:          -W -O2 -main-is Test.GenDataExe
 
     Build-depends:
       base                      >= 4     && < 5,

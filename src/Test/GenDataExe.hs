@@ -1,4 +1,4 @@
-module Test.Main where
+module Test.GenDataExe where
 
 import Test.GenData (genData)
 
@@ -6,7 +6,9 @@ import Options.Applicative.Common
 import Options.Applicative.Extra
 import Options.Applicative.Builder
 
+import qualified Data.ByteString as BS
 import qualified Network.Haskoin.Constants as HCC
+import           Data.Aeson         (toJSON, encode)
 import qualified Data.Text as T
 import Data.String.Conversions (cs)
 import Control.Monad (unless)
@@ -44,7 +46,8 @@ runGen :: Config -> IO ()
 runGen (Config endpoint pubKey numPayments _) = do
 --     unless (not onTestnet)
     HCC.switchToTestnet3
-    genData (cs endpoint) (fromIntegral numPayments) pubKey
+    genData (cs endpoint) (fromIntegral numPayments) pubKey >>=
+        BS.putStr . cs . encode . toJSON
 
 
 main :: IO ()

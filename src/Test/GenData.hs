@@ -32,7 +32,7 @@ cHAN_DURATION = 3600 * 24 * 7 :: Integer
 
 
 
-genData :: T.Text -> Int -> String -> IO ()
+genData :: T.Text -> Int -> String -> IO PaySessionData
 genData endpoint numPayments pubKeyServerStr = do
     pubKeyServer <- either (const $ fail "failed to parse server pubkey") return
         (pathParamDecode $ cs pubKeyServerStr)
@@ -44,7 +44,7 @@ genData endpoint numPayments pubKeyServerStr = do
     let sess = genChannelSession endpoint numPayments prvKey pubKeyServer
             (parseBitcoinLocktime $ fromIntegral $ expTime + cHAN_DURATION)
 
-    BS.putStr (cs . encode . toJSON . getSessionData $ sess)
+    return $ getSessionData sess
 
 
 
