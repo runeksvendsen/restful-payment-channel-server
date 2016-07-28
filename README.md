@@ -21,7 +21,7 @@ The payment channel server consists of three executables:
 * `ChanStore` (database; stores open payment channel states) `store.cfg`
 * `SigningService` (private key custodian; signs Bitcoin settlement transactions) `signing.cfg`
     
-All executable take a single required argument: the path to its config file.
+Each executable takes a single required argument: the path to its config file.
 
 Example config files can be found in `config/`, which has config files for Bitcoin livenet, testnet, and a debug configuration which does not reach out to the Bitcoin network. See `config/live/`, `config/test/` and `config/debug/`, respectively.
     
