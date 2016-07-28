@@ -48,18 +48,17 @@ The `benchPayChanServer.sh` script (located in `test/`) executes a payment sessi
     ./benchPayChanServer.sh 1000 10 localhost:8000 0225b3aaf58992a8cc909522c2ec859ef218fd29fda0a6723cfb4e0529f80cc8f3
 
 ### Performance
-On my 2015 Macbook Pro I get 800-900 payments per second running the `benchPayChanServer.sh` script:
+On my 2015 Macbook Pro I get ~900 payments per second running the `benchPayChanServer.sh` script:
 
-    $ time ./benchPayChanServer.sh 2000 5 localhost:8000
-    Spawning client 1
-    Spawning client 2
+    $ time ./benchPayChanServer.sh 2000 5 localhost:8000 0225b3aaf58992a8cc909522c2ec859ef218fd29fda0a6723cfb4e0529f80cc8f3
     [...]
+    Waiting for clients to terminate...
     Done. Executed 10000 payments.
-    real	0m11.194s
-    user	0m6.651s
-    sys     0m0.917s
+    
+    real	0m10.962s
+    user	0m6.211s
+    sys     0m0.881s
 
-This performs 2000 payments using 5 concurrent threads.
 
 ### Live test servers
 #### Bitcoin live net
