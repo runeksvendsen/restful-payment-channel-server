@@ -12,9 +12,11 @@ An STM 'STMContainers.Map' which syncs each map operation to disk,
  file with the content being the serialized map item. So this is optimized
  for access to relatively large state objects, where storing a file for
  each object on disk is not an issue.
- Optionally, writing to disk can be deferred, such that each map update
+Optionally, writing to disk can be deferred, such that each map update
  doesn't touch the disk immediately, but when the diskSync
- IO action, returned by 'newDiskMap', is evaluated
+ IO action, returned by 'newDiskMap', is evaluated.
+This database is ACID-compliant, although the durability property is lost
+ if deferred disk writes are enabled.
 -}
 
 module DiskMap
@@ -25,7 +27,7 @@ CreateResult(..),
 mapGetItem, mapGetItems, MapItemResult(..),
 getAllItems, getItemCount,
 getFilteredItems, getFilteredKeys, getFilteredKV,
-isSynced,
+isSynced,makeReadOnly,
 Serializable(..),
 ToFileName(..),
 
@@ -48,13 +50,13 @@ import Control.Monad.Catch (try)
 import Control.Monad (forM, filterM)
 import Control.Concurrent.Spawn (parMapIO)
 import qualified  STMContainers.Map as Map
-
-
+import Control.Concurrent.STM.TVar (TVar, newTVarIO, readTVar, writeTVar)
+import Control.Exception.Base     (Exception, throwIO)
 
 
 
 -- |
-data DiskMap k v = DiskMap MapConfig (STMMap k v) (Map.Map k SyncAction)
+data DiskMap k v = DiskMap MapConfig (STMMap k v) (Map.Map k SyncAction) (TVar Bool)
 
 type STMMap k v = Map.Map k (MapItem v)
 
@@ -71,6 +73,8 @@ data MapConfig = MapConfig FilePath Bool
 type SyncNow = IO Integer
 
 data CreateResult = Created | AlreadyExists
+data WriteException = PermissionDenied deriving (Show, Eq)
+instance Exception WriteException
 
 -- |
 data MapItemResult k v =
@@ -121,8 +125,8 @@ getItem m = atomically . getItem' m
 -- |
 addItem :: (ToFileName k, Serializable v) =>
     DiskMap k v -> k -> v -> IO CreateResult
-addItem dm@(DiskMap _ m _) k v = do
-    res <- fmap head $ _updateMapItem dm $
+addItem dm@(DiskMap _ m _ _) k v = do
+    res <- fmap head $ updateMapItem dm $
         getItem' dm k >>= maybe
             (insertItem k v m >> return [ItemUpdated k v])  -- Doesn't already exist
             (const $ return [NotUpdated])                 -- Already exists
@@ -145,13 +149,13 @@ mapGetItem dm f k = head <$> mapGetItems dm f ( return [k] )
 -- |
 mapGetItems :: (ToFileName k, Serializable v) =>
     DiskMap k v -> (v -> Maybe v) -> STM [k] -> IO [MapItemResult k v]
-mapGetItems dm@(DiskMap _ _ _) f stmKeys = _updateMapItem dm $ do
+mapGetItems dm@(DiskMap _ _ _ _) f stmKeys = updateMapItem dm $ do
     keys <- stmKeys
     forM keys (mapStoredItem dm f)
 
 -- |
 getAllItems :: (ToFileName k, Serializable v) => DiskMap k v -> IO [v]
-getAllItems (DiskMap _ m _) =
+getAllItems (DiskMap _ m _ _) =
     atomically $ map (itemContent . snd) <$> LT.toList (Map.stream m)
 
     -- User --
@@ -159,7 +163,7 @@ getAllItems (DiskMap _ m _) =
 
 -- |
 getItemCount :: DiskMap k v -> IO Integer
-getItemCount (DiskMap _ m _) =
+getItemCount (DiskMap _ m _ _) =
     atomically $ fromIntegral . length <$>
         LT.toList (Map.stream m)
 
@@ -175,17 +179,22 @@ getFilteredKeys dm =
 
 -- |
 getFilteredKV :: DiskMap k v -> (v -> Bool) -> STM [(k,v)]
-getFilteredKV (DiskMap _ m _) filterBy =
+getFilteredKV (DiskMap _ m _ _) filterBy =
     filter (filterBy . snd) . map (mapSnd itemContent) <$>
         LT.toList (Map.stream m)
             where mapSnd f (a,b)= (a,f b)
 
+-- |Prevent further writes to the map. All write operations will throw an exception after
+--  running this function.
+makeReadOnly :: DiskMap k v -> IO ()
+makeReadOnly (DiskMap _ _ _ readOnlyTVar) =
+    atomically $ writeTVar readOnlyTVar True
 
 -- |If 'f' applied to the value at 'k' in the map returns a Just, then update the value
 --  to this. Return information about what happened.
 mapStoredItem :: (ToFileName k, Serializable v) =>
     DiskMap k v -> (v -> Maybe v) -> k -> STM (MapItemResult k v)
-mapStoredItem dm@(DiskMap _ m _) f k = do
+mapStoredItem dm@(DiskMap _ m _ _) f k = do
     maybeItem <- getItem' dm k
     case maybeItem of
         Nothing  -> return NoSuchItem
@@ -199,27 +208,34 @@ mapStoredItem dm@(DiskMap _ m _) f k = do
                             return NotUpdated
 
 
--- Disk sync -- {
+---- Disk sync ---- {
+
+updateMapItem dm action = guardReadOnly dm >>= flip _updateMapItem action
 
 -- |Once the map has been initialized, this should be the only function that updates item contents
 _updateMapItem :: (ToFileName k, Serializable v) =>
     DiskMap k v -> STM [MapItemResult k v] -> IO [MapItemResult k v]
-_updateMapItem (DiskMap (MapConfig dir deferSync) _ deferredSyncMap) updateActions = do
-    updateResults <- atomically $ do updateActions
-    let syncToDisk res =
-            case res of
-                ItemUpdated key val ->
-                        if not deferSync then   -- Write to disk immediately
-                            writeEntryToFile dir key val
-                        else   -- Note key, as well as the fact that it lacks sync
-                            atomically $ Map.insert Sync key deferredSyncMap
-                _ -> return ()
-    forM updateResults syncToDisk
-    return updateResults
+_updateMapItem (DiskMap (MapConfig dir deferSync) _ deferredSyncMap readOnlyTVar) updateActions = do
+    readOnly <- atomically $ readTVar readOnlyTVar
+    if not readOnly then do
+            updateResults <- atomically $ do updateActions
+            let syncToDisk res =
+                    case res of
+                        ItemUpdated key val ->
+                                if not deferSync then   -- Write to disk immediately
+                                    writeEntryToFile dir key val
+                                else   -- Note key, as well as the fact that it lacks sync
+                                    atomically $ Map.insert Sync key deferredSyncMap
+                        _ -> return ()
+            forM updateResults syncToDisk
+            return updateResults
+        else
+            throwIO PermissionDenied
 
+-- |Not finished yet
 _deleteMapItem :: (ToFileName k, Serializable v) =>
     DiskMap k v -> k -> IO Bool
-_deleteMapItem dm@(DiskMap (MapConfig syncDir deferSync) m deferredSyncMap) key = do
+_deleteMapItem dm@(DiskMap (MapConfig syncDir deferSync) m deferredSyncMap readOnlyTVar) key = do
     exists <- fmap isJust $ atomically $ markAsBeingDeleted dm key
     if not exists then
             return False
@@ -230,16 +246,24 @@ _deleteMapItem dm@(DiskMap (MapConfig syncDir deferSync) m deferredSyncMap) key 
                 atomically $ Map.insert Delete key deferredSyncMap
             return True
 
+guardReadOnly :: DiskMap k v -> IO (DiskMap k v)
+guardReadOnly dm@(DiskMap (MapConfig _ _) _ _ readOnlyTVar) = do
+    readOnly <- atomically $ readTVar readOnlyTVar
+    if not readOnly then do
+            return dm
+        else
+            throwIO PermissionDenied
+
 -- |
 isSynced :: DiskMap k v -> IO Bool
-isSynced (DiskMap (MapConfig _ True) _ deferredSyncMap) =
+isSynced (DiskMap (MapConfig _ True) _ deferredSyncMap _) =
     atomically $ (== 0) . length <$> LT.toList (Map.stream deferredSyncMap)
 -- If deferred sync is disabled, the map is always in sync with disk
-isSynced (DiskMap (MapConfig _ False) _ _) = return True
+isSynced (DiskMap (MapConfig _ False) _ _ _) = return True
 
 syncToDiskNow :: (ToFileName k, Serializable v) =>
      DiskMap k v -> IO Integer
-syncToDiskNow (DiskMap (MapConfig syncDir True) diskMap deferredSyncMap) = do
+syncToDiskNow (DiskMap (MapConfig syncDir True) diskMap deferredSyncMap _) = do
     -- Get all items from syncMap and simultaneously clear it
     syncKeyActionList <- atomically $ do
         vals <- LT.toList (Map.stream deferredSyncMap)
@@ -252,7 +276,7 @@ syncToDiskNow (DiskMap (MapConfig syncDir True) diskMap deferredSyncMap) = do
         return . fromIntegral $ length successList
     else
         error $ "BUG: Key-to-be-synced not present in DiskMap"
-syncToDiskNow (DiskMap (MapConfig _ False) _ _) =
+syncToDiskNow (DiskMap (MapConfig _ False) _ _ _) =
     error "BUG: How did you get a sync IO action if delaySync is disabled?"
 
 data SyncAction = Sync | Delete
@@ -294,12 +318,16 @@ channelMapFromStateFiles baseDir deferSync l =
         --  so this is turned off  by default.
         forParallel = flip parMapIO
     in do
+        -- Restore map
         m <- atomically Map.new
         readRes <- forSequential l tryReadStateFile
         atomically $ forM readRes
             (either error (\(h,s) -> insertDiskSyncedChannel h s m))
-        deferredSyncKeySet <- Map.newIO
-        let diskMap = DiskMap (MapConfig baseDir deferSync) m deferredSyncKeySet
+        -- Deferred sync + read-only TVar
+        deferredSyncMap <- Map.newIO
+        readOnly <- newTVarIO False
+        let diskMap = DiskMap (MapConfig baseDir deferSync) m deferredSyncMap readOnly
+        -- Sync IO action
         let maybeSyncFunc =
                 if deferSync then
                     Just $ syncToDiskNow diskMap
@@ -363,7 +391,7 @@ mapGetItem_Internal :: ToFileName k =>
     -> (MapItem v -> MapItem v)
     -> k
     -> STM (Maybe (MapItem v))
-mapGetItem_Internal (DiskMap _ m _) f k  = do
+mapGetItem_Internal (DiskMap _ m _ _) f k  = do
     maybeItem <- fetchItem m k
     case maybeItem of
         (Just item) ->
@@ -387,7 +415,7 @@ fetchItem m k = do
 
 getItem' :: ToFileName k =>
     DiskMap k v -> k -> STM (Maybe v)
-getItem' (DiskMap _ m _) k =
+getItem' (DiskMap _ m _ _) k =
     fmap itemContent <$> fetchItem m k
 
 updateItem :: (ToFileName k, Serializable v) => STMMap k v -> k -> v -> STM Bool
