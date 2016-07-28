@@ -38,6 +38,9 @@ See [http://paychandoc.runeks.me/](http://paychandoc.runeks.me/).
 #### Bitcoin testnet3
 [https://paychantest.runeks.me](https://paychantest.runeks.me/v1/fundingInfo?client_pubkey=03a67afebe772b05fcdf2a1f337bdaaf52343d62049793768d866b06194042e0cf&exp_time=1466539800)
 
+### Architecture
+<img src="/doc/arch.png?raw=true" width="600">
+
 ### Performance
 On my 2015 Macbook Pro I get 800-900 payments per second running the `benchPayChanServer.sh` script (located in `test/`):
 
