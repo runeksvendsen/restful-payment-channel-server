@@ -34,7 +34,7 @@ makeLenses ''App
 
 data BitcoinNet = Mainnet | Testnet3
 
-data DBConf     = DBConf Host Word
+data DBConf     = DBConf Host Word Int
 type Host = BS.ByteString
 
 

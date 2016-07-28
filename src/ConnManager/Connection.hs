@@ -16,11 +16,11 @@ import           Network.HTTP.Client
 
 
 
-newConnManager :: BS.ByteString -> Word -> IO ConnManager
-newConnManager host port =
+newConnManager :: BS.ByteString -> Word -> Int -> IO ConnManager
+newConnManager host port numConns =
     Conn host port <$> newManager
         defaultManagerSettings {
-            managerConnCount = 100
+            managerConnCount = numConns
         }
 
 dummyRequest :: IO Request

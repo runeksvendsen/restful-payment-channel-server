@@ -53,7 +53,7 @@ configLookupOrFail conf name =
         return
 
 connFromDBConf :: DBConf -> IO ConnManager
-connFromDBConf (DBConf host port) = newConnManager host port
+connFromDBConf (DBConf host port numConns) = newConnManager host port numConns
 
 getDBPath :: Config -> IO FilePath
 getDBPath cfg = configLookupOrFail cfg "storage.stateDir"
@@ -62,12 +62,13 @@ getSigningServiceConn :: Config -> IO ConnManager
 getSigningServiceConn cfg = do
     host <- (configLookupOrFail cfg "settlement.signingService.host")
     port <- (configLookupOrFail cfg "settlement.signingService.port")
-    newConnManager host port
+    newConnManager host port 1
 
 getDBConf :: Config -> IO DBConf
 getDBConf cfg = DBConf <$>
     configLookupOrFail cfg "chanStore.host" <*>
-    configLookupOrFail cfg "chanStore.port"
+    configLookupOrFail cfg "chanStore.port" <*>
+    configLookupOrFail cfg "chanStore.clientConnPoolSize"
 
 getServerSettleConfig :: Config -> IO ServerSettleConfig
 getServerSettleConfig cfg = ServerSettleConfig <$>
