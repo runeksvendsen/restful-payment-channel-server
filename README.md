@@ -68,6 +68,6 @@ On my 2015 Macbook Pro I get ~900 payments per second running the `benchPayChanS
 
 ### TODO
 
-* Write test for settlement service
+* Write test for expiration-based settlement (separate out into separate executable?)
 * ~~Actually close channel before expiration date (write settlement service)~~
 
