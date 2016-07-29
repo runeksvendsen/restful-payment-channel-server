@@ -4,7 +4,7 @@
 ---
 
 ### What is this?
-This server allows the operator to, after an initial setup step, receive instant Bitcoin payments (no waiting for confirmations) from a pre-defined sender; paying the Bitcoin transaction fee only once, when the channel is closed.
+This server allows the operator to, after an initial setup step involving the sender, receive multiple, instant Bitcoin payments (no waiting for confirmations) from this pre-defined sender; paying the Bitcoin transaction fee only once, when the channel is closed.
 
 So, a client contacts the server for funding information, pays to a derived funding address, notifies the server of this, and then the payment channel is open. Payments sent over the channel do not touch the blockchain, so 1-Satoshi payments are fine, and as many can be sent until all the value, sent in the funding transaction, has been used up. The channel can also be closed before that, in which case the client's unspent value is returned to the client change address.
 
