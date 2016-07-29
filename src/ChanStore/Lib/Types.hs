@@ -6,13 +6,14 @@ CreateResult(..),UpdateResult(..),CloseResult(..),
 MapItemResult(..),
 MaybeChanState(..),
 Key,
-ChannelMap
+ChannelMap(..)
 )
 
 where
 
 
-import           DiskMap (DiskMap, CreateResult(..),
+import           DiskMap (DiskMap, SyncAction,
+                            CreateResult(..),
                             Serializable(..), ToFileName(..), Hashable(..), MapItemResult(..))
 
 import           Data.Bitcoin.PaymentChannel.Types (ReceiverPaymentChannel, PaymentChannelState, Payment)
@@ -25,14 +26,17 @@ import qualified Data.Binary.Put as BinPut
 import qualified Data.ByteString as BS
 import           Network.HTTP.Client (Manager)
 import Data.String.Conversions (cs)
+import           Control.Concurrent (ThreadId)
 
--- Connection {
-type Host = BS.ByteString
-type Port = Word
 
-data ConnManager = Conn Host Port Manager
--- Connection }
+data ChannelMap = ChannelMap
+    (DiskMap Key ChanState)
+    (Maybe (SyncAction,ThreadId))   -- Used when deferred sync is enabled
 
+type Key = HT.OutPoint
+
+data CloseResult  = Closed | DoesntExist
+data UpdateResult = WasUpdated | WasNotUpdated
 
 -- |Holds state for payment channel
 data ChanState =
@@ -45,11 +49,16 @@ data ChanState =
 -- Needed for Binary instance non-overlap
 newtype MaybeChanState = MaybeChanState (Maybe ChanState)
 
-type Key = HT.OutPoint
-type ChannelMap = DiskMap Key ChanState
 
-data CloseResult  = Closed | DoesntExist
-data UpdateResult = WasUpdated | WasNotUpdated
+
+-- Connection {
+type Host = BS.ByteString
+type Port = Word
+
+data ConnManager = Conn Host Port Manager
+-- Connection }
+
+
 
 instance Bin.Binary CreateResult where
     put Created = Bin.putWord8 1

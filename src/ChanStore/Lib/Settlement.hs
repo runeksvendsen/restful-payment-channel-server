@@ -26,7 +26,7 @@ import qualified Network.Haskoin.Transaction as HT
 
 
 finishSettlingChannel :: ChannelMap -> (Key,HT.TxHash) -> IO (MapItemResult Key ChanState)
-finishSettlingChannel m (k,settleTxId)= do
+finishSettlingChannel (ChannelMap m _) (k,settleTxId)= do
     head <$> mapGetItems m finishSettling (return [k])
     where
         finishSettling (SettlementInProgress rpc) = Just $
@@ -34,27 +34,27 @@ finishSettlingChannel m (k,settleTxId)= do
         finishSettling _ = Nothing
 
 beginSettlingChannel :: ChannelMap -> Key -> IO ReceiverPaymentChannel
-beginSettlingChannel m k = head <$> beginSettlingChannels m (return [k])
+beginSettlingChannel chanMap k = head <$> beginSettlingChannels chanMap (return [k])
 
 -- Time-based settlement {
 
 -- |Return a list of 'ReceiverPaymentChannel's expiring before specified point in time,
 --      and simultanesouly mark them as in the process of being settled ('SettlementInProgress')
 beginSettlingExpiringChannels :: ChannelMap -> UTCTime -> IO [ReceiverPaymentChannel]
-beginSettlingExpiringChannels m currentTimeIsh =
-    beginSettlingChannels m $
+beginSettlingExpiringChannels chanMap currentTimeIsh =
+    beginSettlingChannels chanMap $
     fmap fst <$>    --get Key
-        openChannelsExpiringBefore currentTimeIsh m
+        openChannelsExpiringBefore currentTimeIsh chanMap
 
 -- |Just return a list of 'ReceiverPaymentChannel's expiring before specified point in time
 justRetrieveExpiringChannels :: ChannelMap -> UTCTime -> IO [ReceiverPaymentChannel]
-justRetrieveExpiringChannels m currentTimeIsh =
+justRetrieveExpiringChannels chanMap currentTimeIsh =
     atomically $
         fmap (gatherPayChan . snd) <$>    --get Value
-            openChannelsExpiringBefore currentTimeIsh m
+            openChannelsExpiringBefore currentTimeIsh chanMap
 
 beginSettlingChannels :: ChannelMap -> STM [Key] -> IO [ReceiverPaymentChannel]
-beginSettlingChannels m keyGetterAction = do
+beginSettlingChannels (ChannelMap m _) keyGetterAction = do
     res <- mapGetItems m markAsSettlingIfOpen $ keyGetterAction
     return $ map gatherFromResults res
     where
@@ -67,7 +67,8 @@ beginSettlingChannels m keyGetterAction = do
 --      'LockTimeBlockHeight', but the protocol does not.
 -- Get keys for all channel states with an expiration date later than the specified 'UTCTime'
 openChannelsExpiringBefore :: UTCTime -> ChannelMap -> STM [(Key,ChanState)]
-openChannelsExpiringBefore currentTimeIsh m = getFilteredKV m isOpenAndExpiresBefore
+openChannelsExpiringBefore currentTimeIsh (ChannelMap m _) =
+    getFilteredKV m isOpenAndExpiresBefore
     where
         isOpenAndExpiresBefore (ReadyForPayment cs) = chanExpiresBefore cs
         isOpenAndExpiresBefore _ = False

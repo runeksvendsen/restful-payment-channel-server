@@ -27,7 +27,7 @@ CreateResult(..),
 mapGetItem, mapGetItems, MapItemResult(..),
 getAllItems, getItemCount,
 getFilteredItems, getFilteredKeys, getFilteredKV,
-isSynced,makeReadOnly,
+SyncAction,isSynced,makeReadOnly,
 Serializable(..),
 ToFileName(..),
 
@@ -40,23 +40,27 @@ where
 import System.Directory (getDirectoryContents, removeFile, doesFileExist)
 import qualified ListT as LT
 import Data.Hashable
-import Data.Maybe (isJust, fromJust)
+import Data.Maybe (isJust, isNothing, fromJust)
 import qualified Data.ByteString.Base16 as B16
 import qualified Data.ByteString.Char8 as C
 import qualified Data.ByteString as BS
 import Control.Monad.STM
 import Control.Exception (IOException)
 import Control.Monad.Catch (try)
-import Control.Monad (forM, filterM)
+import Control.Monad (forM, filterM, when)
 import Control.Concurrent.Spawn (parMapIO)
 import qualified  STMContainers.Map as Map
 import Control.Concurrent.STM.TVar (TVar, newTVarIO, readTVar, writeTVar)
 import Control.Exception.Base     (Exception, throwIO)
-
+import Control.Concurrent.MVar (MVar, newMVar, takeMVar, putMVar, tryTakeMVar)
 
 
 -- |
-data DiskMap k v = DiskMap MapConfig (STMMap k v) (Map.Map k SyncAction) (TVar Bool)
+data DiskMap k v = DiskMap
+    MapConfig
+    (STMMap k v)
+    (SyncState k)
+    (TVar Bool)     -- Read-only?
 
 type STMMap k v = Map.Map k (MapItem v)
 
@@ -68,9 +72,13 @@ data MapItem v = Item {
 
 data MapConfig = MapConfig FilePath Bool
 
+data SyncState k = SyncState
+    (Map.Map k SyncOp)  -- Deferred sync map
+    (MVar ())           -- If empty: sync is in progress
+
 -- |Disk sync IO action. Returns the number of disk items that were
 --  either updated or deleted.
-type SyncNow = IO Integer
+type SyncAction = IO Integer
 
 data CreateResult = Created | AlreadyExists
 data WriteException = PermissionDenied deriving (Show, Eq)
@@ -109,13 +117,27 @@ newDiskMap :: (ToFileName k, Serializable v) =>
     --  returns a boolean indicating whether the map in question is synced to disk, or contains
     --  unsyned updates.
     -> Bool
-    -> IO (DiskMap k v, Maybe SyncNow)  -- ^New map and, optionally, a sync IO action
-newDiskMap syncDir deferSync =
-    diskGetStateFiles syncDir >>=
-    channelMapFromStateFiles syncDir deferSync
-    -- Root --
+    -> IO (DiskMap k v, Maybe SyncAction)  -- ^New map and, optionally, a sync IO action
+newDiskMap syncDir deferSync = do
+    -- Restore STMMap from disk files
+    m <- channelMapFromStateFiles =<<
+            diskGetStateFiles syncDir
+    -- read-only TVar
+    readOnly <- newTVarIO False
+    -- Deferred sync map+busyVar
+    deferredSyncMap <- Map.newIO
+    syncInProgress <- newMVar ()
+    let syncState = SyncState deferredSyncMap syncInProgress
+    let diskMap = DiskMap (MapConfig syncDir deferSync) m syncState readOnly
+    -- Sync IO action
+    let maybeSyncFunc =
+            if deferSync then
+                Just $ syncToDiskNow diskMap
+            else
+                Nothing
+    return (diskMap, maybeSyncFunc)
 
-    -- User --
+
 -- |
 getItem :: ToFileName k =>
     DiskMap k v -> k -> IO (Maybe v)
@@ -184,8 +206,9 @@ getFilteredKV (DiskMap _ m _ _) filterBy =
         LT.toList (Map.stream m)
             where mapSnd f (a,b)= (a,f b)
 
--- |Prevent further writes to the map. All write operations will throw an exception after
---  running this function.
+-- |Prevent further user writes to the map. All user write operations will throw an exception after
+--  running this function. This does not apply to the SyncNow action, if used, which will
+--  update the map to its correct state when run.
 makeReadOnly :: DiskMap k v -> IO ()
 makeReadOnly (DiskMap _ _ _ readOnlyTVar) =
     atomically $ writeTVar readOnlyTVar True
@@ -210,12 +233,14 @@ mapStoredItem dm@(DiskMap _ m _ _) f k = do
 
 ---- Disk sync ---- {
 
-updateMapItem dm action = guardReadOnly dm >>= flip _updateMapItem action
+updateMapItem dm action =
+    guardReadOnly dm >>=
+        flip _updateMapItem action
 
 -- |Once the map has been initialized, this should be the only function that updates item contents
 _updateMapItem :: (ToFileName k, Serializable v) =>
     DiskMap k v -> STM [MapItemResult k v] -> IO [MapItemResult k v]
-_updateMapItem (DiskMap (MapConfig dir deferSync) _ deferredSyncMap readOnlyTVar) updateActions = do
+_updateMapItem (DiskMap (MapConfig dir deferSync) _ (SyncState deferredSyncMap _) readOnlyTVar) updateActions = do
     readOnly <- atomically $ readTVar readOnlyTVar
     if not readOnly then do
             updateResults <- atomically $ do updateActions
@@ -235,15 +260,15 @@ _updateMapItem (DiskMap (MapConfig dir deferSync) _ deferredSyncMap readOnlyTVar
 -- |Not finished yet
 _deleteMapItem :: (ToFileName k, Serializable v) =>
     DiskMap k v -> k -> IO Bool
-_deleteMapItem dm@(DiskMap (MapConfig syncDir deferSync) m deferredSyncMap readOnlyTVar) key = do
+_deleteMapItem dm@(DiskMap (MapConfig syncDir deferSync) m (SyncState deferredSyncMap _) _) key = do
     exists <- fmap isJust $ atomically $ markAsBeingDeleted dm key
     if not exists then
             return False
         else do
             if not deferSync then
-                runSyncAction syncDir m (key,Delete) >> return ()
-            else
-                atomically $ Map.insert Delete key deferredSyncMap
+                    runSyncAction syncDir m (key,Delete) >> return ()
+                else
+                    atomically $ Map.insert Delete key deferredSyncMap
             return True
 
 guardReadOnly :: DiskMap k v -> IO (DiskMap k v)
@@ -256,14 +281,32 @@ guardReadOnly dm@(DiskMap (MapConfig _ _) _ _ readOnlyTVar) = do
 
 -- |
 isSynced :: DiskMap k v -> IO Bool
-isSynced (DiskMap (MapConfig _ True) _ deferredSyncMap _) =
+isSynced (DiskMap (MapConfig _ True) _ (SyncState deferredSyncMap _) _) =
     atomically $ (== 0) . length <$> LT.toList (Map.stream deferredSyncMap)
 -- If deferred sync is disabled, the map is always in sync with disk
 isSynced (DiskMap (MapConfig _ False) _ _ _) = return True
 
-syncToDiskNow :: (ToFileName k, Serializable v) =>
-     DiskMap k v -> IO Integer
-syncToDiskNow (DiskMap (MapConfig syncDir True) diskMap deferredSyncMap _) = do
+-- |Prevent multiple sync operations from running simultaneously
+startSyncOrWait :: (ToFileName k, Serializable v) => DiskMap k v -> IO (DiskMap k v)
+startSyncOrWait dm@(DiskMap _ _ (SyncState _ syncInProgress) _) = do
+    maybeVal <- tryTakeMVar syncInProgress
+    when (isNothing maybeVal) $
+        putStrLn $ "WARNING: Disk sync is waiting because another one is running already." ++
+            " Disk fast enough?"
+    takeMVar syncInProgress
+    return dm
+
+setSyncDone :: (ToFileName k, Serializable v) =>
+     (DiskMap k v, Integer) -> IO Integer
+setSyncDone ( (DiskMap _ _ (SyncState _ syncInProgress) _) , syncCount ) =
+    putMVar syncInProgress () >>
+    return syncCount
+
+syncToDiskNow dm = startSyncOrWait dm >>= _syncToDiskNow >>= setSyncDone
+
+_syncToDiskNow :: (ToFileName k, Serializable v) =>
+     DiskMap k v -> IO (DiskMap k v,Integer)
+_syncToDiskNow dm@(DiskMap (MapConfig syncDir True) diskMap (SyncState deferredSyncMap _) _) = do
     -- Get all items from syncMap and simultaneously clear it
     syncKeyActionList <- atomically $ do
         vals <- LT.toList (Map.stream deferredSyncMap)
@@ -273,13 +316,13 @@ syncToDiskNow (DiskMap (MapConfig syncDir True) diskMap deferredSyncMap _) = do
     -- For each key in the syncMap, lookup>>=write or delete>>delete in diskMap
     successList <- forM syncKeyActionList (runSyncAction syncDir diskMap)
     if all (== True) successList then
-        return . fromIntegral $ length successList
-    else
-        error $ "BUG: Key-to-be-synced not present in DiskMap"
-syncToDiskNow (DiskMap (MapConfig _ False) _ _ _) =
+            return $ (dm, fromIntegral $ length successList)
+        else
+            error $ "BUG: Key-to-be-synced not present in DiskMap"
+_syncToDiskNow (DiskMap (MapConfig _ False) _ _ _) =
     error "BUG: How did you get a sync IO action if delaySync is disabled?"
 
-data SyncAction = Sync | Delete
+data SyncOp = Sync | Delete
 type Success = Bool
 
 --  Don't try to be a hero: get/delete only one item at a time from the diskMap.
@@ -289,7 +332,7 @@ type Success = Bool
 runSyncAction :: (ToFileName k, Serializable v) =>
     FilePath
     -> STMMap k v
-    -> (k,SyncAction)
+    -> (k,SyncOp)
     -> IO Success
 runSyncAction dir m (key, Sync) = do
     maybeVal <- atomically (Map.lookup key m)
@@ -306,34 +349,24 @@ type FileName = FilePath
 
 channelMapFromStateFiles ::
     (Serializable v, ToFileName k) =>
-    FilePath
-    -> Bool
-    -> [(k,FilePath)]
-    -> IO (DiskMap k v, Maybe SyncNow)
-channelMapFromStateFiles baseDir deferSync l =
+    [(k,FilePath)]
+    -> IO (STMMap k v) --(DiskMap k v, Maybe SyncAction)
+channelMapFromStateFiles keyFilePathList =
     let
-        forSequential = forM
-        -- It may be problematic to open all files in parallel
-        --  (due to max concurrent open files limit),
+        sequentiallyForEach = forM
+        -- It may be problematic, depending on map size,
+        --  to open all state files at the same time,
+        --  due to max concurrent open files limit,
         --  so this is turned off  by default.
-        forParallel = flip parMapIO
+        inParallelForEach = flip parMapIO
     in do
         -- Restore map
         m <- atomically Map.new
-        readRes <- forSequential l tryReadStateFile
+        readRes <- sequentiallyForEach keyFilePathList tryReadStateFile
         atomically $ forM readRes
             (either error (\(h,s) -> insertDiskSyncedChannel h s m))
-        -- Deferred sync + read-only TVar
-        deferredSyncMap <- Map.newIO
-        readOnly <- newTVarIO False
-        let diskMap = DiskMap (MapConfig baseDir deferSync) m deferredSyncMap readOnly
-        -- Sync IO action
-        let maybeSyncFunc =
-                if deferSync then
-                    Just $ syncToDiskNow diskMap
-                else
-                    Nothing
-        return (diskMap, maybeSyncFunc)
+
+        return m
 
 diskGetStateFiles :: ToFileName k => FilePath -> IO [(k,FilePath)]
 diskGetStateFiles baseDir = do

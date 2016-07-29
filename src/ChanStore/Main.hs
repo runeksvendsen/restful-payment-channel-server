@@ -6,13 +6,13 @@ module ChanStore.Main where
 import           Prelude hiding (userError)
 
 import           ChanStore.Lib.Types
-import           ChanStore.Init (init_chanMap)
+import           ChanStore.Init (init_chanMap, destroy_chanMap)
 import           ChanStore.Lib.ChanMap
 import           ChanStore.Lib.Settlement (beginSettlingExpiringChannels, beginSettlingChannel,
                                                        finishSettlingChannel)
 import           PayChanServer.Main (wrapArg)
 import           PayChanServer.Config.Util (Config, loadConfig, configLookupOrFail,
-                                            setBitcoinNetwork, getDBPath)
+                                            setBitcoinNetwork, getServerDBConf)
 import           PayChanServer.Util (decodeFromBody, writeBinary,
                               internalError, userError, getPathArg, getQueryArg, getOptionalQueryArg,
                               errorWithDescription)
@@ -42,11 +42,11 @@ main = wrapArg $ \cfg _ -> do
     let conf = setPort (fromIntegral (port :: Word)) defaultConfig
     mainThread <- myThreadId
     _ <- installHandlerKillThreadOnSig Sig.sigTERM mainThread
-    --       1. first do this            3. at the end always do this
+
     bracket
-        (init_chanMap =<< getDBPath cfg)
-        (const $ return ())
-        (\map -> httpServe conf $ site map)
+        (getServerDBConf cfg >>= init_chanMap)  -- 1. first do this
+        destroy_chanMap                         -- 3. at the end always do this
+        (\map -> httpServe conf $ site map)     -- 2. in the meantime do this
 
 
 site :: ChannelMap -> Snap ()

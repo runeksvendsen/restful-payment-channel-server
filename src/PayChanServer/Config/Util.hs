@@ -7,7 +7,8 @@ getServerSettleConfig,getSigningSettleConfig,
 getBitcoindConf,getSigningServiceConn,
 BitcoinNet,
 setBitcoinNetwork,toPathString,
-getDBConf,connFromDBConf,getDBPath,
+getDBConf,
+getServerDBConf,connFromDBConf,
 configDebugIsEnabled,
 -- re-exports
 Config
@@ -37,10 +38,10 @@ import           ChanStore.Lib.Types (ConnManager)
 import           PayChanServer.Types
 import           Bitcoind (BTCRPCInfo(..))
 
--- |If set to True, bypasses funding/settlement to enable testing
+-- |Optional. If set to True, bypasses funding/settlement in order to enable testing
 configDebugIsEnabled :: Config -> IO Bool
 configDebugIsEnabled cfg =
-    configLookupOrFail cfg "debug.enable"
+    Conf.lookupDefault False cfg "debug.enable"
 
 loadConfig :: String -> IO Config
 loadConfig confFile = Conf.load [Conf.Required confFile]
@@ -57,6 +58,14 @@ connFromDBConf (DBConf host port numConns) = newConnManager host port numConns
 
 getDBPath :: Config -> IO FilePath
 getDBPath cfg = configLookupOrFail cfg "storage.stateDir"
+
+getDBSyncInterval :: Config -> IO Word
+getDBSyncInterval cfg = Conf.lookupDefault 0 cfg "storage.deferredSyncInterval"
+
+getServerDBConf :: Config -> IO ServerDBConf
+getServerDBConf cfg = ServerDBConf <$>
+    getDBPath cfg <*>
+    getDBSyncInterval cfg
 
 getSigningServiceConn :: Config -> IO ConnManager
 getSigningServiceConn cfg = do
