@@ -7,11 +7,11 @@ import           Data.Bitcoin.PaymentChannel.Types (ReceiverPaymentChannel, Bitc
 
 import           PayChanServer.Util (getPathArg, getQueryArg, getOptionalQueryArg, getAppRootURL,
                               channelIDFromPathArgs, writePaymentResult, proceedIfExhausted,
-                              blockchainGetFundingInfo,
+                              blockchainGetFundingInfo, checkExpirationTime,
                               applyCORS')
 import           PayChanServer.Util
 import           PayChanServer.Config.Types
-import           PayChanServer.Types ( ChanOpenConfig(..),ChanPayConfig(..),
+import           PayChanServer.Types ( OpenHandlerConf(..),ChanPayConfig(..),
                                 StdConfig(..), ServerSettleConfig(..))
 import           PayChanServer.Handlers
 
@@ -50,8 +50,8 @@ mainRoutes debug basePath' =
 fundingInfoHandler :: Handler App App ()
 fundingInfoHandler =
     mkFundingInfo <$>
-    use openPrice <*>
-    use fundingMinConf <*>
+    use finalOpenPrice <*>
+    (openMinConf <$> use openConfig) <*>
     use settlePeriod <*>
     use pubKey <*>
     getQueryArg "client_pubkey" <*>
@@ -61,15 +61,15 @@ fundingInfoHandler =
 
 newChannelHandler :: Debug -> Handler App App (BitcoinAmount, ReceiverPaymentChannel)
 newChannelHandler debug = applyCORS' >>
-    ChanOpenConfig <$>
-        use openPrice <*>
+    OpenHandlerConf <$>
+        use finalOpenPrice <*>
         use pubKey <*>
         use dbConn <*>
         blockchainGetFundingInfo debug <*>
         use basePath <*>
         getQueryArg "client_pubkey" <*>
         getQueryArg "change_address" <*>
-        getQueryArg "exp_time" <*>
+        (getQueryArg "exp_time" >>= checkExpirationTime) <*>
         getQueryArg "payment"
     >>= channelOpenHandler
 

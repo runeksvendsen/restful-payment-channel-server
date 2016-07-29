@@ -7,7 +7,7 @@ import           DiskMap (getAllItems,
                             DiskMap, Serializable(..), ToFileName(..), Hashable(..))
 
 import           PayChanServer.Types (ServerSettleConfig(..), SigningSettleConfig(..))
-import           PayChanServer.Util (internalError)
+
 import           Bitcoind (BTCRPCInfo, bitcoindNetworkSumbitTx)
 
 import           Data.Bitcoin.PaymentChannel.Types (ReceiverPaymentChannel, PaymentChannel(..),

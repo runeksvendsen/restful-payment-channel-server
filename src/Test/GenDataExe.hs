@@ -19,10 +19,11 @@ import Data.Maybe (listToMaybe)
 
 
 data Config = Config
-  { endpoint :: String
-  , serverPubKey :: String
-  , num_payments :: Int64
-  , testnet :: Bool }
+  { endpoint        :: String
+  , serverPubKey    :: String
+  , num_payments    :: Int64
+  , testnet         :: Bool }
+--   , no_close        :: Bool}
 
 sample :: Parser Config
 sample = Config
@@ -41,6 +42,7 @@ sample = Config
     <*> switch
       ( long "testnet"
      <> help "Generate data for Bitcoin testnet3" )
+
 
 runGen :: Config -> IO ()
 runGen (Config endpoint pubKey numPayments _) = do

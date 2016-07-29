@@ -6,7 +6,7 @@ import           Data.Bitcoin.PaymentChannel.Types (ReceiverPaymentChannel, Bitc
 import qualified Network.Haskoin.Crypto as HC
 import qualified Network.Haskoin.Transaction as HT
 
--- import           Lib.Lib (ChannelMap)
+import           PayChanServer.Config.Types (OpenConfig)
 import           ChanStore.Lib.Types (ConnManager)
 import qualified Data.ByteString as BS
 import           BlockchainAPI.Types (TxInfo)
@@ -21,7 +21,7 @@ data StdConfig = StdConfig {
     chanPayment     :: Payment
 }
 
-data ChanOpenConfig = ChanOpenConfig {
+data OpenHandlerConf = OpenHandlerConf {
     ocOpenPrice     :: BitcoinAmount
    ,ocServerPubKey  :: HC.PubKey
    ,ocDBConn        :: ConnManager
@@ -33,7 +33,6 @@ data ChanOpenConfig = ChanOpenConfig {
    ,ocInitPayment   :: Payment
 }
 
-data OpenConfig = OpenConfig Int BitcoinAmount Bool
 
 data ChanPayConfig = PayConfig
     StdConfig (Maybe HC.Address)

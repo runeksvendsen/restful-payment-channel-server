@@ -13,8 +13,9 @@ import           PayChanServer.Types (ServerSettleConfig(..))
 import           PayChanServer.DB (tryHTTPRequestOfType)
 
 import           ChanStore.Interface  as DBConn
+
 import           Data.Bitcoin.PaymentChannel.Types (ReceiverPaymentChannel, BitcoinAmount,
-                                                    PaymentChannel(getChannelID))
+                                                    PaymentChannel(getChannelID), BitcoinLockTime(..))
 import           Bitcoind (BTCRPCInfo, bitcoindNetworkSumbitTx)
 import           SigningService.Interface (signSettlementTx)
 
@@ -27,6 +28,7 @@ import           Control.Monad (forM)
 
 logImportantError = putStrLn
 logImportantErrorThenFail e = logImportantError e >> error e
+
 
 
 

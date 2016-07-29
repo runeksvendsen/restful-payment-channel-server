@@ -16,9 +16,9 @@ import           PayChanServer.Config.Types (ServerDBConf(..))
 import           Data.Bitcoin.PaymentChannel.Types
 import           Data.Bitcoin.PaymentChannel.Util (unsafeUpdateRecvState)
 import           Control.Concurrent.STM (STM, atomically)
-import           Control.Monad.Catch (finally, handleAll)
+import           Control.Monad.Catch (finally, handleAll, Exception)
 import           Control.Concurrent (forkIO, killThread, threadDelay)
--- import           Control.Concurrent (ThreadId,  threadDelay)
+import           Control.Exception.Base (AsyncException(ThreadKilled), asyncExceptionFromException)
 
 
 logImportantError = putStrLn
@@ -79,7 +79,7 @@ syncThread ::
 syncThread syncAction delaySecs =
     let delayMicroSecs = fromIntegral delaySecs * round 1e6 in
     (handleAll  -- Log errors from syncing
-        ( logImportantError . ("FATAL: Exception while syncing to disk: " ++) . show )
+        ( undefined )
         ( do
               threadDelay delayMicroSecs
               syncNow syncAction
@@ -88,7 +88,11 @@ syncThread syncAction delaySecs =
     `finally` (    -- Regardless of what happens, keep thread running
         syncThread syncAction delaySecs )
 
-
+-- handleSyncThreadException :: Exception e => e -> IO ()
+-- handleSyncThreadException e = case asyncExceptionFromException e of
+--     ThreadKilled    -> return ()
+--     e               -> logImportantError $
+--         "FATAL: Exception while syncing to disk: " ++ show e
 
 -- Helper functions
 isSettled :: ChanState -> Bool

@@ -4,9 +4,9 @@ module  PayChanServer.Handlers where
 
 import           Prelude hiding (userError)
 
-import           PayChanServer.Types (ChanOpenConfig(..),ChanPayConfig(..),
+import           PayChanServer.Types (OpenHandlerConf(..),ChanPayConfig(..),
                                 StdConfig(..))
-import           PayChanServer.Config.Types (App, pubKey, fundingMinConf)
+import           PayChanServer.Config.Types (App, pubKey, openMinConf, openConfig)
 
 import           Common.Common
 import           Common.Types
@@ -35,7 +35,7 @@ import           Data.Bitcoin.PaymentChannel.Types (ReceiverPaymentChannel, Paym
                                                     ChannelParameters(..), BitcoinAmount,
                                                     FundingTxInfo(CFundingTxInfo),
                                                     channelValueLeft, usesBlockHeight)
-import           Data.Bitcoin.PaymentChannel.Util (setSenderChangeAddress, BitcoinLockTime)
+import           Data.Bitcoin.PaymentChannel.Util (setSenderChangeAddress, BitcoinLockTime(..))
 
 import qualified Network.Haskoin.Constants as HCC
 import           Control.Lens (use)
@@ -63,8 +63,8 @@ writeFundingInfoResp (fi, url) = do
 
 mkFundingInfo ::
     BitcoinAmount ->
-    Int ->
-    Int ->
+    Word ->
+    Word ->
     HC.PubKey ->
     HC.PubKey ->
     BitcoinLockTime ->
@@ -75,8 +75,8 @@ mkFundingInfo openPrice' minConf settleHours recvPK sendPK lockTime rootURL =
         recvPK
         (getFundingAddress' sendPK recvPK lockTime)
         openPrice'
-        minConf
-        settleHours,
+        (fromIntegral minConf)
+        (fromIntegral settleHours),
     cs $ rootURL ++ channelOpenPath sendPK lockTime)
 
 
@@ -92,14 +92,14 @@ chanSettle (StdConfig chanMap chanId clientPayment) settleChannel valRecvd = do
     let confirmClientPayment storedPayment =
             unless (clientPayment == storedPayment) $
                 userError "Invalid payment. Please provide most recent channel payment."
-
+    -- Decide what to do based on channel state: open/half-open/closed
     (settlementTxId,chanValLeft) <- case chanState of
-            (DBConn.SettlementInProgress _) ->
-                errorWithDescription 410 "Channel is being closed"
             (DBConn.ReadyForPayment rpc) -> do
                 confirmClientPayment $ getNewestPayment rpc
                 settleTxId <- liftIO (settleChannel rpc)
                 return (settleTxId, channelValueLeft rpc)
+            (DBConn.SettlementInProgress _) ->
+                errorWithDescription 410 "Channel is being closed"
             (DBConn.ChannelSettled settleTxId _ rpc) -> do
                 confirmClientPayment $ getNewestPayment rpc
                 return (settleTxId, channelValueLeft rpc)
@@ -118,7 +118,7 @@ chanSettle (StdConfig chanMap chanId clientPayment) settleChannel valRecvd = do
 
 
 chanPay :: MonadSnap m => ChanPayConfig -> m (BitcoinAmount, ReceiverPaymentChannel)
-chanPay (PayConfig (StdConfig chanMap chanId payment) maybeNewAddr) = do
+chanPay (PayConfig (StdConfig chanMap chanId payment) _) = do
     existingChanState <- getChannelStateForPayment chanMap chanId
     (valRecvd,newChanState) <- either
             (userError . show)
@@ -136,16 +136,14 @@ chanPay (PayConfig (StdConfig chanMap chanId payment) maybeNewAddr) = do
 
 
 channelOpenHandler :: MonadSnap m =>
-    ChanOpenConfig
+    OpenHandlerConf
     -> m (BitcoinAmount, ReceiverPaymentChannel)
 channelOpenHandler
-    (ChanOpenConfig openPrice pubKeyServ chanMap fundingTxInfo@(CFundingTxInfo fundTxId fundIdx _)
+    (OpenHandlerConf openPrice pubKeyServ chanMap fundingTxInfo@(CFundingTxInfo fundTxId fundIdx _)
     basePath sendPK sendChgAddr lockTime payment) = do
         let chanId = HT.OutPoint fundTxId fundIdx
 
         confirmChannelDoesntExistOrAbort chanMap basePath chanId
-        when (usesBlockHeight lockTime) $
-            userError "Block number as channel expiration date is unsupported"
 
         (valRecvd,recvChanState) <- either (userError . show) return $
             channelFromInitialPayment

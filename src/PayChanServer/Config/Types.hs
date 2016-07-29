@@ -16,15 +16,20 @@ import           Data.Configurator.Types
 import           Common.Common (fromHexString)
 import           Data.Ratio
 import           Data.String.Conversions (cs)
+-- (OpenConfig minConf basePrice)
 
-
+data OpenConfig = OpenConfig {
+    openMinConf         :: Word            -- minConf
+   ,openBasePrice       :: BitcoinAmount   -- basePrice
+   ,openAddFee          :: Bool            -- addSettlement fee to basePrice to get openPrice?
+   ,openMinLengthHours  :: Word }          -- minDurationHours
 
 data App = App
- { _dbConn :: ConnManager
+ { _dbConn          :: ConnManager
  , _pubKey          :: HC.PubKey
- , _openPrice       :: BitcoinAmount
- , _settlePeriod    :: Int
- , _fundingMinConf  :: Int
+ , _openConfig      :: OpenConfig
+ , _finalOpenPrice  :: BitcoinAmount
+ , _settlePeriod    :: Word
  , _basePath        :: BS.ByteString
  , _settleChanFunc  :: ReceiverPaymentChannel -> IO HT.TxHash
  }

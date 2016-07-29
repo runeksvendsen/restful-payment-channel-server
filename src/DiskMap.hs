@@ -292,12 +292,14 @@ startSyncOrWait dm@(DiskMap _ _ (SyncState _ syncInProgress) _) = do
         putStrLn $ "WARNING: Disk sync is waiting because another one is running already." ++
             " Disk fast enough?"
     takeMVar syncInProgress
+    putStrLn $ "DiskMap sync: TOOK mvar"
     return dm
 
 setSyncDone :: (ToFileName k, Serializable v) =>
      (DiskMap k v, Integer) -> IO Integer
 setSyncDone ( (DiskMap _ _ (SyncState _ syncInProgress) _) , syncCount ) =
     putMVar syncInProgress () >>
+    putStrLn ("DiskMap sync: PUT mvar") >>
     return syncCount
 
 syncToDiskNow dm = startSyncOrWait dm >>= _syncToDiskNow >>= setSyncDone

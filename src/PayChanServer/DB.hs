@@ -1,3 +1,5 @@
+{-# LANGUAGE  ScopedTypeVariables #-}
+
 module  PayChanServer.DB where
 
 import           PayChanServer.Util
@@ -9,9 +11,22 @@ import qualified Data.ByteString as BS
 import           Snap
 import           Control.Monad.IO.Class (liftIO)
 import           Control.Exception (try)
+import           Control.Concurrent (threadDelay)
 import           Network.HTTP.Client (HttpException (..))
 import           Data.EitherR (fmapL)
 
+
+
+
+waitConnect :: String -> IO a -> IO a
+waitConnect name ioa = do
+    eitherError <- try $ ioa
+    case eitherError of
+        Left (e :: HttpException) -> do
+                putStr $ "\nFailed to connect to " ++ name ++ ". Waiting 3s and retrying... "
+                threadDelay $ fromIntegral $ round $ 3 * 1e6
+                waitConnect name ioa
+        Right res -> return res
 
 tryDBRequest :: MonadSnap m => IO a -> m a
 tryDBRequest ioa = liftIO (tryHTTPRequestOfType "Database" ioa) >>=
