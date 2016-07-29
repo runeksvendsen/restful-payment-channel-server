@@ -13,6 +13,8 @@ A payment channel also has a pre-defined expiration date. After this date, the c
 ### Use cases
 One could imagine, for example, setting up a service which sends video in response to payments, the first minute being free (if you have an open payment channel), and then charging, say 0.1 cent per second thereafter. Trustless pay-per-view. This server would only be used to verify payments, so an additional protocol, for sending video packets in response to payments, would have to be created.
 
+### Stability
+**Under development**
 
 ### Architecture overview
 <img src="/doc/arch.png?raw=true" width="600">
@@ -45,9 +47,6 @@ For `PayChanServer`, you can set the desired listening port via the `PORT` envir
 The `runEverything.sh` script runs all three components, taking as argument the root path of the config you want to use, eg. `config/debug/`:
 
     ./runEverything.sh config/debug/
-
-### Stability
-Under development.
 
 ### Documentation
 See [http://paychandoc.runeks.me/](http://paychandoc.runeks.me/).
