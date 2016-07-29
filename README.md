@@ -14,7 +14,7 @@ A payment channel also has a pre-defined expiration date. After this date, the c
 One could imagine, for example, setting up a service which sends video in response to payments, the first minute being free (if you have an open payment channel), and then charging, say 0.1 cent per second thereafter. Trustless pay-per-view. This server would only be used to verify payments, so an additional protocol, for sending video packets in response to payments, would have to be created.
 
 ### Stability
-**Under development**
+Under development
 
 ### Architecture overview
 <img src="/doc/arch.png?raw=true" width="600">
