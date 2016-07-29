@@ -3,6 +3,15 @@
 #### Server implementation of the [RESTful Bitcoin Payment Channel Protocol](http://paychandoc.runeks.me/)
 ---
 
+### What is this?
+This server allows the operator to, after an initial setup step, receive instant Bitcoin payments (no waiting for confirmations) from a pre-defined sender; paying the Bitcoin transaction fee only once, when the channel is closed.
+
+So, a client contacts the server for funding information, pays to a derived funding address, notifies the server of this, and then the payment channel is open. Payments sent over the channel do not touch the blockchain, so 1-Satoshi payments are fine, and as many can be sent until all the value, sent in the funding transaction, has been used up. The channel can also be closed before that, in which case the client's unspent value is returned to the client change address.
+
+### Use cases
+One could imagine, for example, setting up a service which sends video in response to payments, the first minute being free (if you have an open payment channel), and then charging, say 0.1 cent per second thereafter. Trustless pay-per-view. This server would only be used to verify payments, so an additional protocol, for sending video packets in response to payments, would have to be created.
+
+
 ### Architecture overview
 <img src="/doc/arch.png?raw=true" width="600">
 
@@ -72,4 +81,3 @@ On my 2015 Macbook Pro I get ~900 payments per second running the `benchPayChanS
 
 * Write test for expiration-based settlement (separate out into separate executable?)
 * ~~Actually close channel before expiration date (write settlement service)~~
-
