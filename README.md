@@ -3,6 +3,22 @@
 #### Server implementation of the [RESTful Bitcoin Payment Channel Protocol](http://paychandoc.runeks.me/)
 ---
 
+### What is this?
+This server allows the operator to, after an initial setup step involving the sender, receive multiple, instant Bitcoin payments (no waiting for confirmations) from this pre-defined sender; paying the Bitcoin transaction fee only once, when the channel is closed.
+
+So, a client contacts the server for funding information, pays to a derived funding address, notifies the server of this, and then the payment channel is open. Payments sent over the channel do not touch the blockchain, so 1-Satoshi payments are fine, and as many can be sent until all the value, sent in the funding transaction, has been used up. The channel can also be closed before that, in which case the client's unspent value is returned to the client change address.
+
+A payment channel also has a pre-defined expiration date. After this date, the client can reclaim all value sent over the channel, if it hasn't been closed yet. For the client, this means that opening a payment channel is trustless because, in case the server/receiver disappears, the client can just wait for the expiration date and reclaim funds. For the receiver, it means that the payment channel server must always be running if it has open payment channels. Not the least in order to be able to receive payments over these open channels in the first place, but also to be able to close channels before they reach expiration.
+
+### Use cases
+One could imagine, for example, setting up a service which sends video in response to payments, the first minute being free (if you have an open payment channel), and then charging, say 0.1 cent per second thereafter. Trustless pay-per-view. This server would only be used to verify payments, so an additional protocol, for sending video packets in response to payments, would have to be created.
+
+### Stability
+Under development. Mature enough to play with, but definitely not ready for production yet. Everything should work, but both the server data structures and interfaces can still change at any time.
+
+### Bugs/questions
+If you find a bug please create an issue here. If you need help, like if I haven't made it clear how to do something or just general support, creating an issue is fine too.
+
 ### Architecture overview
 <img src="/doc/arch.png?raw=true" width="600">
 
@@ -34,9 +50,6 @@ For `PayChanServer`, you can set the desired listening port via the `PORT` envir
 The `runEverything.sh` script runs all three components, taking as argument the root path of the config you want to use, eg. `config/debug/`:
 
     ./runEverything.sh config/debug/
-
-### Stability
-Under development.
 
 ### Documentation
 See [http://paychandoc.runeks.me/](http://paychandoc.runeks.me/).
@@ -72,4 +85,3 @@ On my 2015 Macbook Pro I get ~900 payments per second running the `benchPayChanS
 
 * Write test for expiration-based settlement (separate out into separate executable?)
 * ~~Actually close channel before expiration date (write settlement service)~~
-
