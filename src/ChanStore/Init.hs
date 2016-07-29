@@ -11,7 +11,7 @@ import           PayChanServer.Config.Types (ServerDBConf(..))
 
 
 init_chanMap :: ServerDBConf -> IO ChannelMap
-init_chanMap conf@(ServerDBConf storageDirectory deferredSyncInterval) = do
+init_chanMap conf@(ServerDBConf storageDirectory _) = do
     map <- createChanMap conf
     openCount <- openChannelCount map
     putStrLn $ "Restored " ++ show openCount ++ " open channel states from " ++ show storageDirectory

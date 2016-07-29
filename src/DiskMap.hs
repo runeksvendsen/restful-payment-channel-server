@@ -10,10 +10,10 @@ Portability : POSIX
 An STM 'STMContainers.Map' which syncs each map operation to disk,
  from which the map can be restored later. Each key is stored as a
  file with the content being the serialized map item. So this is optimized
- for access to relatively large state objects, where storing a file for
- each object on disk is not an issue.
+ for access to relatively large state objects, where storing a file on disk for
+ each item in the map is not an issue.
 Optionally, writing to disk can be deferred, such that each map update
- doesn't touch the disk immediately, but when the diskSync
+ doesn't touch the disk immediately, but instead only when the 'DiskSync'
  IO action, returned by 'newDiskMap', is evaluated.
 This database is ACID-compliant, although the durability property is lost
  if deferred disk writes are enabled.
@@ -203,9 +203,10 @@ getFilteredKV (DiskMap _ m _ _) filterBy =
         LT.toList (Map.stream m)
             where mapSnd f (a,b)= (a,f b)
 
--- |Prevent further user writes to the map. All user write operations will throw an exception after
---  running this function. This does not apply to the SyncNow action, if used, which will
---  update the map to its correct state when run.
+-- |Prevent further writes to the map. All write operations will throw an exception after
+--  evaluating this function. Only the 'SyncNow' action may alter the map hereafter,
+--  by deleting items from the map that were queued for deletion before enabling
+--  read-only access.
 makeReadOnly :: DiskMap k v -> IO ()
 makeReadOnly (DiskMap _ _ _ readOnlyTVar) =
     atomically $ writeTVar readOnlyTVar True

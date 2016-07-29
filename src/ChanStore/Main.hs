@@ -17,6 +17,7 @@ import           PayChanServer.Util (decodeFromBody, writeBinary,
                               internalError, userError, getPathArg, getQueryArg, getOptionalQueryArg,
                               errorWithDescription)
 import           PayChanServer.Init (installHandlerKillThreadOnSig)
+import           Common.Common (pathParamEncode)
 import           Control.Concurrent (myThreadId)
 import qualified System.Posix.Signals as Sig
 
@@ -28,6 +29,7 @@ import           Snap -- (serveSnaplet)
 import           Snap.Http.Server -- (defaultConfig, httpServe)
 import           Control.Applicative ((<|>))
 
+import           Data.String.Conversions (cs)
 import           Control.Monad (unless)
 import           Control.Monad.IO.Class (liftIO, MonadIO)
 import           Control.Monad.Catch (bracket, finally, try)
@@ -109,13 +111,12 @@ settleByExp m = do
 settleFin :: ChannelMap -> Snap ()
 settleFin m = do
     key <- getPathArg "funding_outpoint"
---     bs <- readRequestBody 2048
---     liftIO $ print bs
     settleTxId <- decodeFromBody 32
-    liftIO $ print (settleTxId :: HT.TxHash)
     res <- tryDBRequest $ finishSettlingChannel m (key,settleTxId)
     case res of
-        (ItemUpdated _ _) -> return ()
+        (ItemUpdated _ _) -> liftIO . putStrLn $
+            "Settled channel " ++ cs (pathParamEncode key) ++
+            " with settlement txid: " ++ cs (pathParamEncode settleTxId)
         NotUpdated -> userError $ "Channel isn't in the process of being settled." ++
                                   " Did you begin settlement first?" ++
                                   " Also, are you sure you have the right key?"

@@ -31,6 +31,8 @@ createChanMap (ServerDBConf syncDir syncInterval) =
         return $ ChannelMap map Nothing
     else do
         (map,Just syncAction) <- newDiskMap syncDir True
+        putStrLn $ "INFO: Deferred sync enabled. Syncing every " ++
+            show syncInterval ++ " seconds."
         threadId <- forkIO $ syncThread syncAction syncInterval
         return $ ChannelMap map $ Just (syncAction,threadId)
 
