@@ -107,16 +107,13 @@ class (Serializable k, Eq k, Hashable k) => ToFileName k where
 --- Interface ---
 -- |
 newDiskMap :: (ToFileName k, Serializable v) =>
-    -- |Directory where state files will be kept.
-    --  The map is restored from this directory as well.
-    FilePath
-    -- |Don't sync to disk immediately on each map update, but instead return a sync IO action
-    -- which, when evaluated, performs the sync.
-    -- Any updates written to the map after evaluating the sync action are lost, unless the
-    --  sync action is executed again, before destroying the map. The 'isSynced' function
-    --  returns a boolean indicating whether the map in question is synced to disk, or contains
-    --  unsyned updates.
-    -> Bool
+    FilePath -- ^ Directory where state files will be kept. The map is restored from this directory as well.
+    -> Bool  -- ^ Don't sync to disk immediately on each map update, but instead return a sync IO action
+             -- which, when evaluated, performs the sync.
+             -- Any updates written to the map after evaluating the sync action are lost, unless the
+             --  sync action is executed again, before destroying the map. The 'isSynced' function
+             --  returns a boolean indicating whether the map in question is synced to disk, or contains
+             --  unsyned updates.
     -> IO (DiskMap k v, Maybe SyncAction)  -- ^New map and, optionally, a sync IO action
 newDiskMap syncDir deferSync = do
     -- Restore STMMap from disk files
