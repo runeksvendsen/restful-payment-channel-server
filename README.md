@@ -51,16 +51,19 @@ The `runEverything.sh` script runs all three components, taking as argument the 
 
     ./runEverything.sh config/debug/
 
-### Documentation
-See [http://paychandoc.runeks.me/](http://paychandoc.runeks.me/).
-
 ### Testing
-The `benchPayChanServer.sh` script (located in `test/`) executes a payment session (open,pay,close), performing a specified number of payments, for each thread. Usage:
+Setting the `debug.enable` config option to `true` disables any Blockchain querying. This includes both checking the funding address for funding, and publishing a settlement transaction to the Bitcoin network when the channel is closed. The funding information, that would otherwise have been queried from the Blockchain, is derived deterministically from the sender public key and expiration time: the *funding transaction hash* is set to the SHA256 hash of the client pubkey, the *vout*/*output index* is set to `expiration_timestamp \`mod\` 7`, and the *value* is set to a constant of **12345678900000**.
+
+So first set the `debug.enable` option to `true`, for the target server. Then, the `benchPayChanServer.sh` script (located in `test/`) can be used, which executes a payment session (open,pay,close), and performs the specified number of payments, in the specified number of threads, using the debug-derived funding information. Usage:
 
     # First start server, in separate terminal (note pubkey):
     ./runEverything.sh config/debug/
     # Then execute test threads (1000 payments, 10 threads), passing the server pubkey as the last argument:
     ./benchPayChanServer.sh 1000 10 localhost:8000 0225b3aaf58992a8cc909522c2ec859ef218fd29fda0a6723cfb4e0529f80cc8f3
+
+### Documentation
+See [http://paychandoc.runeks.me/](http://paychandoc.runeks.me/).
+
 
 ### Performance
 On my 2015 Macbook Pro I get ~900 payments per second running the `benchPayChanServer.sh` script:
