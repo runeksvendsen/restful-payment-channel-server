@@ -26,7 +26,6 @@ import           Control.Concurrent (ThreadId)
 import           Control.Concurrent (throwTo)
 import qualified Control.Exception as E
 import           Data.Maybe (isNothing)
-import           Control.Exception (try)
 
 
 
@@ -42,13 +41,9 @@ appInit cfg databaseConn = makeSnaplet "PayChanServer" "RESTful Bitcoin payment 
     bitcoinNetwork <- liftIO (configLookupOrFail cfg "bitcoin.network")
     liftIO $ setBitcoinNetwork bitcoinNetwork
 
-    (ServerSettleConfig settleFee settlePeriod) <- liftIO $ getServerSettleConfig cfg
+    (ServerSettleConfig settleFee _) <- liftIO $ getServerSettleConfig cfg
 
-    openConfig@(OpenConfig minConfOpen basePrice addSettleFee _) <- OpenConfig <$>
-            liftIO (configLookupOrFail cfg "open.fundingTxMinConf") <*>
-            liftIO (configLookupOrFail cfg "open.basePrice") <*>
-            liftIO (configLookupOrFail cfg "open.priceAddSettlementFee") <*>
-            liftIO (configLookupOrFail cfg "open.minDurationHours")
+    openConfig@(OpenConfig _ basePrice addSettleFee _) <- liftIO $ getChanOpenConf cfg
     let confOpenPrice = if addSettleFee then basePrice + settleFee else basePrice
 
     signingServiceConn <- liftIO $ getSigningServiceConn cfg

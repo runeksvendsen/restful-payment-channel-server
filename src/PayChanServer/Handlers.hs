@@ -88,7 +88,7 @@ chanSettle :: MonadSnap m =>
     -> m ()
 chanSettle (StdConfig chanMap chanId clientPayment) settleChannel valRecvd = do
     chanState <- getChannelStateOr404 chanMap chanId
-
+    -- Authenticate. Most recent channel payment is supplied by client as a token.
     let confirmClientPayment storedPayment =
             unless (clientPayment == storedPayment) $
                 userError "Invalid payment. Please provide most recent channel payment."

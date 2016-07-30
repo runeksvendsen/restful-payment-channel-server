@@ -3,10 +3,10 @@
 module  PayChanServer.Config.Util
 (
 loadConfig,configLookupOrFail,
-getServerSettleConfig,getSigningSettleConfig,
+getChanOpenConf,getServerSettleConfig,getSigningSettleConfig,
 getBitcoindConf,getSigningServiceConn,
 BitcoinNet,
-setBitcoinNetwork,toPathString,
+setBitcoinNetwork,
 getDBConf,
 getServerDBConf,connFromDBConf,
 configDebugIsEnabled,
@@ -37,6 +37,8 @@ import           Data.String.Conversions (cs)
 import           ChanStore.Lib.Types (ConnManager)
 import           PayChanServer.Types
 import           Bitcoind (BTCRPCInfo(..))
+
+
 
 -- |Optional. If set to True, bypasses funding/settlement in order to enable testing
 configDebugIsEnabled :: Config -> IO Bool
@@ -79,6 +81,13 @@ getDBConf cfg = DBConf <$>
     configLookupOrFail cfg "chanStore.port" <*>
     configLookupOrFail cfg "chanStore.clientConnPoolSize"
 
+getChanOpenConf :: Config -> IO OpenConfig
+getChanOpenConf cfg = OpenConfig <$>
+    configLookupOrFail cfg "open.fundingTxMinConf" <*>
+    configLookupOrFail cfg "open.basePrice" <*>
+    configLookupOrFail cfg "open.priceAddSettlementFee" <*>
+    configLookupOrFail cfg "open.minDurationHours"
+
 getServerSettleConfig :: Config -> IO ServerSettleConfig
 getServerSettleConfig cfg = ServerSettleConfig <$>
         fmap calcSettlementFeeSPB (configLookupOrFail cfg "settlement.txFeeSatoshiPerByte") <*>
@@ -98,17 +107,11 @@ getBitcoindConf cfg = BTCRPCInfo <$>
     configLookupOrFail cfg "bitcoin.bitcoindRPC.pass" <*>
     configDebugIsEnabled cfg
 
--- | Roughly accurate (±10%-ish)
+-- | Roughly accurate (±10%-ish), because we know the two possible sizes (one/two outputs)
+--  of the settlement transaction. Could use refinement.
 calcSettlementFeeSPB :: BitcoinAmount -> BitcoinAmount
 calcSettlementFeeSPB satoshisPerByte = 331 * satoshisPerByte
 
 setBitcoinNetwork :: BitcoinNet -> IO ()
 setBitcoinNetwork Mainnet = return ()
 setBitcoinNetwork Testnet3 = HCC.switchToTestnet3
-
-toPathString :: BitcoinNet -> BS.ByteString
-toPathString Mainnet = "live"
-toPathString Testnet3 = "test"
-
-
-

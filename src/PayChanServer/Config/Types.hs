@@ -16,7 +16,8 @@ import           Data.Configurator.Types
 import           Common.Common (fromHexString)
 import           Data.Ratio
 import           Data.String.Conversions (cs)
--- (OpenConfig minConf basePrice)
+
+
 
 data OpenConfig = OpenConfig {
     openMinConf         :: Word            -- minConf
