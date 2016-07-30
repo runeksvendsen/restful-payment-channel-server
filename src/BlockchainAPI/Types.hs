@@ -1,9 +1,9 @@
 module BlockchainAPI.Types where
 
 import           Data.Bitcoin.PaymentChannel.Types (FundingTxInfo(..))
+import           Data.Bitcoin.PaymentChannel.Util (parseJSONInt)
 import           Network.Haskoin.Transaction  (TxHash)
 import qualified Data.Text as T
-import           Common.Common (parseJSONInt)
 import           Data.Aeson   (withScientific, withText, Value)
 import           Data.Aeson.Types   (Parser)
 import           Data.String.Conversions (cs)

@@ -52,6 +52,7 @@ import           ChanStore.Lib.Settlement (expiresEarlierThan)
 import           PayChanServer.Config.Types (openConfig, openMinLengthHours)
 import           Data.Time.Clock (getCurrentTime)
 
+
 dummyKey :: HT.OutPoint
 dummyKey = HT.OutPoint dummyTxId 0
 
@@ -61,9 +62,6 @@ dummyTxId = HT.TxHash "000000000000000000000000000000000000000000000000000000000
 getAppRootURL :: MonadSnap m => BS.ByteString -> m String
 getAppRootURL basePath = do
     serverName <- getsRequest rqServerName
-    serverPort <- getsRequest rqServerPort
---     let finalHostname = if serverPort == 80 then serverName else
---             serverName <> ":" <> cs (show serverPort)
     isSecure <- getsRequest rqIsSecure
     return $ channelRootURL isSecure serverName basePath
 
@@ -72,7 +70,6 @@ httpLocationSetActiveChannel basePath chanId = do
     chanRootURL <- getAppRootURL basePath
     modifyResponse $ setHeader "Location" (cs $ chanRootURL ++ activeChannelPath chanId)
 
-
 fundingAddressFromParams :: MonadSnap m => HC.PubKey -> m HC.Address
 fundingAddressFromParams pubKey =
     flip getFundingAddress' pubKey <$>
@@ -80,7 +77,7 @@ fundingAddressFromParams pubKey =
         getQueryArg "exp_time"
 
 
----- Blockchain API ----
+---- Blockchain API (Deprecated)----
 txInfoFromAddr :: MonadSnap m => HC.Address -> m TxInfo
 txInfoFromAddr fundAddr = do
     maybeTxId <- liftIO $ txIDFromAddr (toString fundAddr)
@@ -182,6 +179,8 @@ proceedIfExhausted :: MonadSnap m => (ChannelStatus,BitcoinAmount) -> m BitcoinA
 proceedIfExhausted (ChannelOpen,_)          = finishWith =<< getResponse
 proceedIfExhausted (ChannelClosed,valRecvd) = return valRecvd
 
+-- TODO: Figure out how to bake this into all handlers.
+--  Currently we apply it manually to each handler (snap-cors lib doesn't work)
 applyCORS' :: MonadSnap m => m ()
 applyCORS' = do
     modifyResponse $ setHeader "Access-Control-Allow-Origin"    "*"
@@ -207,15 +206,6 @@ writePaymentResult (valRecvd,recvChanState) =
             }
             return (chanStatus,valRecvd)
 
-maybeUpdateChangeAddress :: MonadSnap m =>
-    Maybe HC.Address
-    -> ReceiverPaymentChannel
-    -> m ReceiverPaymentChannel
-maybeUpdateChangeAddress maybeAddr state =
-    maybe (return state) updateAddressAndLog maybeAddr
-        where updateAddressAndLog addr = do
-                liftIO . putStrLn $ "Updating client change address to " ++ toString addr
-                return $ setSenderChangeAddress state addr
 
 checkExpirationTime :: BitcoinLockTime -> Handler App App  BitcoinLockTime
 checkExpirationTime lockTime = do
@@ -231,6 +221,19 @@ checkExpirationTime lockTime = do
                         show minDurationHours ++ " hours"
                 else
                     return lockTime
+
+-- |Not used. A protocol feature that has been dropped, so far
+--  (the client changing its change address for an open channel).
+maybeUpdateChangeAddress :: MonadSnap m =>
+    Maybe HC.Address
+    -> ReceiverPaymentChannel
+    -> m ReceiverPaymentChannel
+maybeUpdateChangeAddress maybeAddr state =
+    maybe (return state) updateAddressAndLog maybeAddr
+        where updateAddressAndLog addr = do
+                liftIO . putStrLn $ "Updating client change address to " ++ toString addr
+                return $ setSenderChangeAddress state addr
+
 
 --- Util ---
 
@@ -267,35 +270,3 @@ test_GetDerivedFundingInfo pubKeyServer = do
 --- Funding ---
 
 
-
-
--- reqBoundedJSON :: (MonadSnap m, FromJSON a) => Int64 -> m (Either String a)
--- reqBoundedJSON n = fmap eitherDecode (readRequestBody n)
---
--- getHeaderOrFail :: MonadSnap m => CI BS.ByteString -> m BS.ByteString
--- getHeaderOrFail h = do
---     r <- getRequest
---     maybe (userError $ cs (original h) ++ " header not present") return (getHeader h r)
---
--- headerGetPayment :: MonadSnap m => m Payment
--- headerGetPayment = do
---     pBS <- getHeaderOrFail "Payment-Payload"
---     case fromJSON . String . cs $ pBS of
---         Error e -> userError $ "failed to decode payment payload: " ++ e
---         Success p -> return p
---
--- bodyJSONGetPayment :: MonadSnap m => m Payment
--- bodyJSONGetPayment =
---     reqBoundedJSON 1024 >>=
---     either (userError . ("Failed to parse Payment: " ++)) (return . paymentpayment_data)
-
-
-
--- logFundingInfo :: MonadSnap m => m ()
--- logFundingInfo  = do
---     pk <- getQueryArg "client_pubkey"
---     expTime <- getQueryArg "exp_time"
---     liftIO . putStrLn $ printf
---         "Got fundingInfo request: pubkey=%s exp=%s"
---             (show (pk :: HC.PubKey))
---             (show (expTime :: BitcoinLockTime))

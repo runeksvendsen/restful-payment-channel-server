@@ -64,7 +64,8 @@ Executable PayChanServer
 
 
   other-modules: PayChanServer.App,
-                 Common.Common
+                 Common.Common,
+                 Common.Types
 
 
 Executable ChanStore

@@ -4,7 +4,7 @@
 module BlockchainAPI.Impl.BlockrIo where
 
 import BlockchainAPI.Types (OutInfo(..), TxInfo(..), parseBTCAmount)
-import Common.Common (parseJSONInt)
+import           Data.Bitcoin.PaymentChannel.Util (parseJSONInt)
 
 import           Control.Concurrent (threadDelay)
 import           Control.Monad      (mzero, unless)

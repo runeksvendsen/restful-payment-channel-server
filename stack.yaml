@@ -7,7 +7,7 @@ packages:
 - '.'
 - location:
     git: https://github.com/runeksvendsen/bitcoin-payment-channel.git
-    commit: 5aa2f43e85e1907551aac71726e8f1a2e4009231
+    commit: 68357ceab65659776258d0734e1a208399b635c5
   extra-dep: true
 - location:
     git: https://github.com/runeksvendsen/haskell-bitcoin-api.git
@@ -25,11 +25,11 @@ extra-deps:
 - pbkdf-1.1.1.1
 - secp256k1-0.4.5
 - text-1.2.2.0
-- JsonGrammar-1.0.4
-- language-typescript-0.0.4
-- stack-prism-0.1.5
-- snap-cors-1.2.9
-- higher-leveldb-0.3.1.0
+#- JsonGrammar-1.0.4
+#- language-typescript-0.0.4
+#- stack-prism-0.1.5
+#- snap-cors-1.2.9
+#- higher-leveldb-0.3.1.0
 - spawn-0.3
 
 

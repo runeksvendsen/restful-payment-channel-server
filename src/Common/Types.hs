@@ -29,6 +29,7 @@ import qualified Network.Haskoin.Transaction as HT
 import qualified Network.Haskoin.Crypto as HC
 import Data.String.Conversions (cs)
 
+
 -- |
 data ChanOpenResult = ChanOpenResult
     { chanOpenResultchannel_uri :: Text -- ^ The URI of the newly opened channel. Payments are PUT on this URI.

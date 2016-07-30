@@ -14,19 +14,25 @@ import           Control.Exception (try)
 import           Control.Concurrent (threadDelay)
 import           Network.HTTP.Client (HttpException (..))
 import           Data.EitherR (fmapL)
-
+import           System.IO (hFlush, stdout)
 
 
 
 waitConnect :: String -> IO a -> IO a
-waitConnect name ioa = do
-    eitherError <- try $ ioa
-    case eitherError of
-        Left (e :: HttpException) -> do
-                putStr $ "\nFailed to connect to " ++ name ++ ". Waiting 3s and retrying... "
-                threadDelay $ fromIntegral $ round $ 3 * 1e6
-                waitConnect name ioa
-        Right res -> return res
+waitConnect serviceName ioa = do
+    let tryAsEither = try ioa
+    -- Keep trying to connect
+    let loopGet = do
+            eitherError <- tryAsEither
+            case eitherError of
+                Left (_ :: HttpException) -> do
+                        threadDelay $ fromIntegral $ round $ 0.1 * 1e6
+                        loopGet
+                Right res -> return res
+    let logNoConn = putStr $ " offline. Waiting for " ++ serviceName ++ " to come online... "
+    -- First try to connect. if there's no connection: log; make it print everything to stdout;
+    --  loop
+    either (\_ -> logNoConn >> hFlush stdout >> loopGet) return =<< tryAsEither
 
 tryDBRequest :: MonadSnap m => IO a -> m a
 tryDBRequest ioa = liftIO (tryHTTPRequestOfType "Database" ioa) >>=

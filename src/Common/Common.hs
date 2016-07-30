@@ -6,28 +6,13 @@
 
 module Common.Common where
 
-import           Common.Types
-
 import           Data.Bitcoin.PaymentChannel
 import           Data.Bitcoin.PaymentChannel.Types (BitcoinAmount, Payment, ChannelParameters(..), b64Encode)
 
-
-import           Control.Monad (mzero)
-import           Control.Monad.IO.Class (liftIO)
-
-import           Control.Lens ((^.))
-import           Network.Wreq (get, asJSON, responseBody, Response)
-
-import qualified Crypto.Secp256k1 as Secp
-import           Data.Aeson.Encode.Pretty (encodePretty)
-import           Data.Aeson.Types (Parser, parseMaybe, parseEither)
 import           Data.Aeson
     (Result(..), Value(Number, Object, String), FromJSON, ToJSON, parseJSON, toJSON,
     fromJSON, withScientific, eitherDecodeStrict, encode, decode, (.=), (.:), object)
-import Data.Maybe (fromJust)
-import Data.Scientific (Scientific, toBoundedInteger, scientific, coefficient)
-import Data.ByteString.Lazy (toStrict)
-import Data.Time.Clock (getCurrentTime)
+
 import           Data.Bitcoin.PaymentChannel.Util
 import qualified Network.Haskoin.Transaction as HT
 import qualified Network.Haskoin.Crypto as HC
@@ -35,14 +20,15 @@ import qualified Network.Haskoin.Util as HU
 import qualified Data.ByteString as BS
 import qualified Data.ByteString.Char8 as C
 import qualified Data.ByteString.Base16 as B16
-import           Data.Word (Word8, Word32, Word64)
-import           Data.Maybe (listToMaybe)
+import           Data.Word (Word32)
 import           Data.EitherR (fmapL)
 import           Data.String.Conversions (cs)
 import           Text.Printf (printf)
 import qualified Data.Binary as Bin
 import           Data.Time.Clock (UTCTime)
 import           Data.Time.Clock.POSIX (utcTimeToPOSIXSeconds, posixSecondsToUTCTime)
+
+
 
 -- |Types that can be encoded to fit in a URL parameter
 class URLParamEncode a where
@@ -81,14 +67,11 @@ instance URLParamEncode BitcoinAmount where
 instance URLParamEncode UTCTime where
     pathParamEncode t = pathParamEncode
         (round $ utcTimeToPOSIXSeconds t :: Integer)
-----
 
-----
+
 -- |Types that can be decoded from an URL parameter
 class URLParamEncode a => URLParamDecode a where
     pathParamDecode :: BS.ByteString -> Either String a
-
-decodeHex bs = maybe (Left "invalid hex string") Right (HU.decodeHex bs)
 
 instance URLParamDecode HC.PubKey where
     pathParamDecode bs =
@@ -119,10 +102,6 @@ instance URLParamDecode Payment where
             Error e -> Left $ "payment parse failure: " ++ e
             Success p -> Right p
 
-decodeVout :: (Num a, FromJSON a) => BS.ByteString -> Either String a
-decodeVout bs = maybe
-    (Left "failed to decode funding tx vout") Right (decode . cs $ bs)
-
 instance URLParamDecode Integer where
     pathParamDecode = decodeVout
 
@@ -144,10 +123,15 @@ instance URLParamDecode UTCTime where
     pathParamDecode bs = (posixSecondsToUTCTime . fromIntegral)
         <$> (decodeVout bs :: Either String Integer)
 
+decodeVout :: (Num a, FromJSON a) => BS.ByteString -> Either String a
+decodeVout bs = maybe
+    (Left "failed to decode funding tx vout") Right (decode . cs $ bs)
+
+decodeHex bs = maybe (Left "invalid hex string") Right (HU.decodeHex bs)
 ----
 
 
-----URLs----
+---- URLs
 channelRootURL :: Bool -> BS.ByteString -> BS.ByteString -> String
 channelRootURL isSecure hostname basePath =
     printf "%s://%s%s"
@@ -155,23 +139,22 @@ channelRootURL isSecure hostname basePath =
         (cs hostname :: String)
         (cs basePath :: String)
 
-fundingInfoURL :: Bool -> String -> BS.ByteString -> HC.PubKey -> BitcoinLockTime ->  String
-fundingInfoURL isSecure host basePath sendPK expTime =
-    channelRootURL isSecure (cs host) basePath ++ "/fundingInfo" ++
-    printf "?client_pubkey=%s&exp_time=%d"
-        (cs $ pathParamEncode sendPK :: String)
-        (toWord32 expTime)
-
--- /channels/new" -- ?client_pubkey&exp_time
-channelOpenURL :: Bool -> String -> BS.ByteString -> HC.PubKey -> BitcoinLockTime -> String
-channelOpenURL isSecure host basePath sendPK expTime =
-    channelRootURL isSecure (cs host) basePath ++ channelOpenPath sendPK expTime
-
 channelOpenPath :: HC.PubKey -> BitcoinLockTime -> String
 channelOpenPath sendPK expTime = "/channels/new" ++
     printf "?client_pubkey=%s&exp_time=%s"
         (cs $ pathParamEncode sendPK :: String)
         (cs $ pathParamEncode expTime :: String)
+
+activeChannelPath :: HT.OutPoint -> String
+activeChannelPath (HT.OutPoint txid vout)  = "/channels/" ++
+    cs (pathParamEncode txid) ++ "/" ++
+    cs (pathParamEncode vout)
+
+--- Test URLS
+-- /channels/new" -- ?client_pubkey&exp_time
+channelOpenURL :: Bool -> String -> BS.ByteString -> HC.PubKey -> BitcoinLockTime -> String
+channelOpenURL isSecure host basePath sendPK expTime =
+    channelRootURL isSecure (cs host) basePath ++ channelOpenPath sendPK expTime
 
 mkOpenQueryParams :: HC.Address -> Payment -> String
 mkOpenQueryParams chgAddr payment =
@@ -179,19 +162,9 @@ mkOpenQueryParams chgAddr payment =
         (cs $ pathParamEncode chgAddr :: String)
         (cs $ pathParamEncode payment :: String)
 
-mkOpenPath :: HC.PubKey -> BitcoinLockTime -> HC.Address -> Payment -> String
-mkOpenPath sendPK expTime chgAddr payment =
-    channelOpenPath sendPK expTime ++ mkOpenQueryParams chgAddr payment
-
--- https://localhost/channels/f583e0b.../1
-activeChannelURL :: Bool -> BS.ByteString -> BS.ByteString -> HT.OutPoint -> String
-activeChannelURL isSecure host basePath chanId =
-    channelRootURL isSecure (cs host) basePath ++ activeChannelPath chanId
-
-activeChannelPath :: HT.OutPoint -> String
-activeChannelPath (HT.OutPoint txid vout)  = "/channels/" ++
-    cs (pathParamEncode txid) ++ "/" ++
-    cs (pathParamEncode vout)
+mkPaymentURL :: Bool -> String -> BS.ByteString -> HT.OutPoint -> Payment -> String
+mkPaymentURL isSecure host basePath chanId payment  =
+    activeChannelURL isSecure (cs host) basePath chanId ++ mkPaymentQueryParams payment Nothing
 
 -- ?payment=AAf8s...(&change_address=2Nuz3s...)
 mkPaymentQueryParams :: Payment -> Maybe HC.Address -> String
@@ -200,9 +173,11 @@ mkPaymentQueryParams payment maybeAddr =
         (cs $ pathParamEncode payment :: String) ++
     maybe "" (\addr -> "&change_address=" ++ (cs . pathParamEncode $ addr)) maybeAddr
 
-mkPaymentURL :: Bool -> String -> BS.ByteString -> HT.OutPoint -> Payment -> String
-mkPaymentURL isSecure host basePath chanId payment  =
-    activeChannelURL isSecure (cs host) basePath chanId ++ mkPaymentQueryParams payment Nothing
+-- https://localhost/channels/f583e0b.../1
+activeChannelURL :: Bool -> BS.ByteString -> BS.ByteString -> HT.OutPoint -> String
+activeChannelURL isSecure host basePath chanId =
+    channelRootURL isSecure (cs host) basePath ++ activeChannelPath chanId
+--- Test URLs
 
 ----URLs-----
 
@@ -217,40 +192,6 @@ toString = C.unpack . HC.addrToBase58
 
 
 
-
-
-
-
-
-
------
-
-newtype Satoshi = Satoshi Integer deriving (Eq, Num, Ord, Enum, Real, Integral)
-instance Bounded Satoshi where
-    minBound = Satoshi 0
-    maxBound = Satoshi $ round $ 21e6 * 1e8 -- Will work fine for a Word32, too.
-
-instance ToJSON BitcoinLockTime where
-    toJSON blt = Number $ scientific
-        (fromIntegral $ toWord32 blt) 0
-
-instance FromJSON BitcoinLockTime where
-    parseJSON = withScientific "BitcoinLockTime" $
-        fmap (parseBitcoinLocktime . fromIntegral) . parseJSONInt
-
-parseJSONInt :: Scientific -> Parser Integer
-parseJSONInt = fmap fromIntegral . parseJSONWord
-
-parseJSONWord :: Scientific -> Parser Word64
-parseJSONWord s =
-    case toBoundedInteger s of
-        Just w -> return w
-        Nothing -> fail $ "failed to decode JSON number to Word64. data: " ++ show s
-
------
-
-toJSONNum :: Integral a => a -> Value
-toJSONNum i = Number $ scientific (toInteger i) 0
 
 fromHexString :: String -> BS.ByteString
 fromHexString hexStr =
