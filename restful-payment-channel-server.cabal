@@ -159,7 +159,7 @@ Executable SigningService
 --    string-conversions
 
 Library
-  exposed-modules:      DiskMap
+  exposed-modules:      Data.DiskMap
   ghc-options:          -W -O2 -threaded -with-rtsopts=-N
 
   build-depends:        base                      >= 4     && < 5,

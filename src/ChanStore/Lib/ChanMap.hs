@@ -3,7 +3,7 @@
 module ChanStore.Lib.ChanMap where
 
 
-import           DiskMap (newDiskMap, SyncAction,
+import           Data.DiskMap (newDiskMap, SyncAction,
                             addItem, getItem,
                             CreateResult,
                             mapGetItem,

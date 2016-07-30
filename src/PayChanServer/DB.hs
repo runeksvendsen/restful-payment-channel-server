@@ -18,10 +18,14 @@ import           System.IO (hFlush, stdout)
 import           Text.Printf (printf)
 
 
--- |Keep trying to connect (only used during startup)
+-- |Keep trying to connect (only used during startup).
+--  If we fail to get a result because host is offline:
+--   log about it, then keep trying every 'delaySecs'
+--   seconds until we get a result.
 initWaitConnect :: String -> IO a -> IO a
 initWaitConnect serviceName ioa = do
-    let checkIsFailedConnect e =
+    let delaySecs = 0.1
+    let isFailedConnectOrThrow e =
             case e of
                 FailedConnectionException  host port     -> return (host,port)
                 FailedConnectionException2 host port _ _ -> return (host,port)
@@ -31,8 +35,8 @@ initWaitConnect serviceName ioa = do
             eitherError <- getter
             case eitherError of
                 Left (e :: HttpException) -> do
-                        checkIsFailedConnect e
-                        threadDelay (fromIntegral $ round $ 0.1 * 1e6)
+                        isFailedConnectOrThrow e
+                        threadDelay (fromIntegral $ round $ delaySecs * 1e6)
                         loopGet getter
                 Right res -> return res
     let logNoConnection (host,port) = putStr $ printf
@@ -41,7 +45,7 @@ initWaitConnect serviceName ioa = do
     let tryAsEither = try ioa
     tryAsEither >>= either  -- <- First try to connect
         -- If there's no connection: log; make it print everything to stdout; wait in loop
-        (\e -> checkIsFailedConnect e >>= logNoConnection >> hFlush stdout >> loopGet tryAsEither)
+        (\e -> isFailedConnectOrThrow e >>= logNoConnection >> hFlush stdout >> loopGet tryAsEither)
         return
 
 tryDBRequest :: MonadSnap m => IO a -> m a

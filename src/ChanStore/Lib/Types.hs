@@ -12,7 +12,7 @@ ChannelMap(..)
 where
 
 
-import           DiskMap (DiskMap, SyncAction,
+import           Data.DiskMap (DiskMap, SyncAction,
                             CreateResult(..),
                             Serializable(..), ToFileName(..), Hashable(..), MapItemResult(..))
 

@@ -1,7 +1,7 @@
 module ChanStore.Lib.Settlement where --TODO: move
 
 import           ChanStore.Lib.Types hiding (UpdateResult(..))
-import           DiskMap (getAllItems,
+import           Data.DiskMap (getAllItems,
                             mapGetItem, mapGetItems, MapItemResult(..),
                             getFilteredKV, getFilteredItems,
                             DiskMap, Serializable(..), ToFileName(..), Hashable(..))
