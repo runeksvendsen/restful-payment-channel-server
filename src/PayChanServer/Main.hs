@@ -2,7 +2,7 @@
 
 module  PayChanServer.Main where
 
-import           PayChanServer.Util -- (Config, loadConfig, configLookupOrFail, getSettleConfig, getBitcoindConf, getDBConf)
+import           Common.Util -- (Config, loadConfig, configLookupOrFail, getSettleConfig, getBitcoindConf, getDBConf)
 import           PayChanServer.Init (appInit, installHandlerKillThreadOnSig)
 import           ChanStore.Lib.Types (ConnManager)
 import           PayChanServer.Settlement (settlementThread)

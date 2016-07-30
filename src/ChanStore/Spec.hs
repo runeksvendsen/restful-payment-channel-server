@@ -5,7 +5,7 @@ module ChanStore.Spec where
 import ChanStore.Lib.Types
 import ConnManager.RequestRunner
 
-import           Common.Common (pathParamEncode)
+import           Common.URLParam (pathParamEncode)
 import           Data.Bitcoin.PaymentChannel.Types (ReceiverPaymentChannel, Payment)
 
 import qualified Network.Haskoin.Transaction as HT

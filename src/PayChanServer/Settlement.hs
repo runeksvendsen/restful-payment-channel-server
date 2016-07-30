@@ -1,4 +1,8 @@
-
+{-|
+Deals with settling channels. Both channels for expiry
+(by querying the ChanStore) and channels that are settled either
+because the client requested it or
+-}
 
 module  PayChanServer.Settlement
 (
@@ -15,7 +19,7 @@ import           PayChanServer.DB (tryHTTPRequestOfType)
 import           ChanStore.Interface  as DBConn
 
 import           Data.Bitcoin.PaymentChannel.Types (ReceiverPaymentChannel, BitcoinAmount,
-                                                    PaymentChannel(getChannelID), BitcoinLockTime(..))
+                                                    PaymentChannel(getChannelID))
 import           Bitcoind (BTCRPCInfo, bitcoindNetworkSumbitTx)
 import           SigningService.Interface (signSettlementTx)
 
@@ -26,13 +30,12 @@ import           Control.Concurrent  (threadDelay)
 import           Control.Monad (forM)
 
 
+-- TODO: Figure out how to alert the server operator of important errors
+-- Send email? (first step implementation: PayChanServer.Misc.Email)
 logImportantError = putStrLn
 logImportantErrorThenFail e = logImportantError e >> error e
 
-
-
-
---- Generic (because of either expiration date or value exhaustion) settlement (move somewhere else?)
+-- | Fully settle a given payment channel; return settlement txid
 settleChannel ::
     ConnManager
     -> ConnManager
@@ -44,23 +47,8 @@ settleChannel dbConn signConn rpcInfo txFee rpc =
     tryRequest "BeginSettle" (DBConn.settleByIdBegin dbConn (getChannelID rpc))
         >>= finishSettleChannel dbConn signConn rpcInfo txFee
 
--- Utility function
-finishSettleChannel ::
-    ConnManager
-    -> ConnManager
-    -> BTCRPCInfo
-    -> BitcoinAmount
-    -> ReceiverPaymentChannel
-    -> IO HT.TxHash
-finishSettleChannel dbConn signConn rpcInfo txFee rpc = do
-    settlementTx   <- tryRequest "Signing" (signSettlementTx signConn txFee rpc)
-    settlementTxId <- tryBitcoind =<< bitcoindNetworkSumbitTx rpcInfo settlementTx -- HEY
-    tryRequest "FinishSettle" (DBConn.settleFin dbConn (getChannelID rpc) settlementTxId)
-    return settlementTxId
----
-
-
--- |
+-- | Thread that queries the ChanStore for channels close to expiriry,
+--   and settles them
 settlementThread ::
     ConnManager
     -> ConnManager
@@ -80,7 +68,26 @@ settlementThread dbConn signConn settleConf rpcInfo delaySecs =
     )
     `finally` (    -- Regardless of what happens, keep thread running
         settlementThread dbConn signConn settleConf rpcInfo delaySecs )
----
+
+-- | After getting the channel state (ReceiverPaymentChannel) from the DB while
+--   simultaneously marking it as being closed, this function is used
+--   to produce and publish the settlement tx.
+--  First the SettlementService creates and signs the tx, then we submit this to
+--   the Bitcoin network, and finally mark the channel as completely closed
+--   in the ChanStore.
+finishSettleChannel ::
+    ConnManager
+    -> ConnManager
+    -> BTCRPCInfo
+    -> BitcoinAmount
+    -> ReceiverPaymentChannel
+    -> IO HT.TxHash
+finishSettleChannel dbConn signConn rpcInfo txFee rpc = do
+    settlementTx   <- tryRequest "Signing" (signSettlementTx signConn txFee rpc)
+    settlementTxId <- tryBitcoind =<< bitcoindNetworkSumbitTx rpcInfo settlementTx -- HEY
+    tryRequest "FinishSettle" (DBConn.settleFin dbConn (getChannelID rpc) settlementTxId)
+    return settlementTxId
+        where tryBitcoind = either logImportantErrorThenFail return
 
 
 --- Time-based settlement
@@ -103,13 +110,8 @@ getExpirationDateCutoff settlePeriodHours = do
     -- So we get the current time, add to it our head start, and get all channels
     --  expiring *before* the resulting date.
     return $ settlePeriodSecsOffset `addUTCTime` now
----
 
-
---- Util
-tryBitcoind = either logImportantErrorThenFail return
 
 tryRequest typeStr req = either logImportantErrorThenFail return =<<
                          tryHTTPRequestOfType typeStr req
----
 

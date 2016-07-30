@@ -6,7 +6,7 @@ import           ConnManager.RequestRunner (ReqParams(..))
 import           ChanStore.Lib.Types
 import           ConnManager.Connection
 -- import           Data.Bitcoin.PaymentChannel.Util (deserEither)
-import           Common.Common (pathParamEncode)
+import           Common.URLParam (pathParamEncode)
 
 import           Data.Bitcoin.PaymentChannel.Types (ReceiverPaymentChannel, BitcoinAmount)
 import qualified Network.Haskoin.Transaction as HT

@@ -2,7 +2,9 @@
 
 module  PayChanServer.DB where
 
+import           Common.Util
 import           PayChanServer.Util
+
 import qualified ChanStore.Interface as DBConn
 import           Data.Bitcoin.PaymentChannel.Types (ReceiverPaymentChannel, Payment,
                                                     PaymentChannel(getNewestPayment))

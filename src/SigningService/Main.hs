@@ -10,7 +10,7 @@ import           SigningService.Util (produceSettlementTx)
 import           PayChanServer.Main (wrapArg)
 import           PayChanServer.Config.Util (loadConfig, configLookupOrFail, setBitcoinNetwork, getSigningSettleConfig)
 import qualified PayChanServer.Config.Util as Conf (Config)
-import           PayChanServer.Util (writeBinary, decodeFromBody, userError, getQueryArg)
+import           Common.Util (writeBinary, decodeFromBody, userError, getQueryArg)
 import           PayChanServer.Types (SigningSettleConfig(..))
 import           Data.Bitcoin.PaymentChannel.Types (ReceiverPaymentChannel, BitcoinAmount, RecvPubKey(MkRecvPubKey))
 

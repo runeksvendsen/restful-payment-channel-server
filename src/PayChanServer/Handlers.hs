@@ -7,11 +7,13 @@ import           Prelude hiding (userError)
 import           PayChanServer.Types (OpenHandlerConf(..),ChanPayConfig(..),
                                 StdConfig(..))
 import           PayChanServer.Config.Types (App, pubKey, openMinConf, openConfig)
-
-import           Common.Common
-import           Common.Types
-
 import           PayChanServer.Util
+
+import           Common.Util
+import           Common.Types
+import           Common.ResourceURL (channelOpenPath)
+
+import           Common.Util
 import           PayChanServer.DB (tryDBRequest, trySigningRequest,
                             getChannelStateForPayment, getChannelStateForSettlement,
                             confirmChannelDoesntExistOrAbort, getChannelStateOr404)

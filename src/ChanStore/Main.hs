@@ -13,11 +13,11 @@ import           ChanStore.Lib.Settlement (beginSettlingExpiringChannels, beginS
 import           PayChanServer.Main (wrapArg)
 import           PayChanServer.Config.Util (Config, loadConfig, configLookupOrFail,
                                             setBitcoinNetwork, getServerDBConf)
-import           PayChanServer.Util (decodeFromBody, writeBinary,
+import           Common.Util (decodeFromBody, writeBinary,
                               internalError, userError, getPathArg, getQueryArg, getOptionalQueryArg,
                               errorWithDescription)
 import           PayChanServer.Init (installHandlerKillThreadOnSig)
-import           Common.Common (pathParamEncode)
+import           Common.URLParam (pathParamEncode)
 import           Control.Concurrent (myThreadId)
 import qualified System.Posix.Signals as Sig
 

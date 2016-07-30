@@ -3,18 +3,13 @@ module  PayChanServer.Types where
 import           Data.Bitcoin.PaymentChannel.Types (ReceiverPaymentChannel, BitcoinAmount,
                                                     Payment, BitcoinLockTime, FundingTxInfo,
                                                     SendPubKey, RecvPubKey)
--- import           Data.Bitcoin.PaymentChannel.Util (BitcoinLockTime)
 import qualified Network.Haskoin.Crypto as HC
 import qualified Network.Haskoin.Transaction as HT
 
-import           PayChanServer.Config.Types (OpenConfig)
 import           ChanStore.Lib.Types (ConnManager)
 import qualified Data.ByteString as BS
-import           BlockchainAPI.Types (TxInfo)
 
 
-
-type Vout = Integer     -- Output index
 
 data StdConfig = StdConfig {
     serverChanMap   :: ConnManager,
@@ -33,7 +28,6 @@ data OpenHandlerConf = OpenHandlerConf {
    ,ocExpTime       :: BitcoinLockTime
    ,ocInitPayment   :: Payment
 }
-
 
 data ChanPayConfig = PayConfig
     StdConfig (Maybe HC.Address)

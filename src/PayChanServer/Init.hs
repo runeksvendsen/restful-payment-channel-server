@@ -5,7 +5,7 @@ module  PayChanServer.Init where
 
 import           PayChanServer.App  (mainRoutes)
 
-import           PayChanServer.Util
+import           PayChanServer.Util (dummyKey)
 import           PayChanServer.Config.Types
 import           PayChanServer.Config.Util
 import           PayChanServer.Types (ServerSettleConfig(..))
@@ -15,7 +15,7 @@ import           PayChanServer.DB (initWaitConnect)
 import           ChanStore.Interface  as DBConn
 import           SigningService.Interface (getPubKey)
 
-import           Common.Common (pathParamEncode)
+import           Common.URLParam (pathParamEncode)
 
 import           Snap (SnapletInit, makeSnaplet, addRoutes)
 import           Data.String.Conversions (cs)

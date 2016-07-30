@@ -17,9 +17,9 @@ Config
 where
 
 import           PayChanServer.Config.Types
-import           PayChanServer.Util
+import           Common.Util
 import           ConnManager.Connection (newConnManager)
-import           Common.Common (fromHexString)
+import           Common.Util (fromHexString)
 import           Data.Bitcoin.PaymentChannel.Types (BitcoinAmount)
 
 import qualified Network.Haskoin.Transaction as HT

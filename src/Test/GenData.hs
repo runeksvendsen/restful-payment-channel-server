@@ -2,7 +2,9 @@
 
 module Test.GenData where
 
-import Common.Common    (channelOpenURL,mkOpenQueryParams,mkPaymentURL, pathParamDecode)
+import           Common.ResourceURL (channelOpenURL,mkOpenQueryParams,mkPaymentURL)
+import           Common.URLParam   (pathParamDecode)
+
 import           Data.Bitcoin.PaymentChannel (channelWithInitialPaymentOf, sendPayment)
 import           Data.Bitcoin.PaymentChannel.Util (BitcoinLockTime(..), toWord32, parseBitcoinLocktime,
                                                    getFundingAddress)
@@ -16,8 +18,7 @@ import qualified Data.ByteString as BS
 import           Data.Aeson         (object, ToJSON, toJSON, (.=), encode,
                                      Value(Object), parseJSON, FromJSON, (.:))
 import Control.Monad (mzero)
-import Data.Maybe (isJust, fromJust)
-import Data.Word (Word32)
+
 import Data.String.Conversions (cs)
 import qualified Data.Text as T
 import System.Entropy (getEntropy)
@@ -115,7 +116,7 @@ convertMockFundingInfo (CFundingTxInfo txid vout val)  =
     TxInfo txid 27 (OutInfo "" (fromIntegral val) (fromIntegral vout))
 
 deriveMockFundingInfo :: ChannelParameters -> FundingTxInfo
-deriveMockFundingInfo (CChannelParameters sendPK recvPK expTime) =
+deriveMockFundingInfo (CChannelParameters sendPK _ expTime) =
     CFundingTxInfo
         (HT.TxHash $ HC.hash256 $ cs . Bin.encode $ sendPK)
         (toWord32 expTime `mod` 7)

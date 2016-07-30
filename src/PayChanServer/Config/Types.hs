@@ -14,7 +14,7 @@ import qualified Crypto.Secp256k1 as Secp
 import           Control.Lens.TH (makeLenses)
 import qualified Data.ByteString as BS
 import           Data.Configurator.Types
-import           Common.Common (fromHexString)
+import           Common.Util (fromHexString)
 import           Data.Ratio
 import           Data.String.Conversions (cs)
 

@@ -5,10 +5,7 @@ module  PayChanServer.App where
 
 import           Data.Bitcoin.PaymentChannel.Types (ReceiverPaymentChannel, BitcoinAmount)
 
-import           PayChanServer.Util (getPathArg, getQueryArg, getOptionalQueryArg, getAppRootURL,
-                              channelIDFromPathArgs, writePaymentResult, proceedIfExhausted,
-                              blockchainGetFundingInfo, checkExpirationTime,
-                              applyCORS')
+import           Common.Util (getPathArg, getQueryArg, getOptionalQueryArg, applyCORS')
 import           PayChanServer.Util
 import           PayChanServer.Config.Types
 import           PayChanServer.Types ( OpenHandlerConf(..),ChanPayConfig(..),

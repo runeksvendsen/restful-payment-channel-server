@@ -4,7 +4,7 @@ module ConnManager.RequestRunner where
 
 import           ChanStore.Lib.Types
 import           ConnManager.Connection
-import           Common.Common (pathParamEncode)
+import           Common.URLParam (pathParamEncode)
 
 import           Data.Bitcoin.PaymentChannel.Types (ReceiverPaymentChannel, Payment)
 import           Data.Bitcoin.PaymentChannel.Util (deserEither)
