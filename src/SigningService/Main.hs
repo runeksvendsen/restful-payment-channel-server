@@ -12,7 +12,7 @@ import           PayChanServer.Config.Util (loadConfig, configLookupOrFail, setB
 import qualified PayChanServer.Config.Util as Conf (Config)
 import           PayChanServer.Util (writeBinary, decodeFromBody, userError, getQueryArg)
 import           PayChanServer.Types (SigningSettleConfig(..))
-import           Data.Bitcoin.PaymentChannel.Types (ReceiverPaymentChannel, BitcoinAmount)
+import           Data.Bitcoin.PaymentChannel.Types (ReceiverPaymentChannel, BitcoinAmount, RecvPubKey(MkRecvPubKey))
 
 import           PayChanServer.Init (installHandlerKillThreadOnSig)
 import           Control.Concurrent (myThreadId)
@@ -46,7 +46,7 @@ createSignTx (chanState,txFee) = do
 init :: Conf.Config -> SnapletInit AppConf AppConf
 init cfg = makeSnaplet "SigningService" "Settlement transaction producer" Nothing $ do
     settleConfig@(SigningSettleConfig privKey _) <- liftIO $ getSigningSettleConfig cfg
-    let confPubKey = HC.derivePubKey privKey
+    let confPubKey = MkRecvPubKey $ HC.derivePubKey privKey
     addRoutes $ site
     return $ AppConf confPubKey $ produceSettlementTx settleConfig
 

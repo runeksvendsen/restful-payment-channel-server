@@ -7,13 +7,17 @@
 module Common.Common where
 
 import           Data.Bitcoin.PaymentChannel
-import           Data.Bitcoin.PaymentChannel.Types (BitcoinAmount, Payment, ChannelParameters(..), b64Encode)
+import           Data.Bitcoin.PaymentChannel.Types (BitcoinAmount, Payment, ChannelParameters(..),
+                                                    SendPubKey, RecvPubKey, b64Encode,
+                                                    IsPubKey(getPubKey))
 
 import           Data.Aeson
     (Result(..), Value(Number, Object, String), FromJSON, ToJSON, parseJSON, toJSON,
     fromJSON, withScientific, eitherDecodeStrict, encode, decode, (.=), (.:), object)
 
 import           Data.Bitcoin.PaymentChannel.Util
+import           Data.Bitcoin.PaymentChannel.Types (RecvPubKey(..), IsPubKey(getPubKey))
+
 import qualified Network.Haskoin.Transaction as HT
 import qualified Network.Haskoin.Crypto as HC
 import qualified Network.Haskoin.Util as HU
@@ -36,6 +40,9 @@ class URLParamEncode a where
 
 instance URLParamEncode HC.PubKey where
     pathParamEncode = HU.encodeHex . cs . Bin.encode
+
+instance URLParamEncode RecvPubKey where
+    pathParamEncode recvPK = pathParamEncode $ getPubKey recvPK
 
 instance URLParamEncode HT.TxHash where
     pathParamEncode = HT.txHashToHex
@@ -139,10 +146,10 @@ channelRootURL isSecure hostname basePath =
         (cs hostname :: String)
         (cs basePath :: String)
 
-channelOpenPath :: HC.PubKey -> BitcoinLockTime -> String
+channelOpenPath :: SendPubKey -> BitcoinLockTime -> String
 channelOpenPath sendPK expTime = "/channels/new" ++
     printf "?client_pubkey=%s&exp_time=%s"
-        (cs $ pathParamEncode sendPK :: String)
+        (cs $ pathParamEncode (getPubKey sendPK) :: String)
         (cs $ pathParamEncode expTime :: String)
 
 activeChannelPath :: HT.OutPoint -> String
@@ -152,7 +159,7 @@ activeChannelPath (HT.OutPoint txid vout)  = "/channels/" ++
 
 --- Test URLS
 -- /channels/new" -- ?client_pubkey&exp_time
-channelOpenURL :: Bool -> String -> BS.ByteString -> HC.PubKey -> BitcoinLockTime -> String
+channelOpenURL :: Bool -> String -> BS.ByteString -> SendPubKey -> BitcoinLockTime -> String
 channelOpenURL isSecure host basePath sendPK expTime =
     channelRootURL isSecure (cs host) basePath ++ channelOpenPath sendPK expTime
 
@@ -182,14 +189,12 @@ activeChannelURL isSecure host basePath chanId =
 ----URLs-----
 
 
-getFundingAddress' :: HC.PubKey -> HC.PubKey -> BitcoinLockTime -> HC.Address
+getFundingAddress' :: SendPubKey -> RecvPubKey -> BitcoinLockTime -> HC.Address
 getFundingAddress' sendPK recvPK blt =
     getFundingAddress $ CChannelParameters sendPK recvPK blt
 
 toString :: HC.Address -> String
 toString = C.unpack . HC.addrToBase58
-
-
 
 
 

@@ -1,7 +1,8 @@
 module  PayChanServer.Types where
 
 import           Data.Bitcoin.PaymentChannel.Types (ReceiverPaymentChannel, BitcoinAmount,
-                                                    Payment, BitcoinLockTime, FundingTxInfo)
+                                                    Payment, BitcoinLockTime, FundingTxInfo,
+                                                    SendPubKey, RecvPubKey)
 -- import           Data.Bitcoin.PaymentChannel.Util (BitcoinLockTime)
 import qualified Network.Haskoin.Crypto as HC
 import qualified Network.Haskoin.Transaction as HT
@@ -23,11 +24,11 @@ data StdConfig = StdConfig {
 
 data OpenHandlerConf = OpenHandlerConf {
     ocOpenPrice     :: BitcoinAmount
-   ,ocServerPubKey  :: HC.PubKey
+   ,ocServerPubKey  :: RecvPubKey
    ,ocDBConn        :: ConnManager
    ,ocFundingInfo   :: FundingTxInfo
    ,ocBasePath      :: BS.ByteString
-   ,ocClientPubKey  :: HC.PubKey
+   ,ocClientPubKey  :: SendPubKey
    ,ocClientChange  :: HC.Address
    ,ocExpTime       :: BitcoinLockTime
    ,ocInitPayment   :: Payment

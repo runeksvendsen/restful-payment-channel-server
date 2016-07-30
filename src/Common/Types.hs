@@ -13,21 +13,21 @@ module Common.Types (
     PaymentResult (..),
     ) where
 
-import Data.Bitcoin.PaymentChannel.Types (BitcoinAmount)
-import qualified Data.Bitcoin.PaymentChannel.Types as PayChan (Payment)
+import           Data.Bitcoin.PaymentChannel.Types (BitcoinAmount)
+import           Data.Bitcoin.PaymentChannel.Types (Payment, RecvPubKey)
 
-import Data.List (stripPrefix)
-import Data.Maybe (fromMaybe)
-import Data.Aeson (Value(..), FromJSON(..), ToJSON(..), genericToJSON, genericParseJSON)
-import Data.Aeson.Types (Options(..), defaultOptions)
-import Data.Text (Text)
+import           Data.List (stripPrefix)
+import           Data.Maybe (fromMaybe)
+import           Data.Aeson (Value(..), FromJSON(..), ToJSON(..), genericToJSON, genericParseJSON)
+import           Data.Aeson.Types (Options(..), defaultOptions)
+import           Data.Text (Text)
 import           Control.Monad      (mzero)
 import qualified Data.Text as T
-import GHC.Generics (Generic)
-import Data.Function ((&))
+import           GHC.Generics (Generic)
+import           Data.Function ((&))
 import qualified Network.Haskoin.Transaction as HT
 import qualified Network.Haskoin.Crypto as HC
-import Data.String.Conversions (cs)
+import           Data.String.Conversions (cs)
 
 
 -- |
@@ -43,7 +43,7 @@ instance ToJSON ChanOpenResult where
 
 -- |
 data FundingInfo = FundingInfo
-    { fundingInfoserver_pubkey :: HC.PubKey -- ^ Server public key (33-byte, hex-encoded, compressed Secp256k1 pubkey)
+    { fundingInfoserver_pubkey :: RecvPubKey -- ^ Server public key (33-byte, hex-encoded, compressed Secp256k1 pubkey)
     , fundingInfofunding_address_copy :: HC.Address -- ^ Payment channel funding address. Send bitcoins to this address to fund a new channel.
     , fundingInfoopen_price :: BitcoinAmount -- ^ Price (in satoshis) for opening a channel with the given {exp_time}. This amount is paid in the initial channel payment when creating a new channel. May be zero, in which case a payment of zero value is transferred, ensuring that the channel can be closed at any time.
     , fundingInfofunding_tx_min_conf :: Int -- ^ Minimum confirmation count that the funding transaction must have before proceeding with opening a new channel.
@@ -57,7 +57,7 @@ instance ToJSON FundingInfo where
 
 -- |
 data PaymentWrapper = PaymentWrapper
-    { paymentpayment_data :: PayChan.Payment -- ^ Opaque payment data, base64-encoded
+    { paymentpayment_data :: Payment -- ^ Opaque payment data, base64-encoded
     } deriving (Show, Eq, Generic)
 
 instance FromJSON PaymentWrapper where

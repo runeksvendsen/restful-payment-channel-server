@@ -53,8 +53,8 @@ fundingInfoHandler =
     use finalOpenPrice <*>
     (openMinConf <$> use openConfig) <*>
     use settlePeriod <*>
-    use pubKey <*>
-    getQueryArg "client_pubkey" <*>
+    getServerPubKey <*>
+    getClientPubKey <*>
     getQueryArg "exp_time" <*>
     (use basePath >>= getAppRootURL)
         >>= writeFundingInfoResp
@@ -63,11 +63,11 @@ newChannelHandler :: Debug -> Handler App App (BitcoinAmount, ReceiverPaymentCha
 newChannelHandler debug = applyCORS' >>
     OpenHandlerConf <$>
         use finalOpenPrice <*>
-        use pubKey <*>
+        getServerPubKey <*>
         use dbConn <*>
         blockchainGetFundingInfo debug <*>
         use basePath <*>
-        getQueryArg "client_pubkey" <*>
+        getClientPubKey <*>
         getQueryArg "change_address" <*>
         (getQueryArg "exp_time" >>= checkExpirationTime) <*>
         getQueryArg "payment"

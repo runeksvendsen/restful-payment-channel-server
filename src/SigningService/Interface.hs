@@ -28,11 +28,11 @@ import           SigningService.Spec
 import           ChanStore.Lib.Types (ConnManager)
 import           ConnManager.RequestRunner (runRequest)
 
-import           Data.Bitcoin.PaymentChannel.Types (ReceiverPaymentChannel, BitcoinAmount)
+import           Data.Bitcoin.PaymentChannel.Types (ReceiverPaymentChannel, BitcoinAmount, RecvPubKey)
 import qualified Network.Haskoin.Transaction as HT
 import qualified Network.Haskoin.Crypto as HC
 
-getPubKey :: ConnManager -> IO HC.PubKey
+getPubKey :: ConnManager -> IO RecvPubKey
 getPubKey conn = runRequest conn GetPubKey
 
 -- |Produce settlement transaction(s) by POSTing a list of states to the endpoint /settle_channel

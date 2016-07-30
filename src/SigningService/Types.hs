@@ -6,7 +6,8 @@ module SigningService.Types where
 
 import           PayChanServer.Types
 import           Snap (Snap)
-import           Data.Bitcoin.PaymentChannel.Types (ReceiverPaymentChannel, BitcoinAmount, PayChanError)
+import           Data.Bitcoin.PaymentChannel.Types (ReceiverPaymentChannel, BitcoinAmount,
+                                                    PayChanError, RecvPubKey)
 import qualified Network.Haskoin.Transaction as HT
 import qualified Network.Haskoin.Crypto as HC
 import           Control.Lens.TH (makeLenses)
@@ -14,7 +15,7 @@ import           Control.Lens.TH (makeLenses)
 type SettlementTxId = HT.TxHash
 
 data AppConf = AppConf
- {  _pubKey                 :: HC.PubKey
+ {  _pubKey                 :: RecvPubKey
  ,  _makeSettlementTxFunc   :: (ReceiverPaymentChannel, BitcoinAmount) -> HT.Tx
  }
 

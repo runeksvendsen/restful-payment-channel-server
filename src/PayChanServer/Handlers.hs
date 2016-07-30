@@ -34,6 +34,7 @@ import           Data.Bitcoin.PaymentChannel
 import           Data.Bitcoin.PaymentChannel.Types (ReceiverPaymentChannel, PaymentChannel(..),
                                                     ChannelParameters(..), BitcoinAmount,
                                                     FundingTxInfo(CFundingTxInfo),
+                                                    SendPubKey(..), RecvPubKey(..), IsPubKey(getPubKey),
                                                     channelValueLeft, usesBlockHeight)
 import           Data.Bitcoin.PaymentChannel.Util (setSenderChangeAddress, BitcoinLockTime(..))
 
@@ -65,8 +66,8 @@ mkFundingInfo ::
     BitcoinAmount ->
     Word ->
     Word ->
-    HC.PubKey ->
-    HC.PubKey ->
+    RecvPubKey ->
+    SendPubKey ->
     BitcoinLockTime ->
     String ->
     (FundingInfo,URL)

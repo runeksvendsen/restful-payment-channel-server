@@ -5,7 +5,8 @@
 module  PayChanServer.Config.Types where
 
 import           ChanStore.Lib.Types (ConnManager)
-import           Data.Bitcoin.PaymentChannel.Types (ReceiverPaymentChannel, BitcoinAmount)
+import           Data.Bitcoin.PaymentChannel.Types (ReceiverPaymentChannel, BitcoinAmount,
+                                                    RecvPubKey)
 
 import qualified Network.Haskoin.Transaction as HT
 import qualified Network.Haskoin.Crypto as HC
@@ -27,7 +28,7 @@ data OpenConfig = OpenConfig {
 
 data App = App
  { _dbConn          :: ConnManager
- , _pubKey          :: HC.PubKey
+ , _pubKey          :: RecvPubKey
  , _openConfig      :: OpenConfig
  , _finalOpenPrice  :: BitcoinAmount
  , _settlePeriod    :: Word

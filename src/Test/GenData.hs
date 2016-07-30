@@ -7,7 +7,7 @@ import           Data.Bitcoin.PaymentChannel (channelWithInitialPaymentOf, sendP
 import           Data.Bitcoin.PaymentChannel.Util (BitcoinLockTime(..), toWord32, parseBitcoinLocktime,
                                                    getFundingAddress)
 import           Data.Bitcoin.PaymentChannel.Types
-    (Payment, ChannelParameters(..), FundingTxInfo(..))
+    (Payment, ChannelParameters(..), FundingTxInfo(..), SendPubKey(..), RecvPubKey(..), IsPubKey(getPubKey))
 import qualified Network.Haskoin.Transaction as HT
 import qualified Network.Haskoin.Crypto as HC
 import qualified Network.Haskoin.Constants as HCC
@@ -62,7 +62,9 @@ iterateFunc (p,s) = sendPayment s 1
 genChannelSession :: T.Text -> Int -> HC.PrvKey -> HC.PubKey -> BitcoinLockTime -> ChannelSession
 genChannelSession endPoint numPayments privClient pubServer expTime =
     let
-        cp = CChannelParameters (HC.derivePubKey privClient) pubServer expTime
+        cp = CChannelParameters
+                (MkSendPubKey $ HC.derivePubKey privClient) (MkRecvPubKey pubServer)
+                expTime
         fundInfo = deriveMockFundingInfo cp
         (initPay,initState) = channelWithInitialPaymentOf cp fundInfo
                 (`HC.signMsg` privClient) mockChangeAddress 100000
