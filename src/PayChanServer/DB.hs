@@ -10,29 +10,39 @@ import qualified Network.Haskoin.Transaction as HT
 import qualified Data.ByteString as BS
 import           Snap
 import           Control.Monad.IO.Class (liftIO)
-import           Control.Exception (try)
+import           Control.Exception (try, throwIO)
 import           Control.Concurrent (threadDelay)
-import           Network.HTTP.Client (HttpException (..))
+import           Network.HTTP.Client (HttpException (FailedConnectionException, FailedConnectionException2))
 import           Data.EitherR (fmapL)
 import           System.IO (hFlush, stdout)
+import           Text.Printf (printf)
 
 
-
-waitConnect :: String -> IO a -> IO a
-waitConnect serviceName ioa = do
-    let tryAsEither = try ioa
+-- |Keep trying to connect (only used during startup)
+initWaitConnect :: String -> IO a -> IO a
+initWaitConnect serviceName ioa = do
+    let checkIsFailedConnect e =
+            case e of
+                FailedConnectionException  host port     -> return (host,port)
+                FailedConnectionException2 host port _ _ -> return (host,port)
+                _ -> throwIO e
     -- Keep trying to connect
-    let loopGet = do
-            eitherError <- tryAsEither
+    let loopGet getter = do
+            eitherError <- getter
             case eitherError of
-                Left (_ :: HttpException) -> do
-                        threadDelay $ fromIntegral $ round $ 0.1 * 1e6
-                        loopGet
+                Left (e :: HttpException) -> do
+                        checkIsFailedConnect e
+                        threadDelay (fromIntegral $ round $ 0.1 * 1e6)
+                        loopGet getter
                 Right res -> return res
-    let logNoConn = putStr $ " offline. Waiting for " ++ serviceName ++ " to come online... "
-    -- First try to connect. if there's no connection: log; make it print everything to stdout;
-    --  loop
-    either (\_ -> logNoConn >> hFlush stdout >> loopGet) return =<< tryAsEither
+    let logNoConnection (host,port) = putStr $ printf
+             "%s offline (%s:%d). Waiting for %s to come online... "
+             serviceName host port serviceName
+    let tryAsEither = try ioa
+    tryAsEither >>= either  -- <- First try to connect
+        -- If there's no connection: log; make it print everything to stdout; wait in loop
+        (\e -> checkIsFailedConnect e >>= logNoConnection >> hFlush stdout >> loopGet tryAsEither)
+        return
 
 tryDBRequest :: MonadSnap m => IO a -> m a
 tryDBRequest ioa = liftIO (tryHTTPRequestOfType "Database" ioa) >>=

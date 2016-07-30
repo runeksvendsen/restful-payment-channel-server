@@ -11,7 +11,7 @@ import           PayChanServer.Config.Util
 import           PayChanServer.Types (ServerSettleConfig(..))
 import           PayChanServer.Settlement (settleChannel)
 
-import           PayChanServer.DB (tryDBRequest, waitConnect)
+import           PayChanServer.DB (tryDBRequest, initWaitConnect)
 import           ChanStore.Interface  as DBConn
 import           SigningService.Interface (getPubKey)
 
@@ -56,11 +56,11 @@ appInit cfg databaseConn = makeSnaplet "PayChanServer" "RESTful Bitcoin payment 
     let settleChanFunc = settleChannel databaseConn signingServiceConn bitcoindRPCConf settleFee
 
     liftIO $ putStr $ "Testing database connection... "
-    maybeRes <- liftIO . waitConnect "database" $ DBConn.chanGet databaseConn dummyKey
+    maybeRes <- liftIO . initWaitConnect "database" $ DBConn.chanGet databaseConn dummyKey
     liftIO $ putStrLn $ if isNothing maybeRes then "success." else "something is horribly broken"
 
     liftIO $ putStr "Contacting SigningService for public key... "
-    pubKey <- liftIO . waitConnect "SigningService" $ getPubKey signingServiceConn
+    pubKey <- liftIO . initWaitConnect "SigningService" $ getPubKey signingServiceConn
     liftIO $ putStrLn $ "success: " ++ cs (pathParamEncode pubKey)
 
     let basePathVersion = "/v1"
