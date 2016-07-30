@@ -1,20 +1,15 @@
-{-# LANGUAGE  OverloadedStrings #-}
-
+{-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE DeriveGeneric #-}
-{-# LANGUAGE GeneralizedNewtypeDeriving #-}
-{-# OPTIONS_GHC -fno-warn-unused-binds -fno-warn-unused-imports #-}
-
 
 module Common.Types (
     ChannelStatus(..),
     ChanOpenResult (..),
     FundingInfo (..),
-    PaymentWrapper (..),
     PaymentResult (..),
     ) where
 
 import           Data.Bitcoin.PaymentChannel.Types (BitcoinAmount)
-import           Data.Bitcoin.PaymentChannel.Types (Payment, RecvPubKey)
+import           Data.Bitcoin.PaymentChannel.Types (RecvPubKey)
 
 import           Data.List (stripPrefix)
 import           Data.Maybe (fromMaybe)
@@ -54,16 +49,6 @@ instance FromJSON FundingInfo where
   parseJSON  = genericParseJSON  (removeFieldLabelPrefix True "fundingInfo")
 instance ToJSON FundingInfo where
   toJSON     = genericToJSON     (removeFieldLabelPrefix False "fundingInfo")
-
--- |
-data PaymentWrapper = PaymentWrapper
-    { paymentpayment_data :: Payment -- ^ Opaque payment data, base64-encoded
-    } deriving (Show, Eq, Generic)
-
-instance FromJSON PaymentWrapper where
-  parseJSON  = genericParseJSON  (removeFieldLabelPrefix True "payment")
-instance ToJSON PaymentWrapper where
-  toJSON     = genericToJSON     (removeFieldLabelPrefix False "payment")
 
 -- | Custom
 data ChannelStatus = ChannelOpen | ChannelClosed deriving (Show, Eq)

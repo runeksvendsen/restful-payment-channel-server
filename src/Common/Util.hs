@@ -5,53 +5,25 @@ module Common.Util where
 
 import           Prelude hiding (userError)
 
-import           Common.Types
 import           Common.URLParam
-
-import           BlockchainAPI.Impl.BlockrIo (txIDFromAddr, fundingOutInfoFromTxId)
-import           BlockchainAPI.Types (txConfs, toFundingTxInfo,
-                                TxInfo(..), OutInfo(..))
-
-import           Snap
-import           Snap.Iteratee (Enumerator, enumBuilder)
-
-import           Data.Bitcoin.PaymentChannel.Types (PaymentChannel(..), ReceiverPaymentChannel,
-                                                    ChannelParameters(..), PayChanError(..), FundingTxInfo
-                                                    ,getChannelState, BitcoinAmount, Payment, BitcoinLockTime(..),
+import           Data.Bitcoin.PaymentChannel.Types (ChannelParameters(..), BitcoinLockTime(..),
                                                     SendPubKey(..),RecvPubKey(..))
-import           Data.Bitcoin.PaymentChannel.Util (deserEither, setSenderChangeAddress, getFundingAddress)
+import           Data.Bitcoin.PaymentChannel.Util (deserEither, getFundingAddress)
+import           Snap
+import           Snap.Iteratee (enumBuilder)
+import           Data.Aeson (ToJSON)
+import           Data.String.Conversions (cs)
+import           Data.Aeson.Encode.Pretty (encodePretty)
 
-import           Data.Aeson (FromJSON, ToJSON, parseJSON, toJSON,
-                            decode, encode)
-import Text.Printf (printf)
-import Data.String.Conversions (cs)
-import Data.Aeson.Encode.Pretty (encodePretty)
-
-import qualified Network.Haskoin.Constants as HCC
-import           Control.Monad.IO.Class
 import qualified Network.Haskoin.Crypto as HC
-import qualified Network.Haskoin.Transaction as HT
-
 import qualified Data.ByteString as BS
 import qualified Data.ByteString.Lazy as BL
 import qualified Data.ByteString.Base16 as B16
 import qualified Data.ByteString.Char8 as C
 import Blaze.ByteString.Builder.ByteString (fromLazyByteString)
 import Data.Int (Int64)
-import           Data.Time.Clock (UTCTime, addUTCTime)
-
-import qualified Data.Binary as Bin (Binary, encode, decodeOrFail)
-
-
-import           BlockchainAPI.Impl.ChainSo (chainSoAddressInfo, toEither)
-import           Test.GenData (deriveMockFundingInfo, convertMockFundingInfo)
+import qualified Data.Binary as Bin (Binary, encode)
 import           Data.Typeable
-
--- Check expiration date
-import           ChanStore.Lib.Settlement (expiresEarlierThan)
-import           Data.Time.Clock (getCurrentTime)
-
-
 
 
 --- Get URL parameters with built-in error handling
@@ -80,8 +52,6 @@ getOptionalQueryArg bs = do
     case maybeParam of
         Nothing -> return Nothing
         Just pBS -> fmap Just . handleQueryDecodeFail bs . pathParamDecode $ pBS
---- Get parameters with built-in error handling
-
 
 
 --- HTTP error
@@ -97,7 +67,7 @@ errorWithDescription code errStr = do
     finishWith =<< getResponse
 
 
---- HTTP parse/write data
+--- HTTP decode/write data
 encodeJSON :: ToJSON a => a -> BL.ByteString
 encodeJSON json = encodePretty json
 
@@ -126,7 +96,7 @@ decodeFromBody n =
 
 
 -- TODO: Figure out how to bake this into all handlers.
---  Currently we apply it manually to each handler (snap-cors lib doesn't work)
+--  Currently we apply it manually to each handler (snap-cors lib doesn't work for me)
 applyCORS' :: MonadSnap m => m ()
 applyCORS' = do
     modifyResponse $ setHeader "Access-Control-Allow-Origin"    "*"

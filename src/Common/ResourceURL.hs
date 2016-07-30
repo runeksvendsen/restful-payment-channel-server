@@ -4,20 +4,16 @@
 
 module Common.ResourceURL where
 
-
 import           Common.URLParam
-
 import           Data.Bitcoin.PaymentChannel.Types (BitcoinAmount, Payment, ChannelParameters(..),
                                                     SendPubKey, RecvPubKey, b64Encode,
                                                     IsPubKey(getPubKey))
 import           Data.Bitcoin.PaymentChannel.Util
-
 import qualified Network.Haskoin.Transaction as HT
 import qualified Network.Haskoin.Crypto as HC
 import qualified Data.ByteString as BS
 import           Data.String.Conversions (cs)
 import           Text.Printf (printf)
-
 
 
 channelRootURL :: Bool -> BS.ByteString -> BS.ByteString -> String
@@ -38,7 +34,11 @@ activeChannelPath (HT.OutPoint txid vout)  = "/channels/" ++
     cs (pathParamEncode txid) ++ "/" ++
     cs (pathParamEncode vout)
 
---- Test URLs
+-- https://localhost:8000/channels/f583e0b.../1
+activeChannelURL :: Bool -> BS.ByteString -> BS.ByteString -> HT.OutPoint -> String
+activeChannelURL isSecure host basePath chanId =
+    channelRootURL isSecure (cs host) basePath ++ activeChannelPath chanId
+
 -- /channels/new" -- ?client_pubkey&exp_time
 channelOpenURL :: Bool -> String -> BS.ByteString -> SendPubKey -> BitcoinLockTime -> String
 channelOpenURL isSecure host basePath sendPK expTime =
@@ -62,7 +62,3 @@ mkPaymentQueryParams payment maybeAddr =
         (cs $ pathParamEncode payment :: String) ++
     maybe "" (\addr -> "&change_address=" ++ (cs . pathParamEncode $ addr)) maybeAddr
 
--- https://localhost:8000/channels/f583e0b.../1
-activeChannelURL :: Bool -> BS.ByteString -> BS.ByteString -> HT.OutPoint -> String
-activeChannelURL isSecure host basePath chanId =
-    channelRootURL isSecure (cs host) basePath ++ activeChannelPath chanId
