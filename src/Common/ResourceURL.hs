@@ -17,7 +17,6 @@ import           Data.Aeson
     fromJSON, withScientific, eitherDecodeStrict, encode, decode, (.=), (.:), object)
 
 import           Data.Bitcoin.PaymentChannel.Util
-import           Data.Bitcoin.PaymentChannel.Types (RecvPubKey(..), IsPubKey(getPubKey))
 
 import qualified Network.Haskoin.Transaction as HT
 import qualified Network.Haskoin.Crypto as HC

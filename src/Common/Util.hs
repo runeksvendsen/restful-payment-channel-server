@@ -42,7 +42,6 @@ import           Data.Time.Clock (UTCTime, addUTCTime)
 
 import qualified Data.Binary as Bin (Binary, encode, decodeOrFail)
 
-import           Control.Lens (use)
 
 import           BlockchainAPI.Impl.ChainSo (chainSoAddressInfo, toEither)
 import           Test.GenData (deriveMockFundingInfo, convertMockFundingInfo)

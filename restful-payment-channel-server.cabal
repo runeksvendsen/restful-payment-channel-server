@@ -64,8 +64,38 @@ Executable PayChanServer
 
 
   other-modules: PayChanServer.App,
-                 Common.Common,
-                 Common.Types
+                 Common.Types,
+                 Bitcoind
+                 BlockchainAPI.Impl.BlockrIo
+                 BlockchainAPI.Impl.ChainSo
+                 BlockchainAPI.Types
+                 ChanStore.Interface
+                 ChanStore.Lib.ChanMap
+                 ChanStore.Lib.Settlement
+                 ChanStore.Lib.Types
+                 ChanStore.Spec
+                 Common.ResourceURL
+                 Common.URLParam
+                 Common.Util
+                 ConnManager.Connection
+                 ConnManager.RequestRunner
+                 Data.DiskMap
+                 Data.DiskMap.Internal.Helpers
+                 Data.DiskMap.Internal.Update
+                 Data.DiskMap.Sync.Deferred
+                 Data.DiskMap.Sync.Sync
+                 Data.DiskMap.Types
+                 PayChanServer.Config.Types
+                 PayChanServer.Config.Util
+                 PayChanServer.DB
+                 PayChanServer.Handlers
+                 PayChanServer.Init
+                 PayChanServer.Settlement
+                 PayChanServer.Types
+                 PayChanServer.Util
+                 SigningService.Interface
+                 SigningService.Spec
+                 Test.GenData
 
 
 Executable ChanStore
@@ -107,6 +137,37 @@ Executable ChanStore
     exceptions,
     filepath,
     spawn
+  other-modules:
+                     ChanStore.Init
+                     ChanStore.Interface
+                     ChanStore.Lib.ChanMap
+                     ChanStore.Lib.Settlement
+                     ChanStore.Lib.Types
+                     ChanStore.Spec
+                     Common.ResourceURL
+                     Common.Types
+                     Common.URLParam
+                     Common.Util
+                     ConnManager.Connection
+                     ConnManager.RequestRunner
+                     Data.DiskMap
+                     Data.DiskMap.Internal.Helpers
+                     Data.DiskMap.Internal.Update
+                     Data.DiskMap.Sync.Deferred
+                     Data.DiskMap.Sync.Sync
+                     Data.DiskMap.Types
+                     PayChanServer.App
+                     PayChanServer.Config.Types
+                     PayChanServer.Config.Util
+                     PayChanServer.DB
+                     PayChanServer.Handlers
+                     PayChanServer.Init
+                     PayChanServer.Main
+                     PayChanServer.Settlement
+                     PayChanServer.Types
+                     PayChanServer.Util
+                     SigningService.Interface
+                     SigningService.Spec
 
 Executable SigningService
   hs-source-dirs: src
@@ -146,17 +207,43 @@ Executable SigningService
     unix,
     exceptions,
     filepath
+  other-modules: Bitcoind
+                 BlockchainAPI.Impl.BlockrIo
+                 BlockchainAPI.Impl.ChainSo
+                 BlockchainAPI.Types
+                 ChanStore.Interface
+                 ChanStore.Lib.ChanMap
+                 ChanStore.Lib.Settlement
+                 ChanStore.Lib.Types
+                 ChanStore.Spec
+                 Common.ResourceURL
+                 Common.Types
+                 Common.URLParam
+                 Common.Util
+                 ConnManager.Connection
+                 ConnManager.RequestRunner
+                 Data.DiskMap
+                 Data.DiskMap.Internal.Helpers
+                 Data.DiskMap.Internal.Update
+                 Data.DiskMap.Sync.Deferred
+                 Data.DiskMap.Sync.Sync
+                 Data.DiskMap.Types
+                 PayChanServer.App
+                 PayChanServer.Config.Types
+                 PayChanServer.Config.Util
+                 PayChanServer.DB
+                 PayChanServer.Handlers
+                 PayChanServer.Init
+                 PayChanServer.Main
+                 PayChanServer.Settlement
+                 PayChanServer.Types
+                 PayChanServer.Util
+                 SigningService.Interface
+                 SigningService.Spec
+                 SigningService.Types
+                 SigningService.Util
+                 Test.GenData
 
---Executable CleanImports
---  hs-source-dirs: src
---  main-is: CleanImports.hs
---  ghc-options: -W -O2 -threaded -with-rtsopts=-N -main-is CleanImports
---
---  build-depends:
---    base                      >= 4     && < 5,
---    process,
---    attoparsec,
---    string-conversions
 
 Library
   exposed-modules:      Data.DiskMap
@@ -170,16 +257,13 @@ Library
 
   hs-source-dirs:       src
   default-language:     Haskell2010
+  other-modules:        Data.DiskMap.Internal.Helpers
+                        Data.DiskMap.Internal.Update
+                        Data.DiskMap.Sync.Deferred
+                        Data.DiskMap.Sync.Sync
+                        Data.DiskMap.Types
 
---Executable Email
---    hs-source-dirs:       src
---    main-is:              Email.hs
---    ghc-options:          -main-is Email
---
---    Build-depends:
---                    base,
---                    HaskellNet,
---                    HaskellNet-SSL
+
 
 Executable GenTestData
     hs-source-dirs:       src
