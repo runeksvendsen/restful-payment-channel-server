@@ -54,7 +54,7 @@ The `runEverything.sh` script runs all three components, taking as argument the 
 ### Testing
 Setting the `debug.enable` config option to `true` disables any Blockchain querying. This includes both checking the funding address for funding, and publishing a settlement transaction to the Bitcoin network when the channel is closed. The funding information, that would otherwise have been queried from the Blockchain, is instead derived deterministically from the sender public key and expiration time: the *funding transaction hash* is set to the SHA256 hash of the client pubkey, the *vout*/*output index* is set to `expiration_timestamp % 7`, and the *value* is set to the constant **12345678900000**.
 
-So, first, set the `debug.enable` option to `true` for the target server. Then, the `benchPayChanServer.sh` script (located in `test/`) can be used, which executes a payment session (open, pay, close), performing the specified number of payments in the specified number of threads, using the debug-derived funding information. Usage:
+So, first, set the `debug.enable` option to `true` for the target server. Then the `benchPayChanServer.sh` script (located in `test/`) can be used, which executes a payment session (open, pay, close), performing the specified number of payments in the specified number of threads, using the debug-derived funding information. Usage:
 
     # First start server, in separate terminal (note pubkey):
     ./runEverything.sh config/debug/
