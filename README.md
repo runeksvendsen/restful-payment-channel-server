@@ -6,7 +6,7 @@
 ### What is this?
 This server allows the operator to, after an initial setup step involving a sender/client, receive multiple, instant Bitcoin payments (no waiting for confirmations) from this pre-defined sender; paying the Bitcoin transaction fee only once, when the channel is closed.
 
-So, a client contacts the server for funding information, pays to a derived funding address, notifies the server of this, and then the payment channel is open. Payments sent over the channel do not touch the blockchain, so 1-Satoshi payments are fine, and as many can be sent until all the value, sent in the funding transaction, has been used up. The channel can also be closed before that, in which case the client's unspent value is returned to the client change address.
+So, a client contacts the server for funding information, pays to a funding address, waits the number of confirmations that the sever has specified, and then contacts the server to open the payment channel. Payments sent over the channel do not touch the Blockchain, so 1-Satoshi payments are fine, and as many can be sent without additional cost, until all the value has been used up. The channel can also be closed before that, in which case the client's unspent value is returned to its change address.
 
 A payment channel also has a pre-defined expiration date. After this date, the client can reclaim all value sent over the channel, if it hasn't been closed yet. For the client, this means that opening a payment channel is trustless because, in case the server/receiver disappears, the client can just wait for the expiration date and reclaim funds. For the receiver, it means that the payment channel server must always be running if it has open payment channels. Not the least in order to be able to receive payments over these open channels in the first place, but also to be able to close channels before they reach expiration.
 
@@ -85,5 +85,6 @@ On my 2015 Macbook Pro I get ~900 payments per second running the `benchPayChanS
 [https://paychantest.runeks.me](https://paychantest.runeks.me/v1/fundingInfo?client_pubkey=03a67afebe772b05fcdf2a1f337bdaaf52343d62049793768d866b06194042e0cf&exp_time=1466539800)
 
 ### TODO
+* Local *bitcoind*-based address funding lookup
 * Write test for expiration-based settlement
 * Clean up imports
