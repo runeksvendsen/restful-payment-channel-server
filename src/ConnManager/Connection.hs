@@ -1,5 +1,7 @@
 module ConnManager.Connection where --TODO: move
 
+import           ConnManager.Types
+
 import           ChanStore.Lib.Types
 import ChanStore.Lib.ChanMap
 -- impor  PayChanServer.Config.Types

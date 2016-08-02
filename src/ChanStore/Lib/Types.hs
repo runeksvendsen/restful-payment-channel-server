@@ -1,6 +1,5 @@
 module ChanStore.Lib.Types
 (
-ConnManager(..), Host, Port,
 ChanState(..),
 CreateResult(..),UpdateResult(..),CloseResult(..),
 MapItemResult(..),
@@ -23,8 +22,6 @@ import qualified Data.ByteString.Lazy as BL
 import qualified Data.Binary as Bin
 import qualified Data.Binary.Get as BinGet
 import qualified Data.Binary.Put as BinPut
-import qualified Data.ByteString as BS
-import           Network.HTTP.Client (Manager)
 import Data.String.Conversions (cs)
 import           Control.Concurrent (ThreadId)
 
@@ -51,12 +48,6 @@ newtype MaybeChanState = MaybeChanState (Maybe ChanState)
 
 
 
--- Connection {
-type Host = BS.ByteString
-type Port = Word
-
-data ConnManager = Conn Host Port Manager
--- Connection }
 
 
 

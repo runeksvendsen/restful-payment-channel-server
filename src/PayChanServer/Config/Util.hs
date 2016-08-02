@@ -17,7 +17,6 @@ Config
 where
 
 import           PayChanServer.Config.Types
-import           Common.Util
 import           ConnManager.Connection (newConnManager)
 import           Common.Util (fromHexString)
 import           Data.Bitcoin.PaymentChannel.Types (BitcoinAmount)
@@ -34,7 +33,7 @@ import           Data.Ratio
 import           Data.Configurator.Types
 import qualified Data.Configurator as Conf
 import           Data.String.Conversions (cs)
-import           ChanStore.Lib.Types (ConnManager)
+import           ConnManager.Types (ConnManager)
 import           PayChanServer.Types
 import           Bitcoind (BTCRPCInfo(..))
 
@@ -71,8 +70,8 @@ getServerDBConf cfg = ServerDBConf <$>
 
 getSigningServiceConn :: Config -> IO ConnManager
 getSigningServiceConn cfg = do
-    host <- (configLookupOrFail cfg "settlement.signingService.host")
-    port <- (configLookupOrFail cfg "settlement.signingService.port")
+    host <- configLookupOrFail cfg "settlement.signingService.host"
+    port <- configLookupOrFail cfg "settlement.signingService.port"
     newConnManager host port 1
 
 getDBConf :: Config -> IO DBConf

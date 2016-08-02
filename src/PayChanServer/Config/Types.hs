@@ -4,7 +4,7 @@
 
 module  PayChanServer.Config.Types where
 
-import           ChanStore.Lib.Types (ConnManager)
+import           ConnManager.Types (ConnManager)
 import           Data.Bitcoin.PaymentChannel.Types (ReceiverPaymentChannel, BitcoinAmount,
                                                     RecvPubKey)
 

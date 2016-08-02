@@ -25,8 +25,8 @@ module SigningService.Interface
 where
 
 import           SigningService.Spec
-import           ChanStore.Lib.Types (ConnManager)
-import           ConnManager.RequestRunner (runRequest)
+-- import           ConnManager.Types ()
+import           ConnManager.RequestRunner (ConnManager, runRequest)
 
 import           Data.Bitcoin.PaymentChannel.Types (ReceiverPaymentChannel, BitcoinAmount, RecvPubKey)
 import qualified Network.Haskoin.Transaction as HT

@@ -1,6 +1,18 @@
 {-# LANGUAGE OverloadedStrings #-}
 
-module ConnManager.RequestRunner where
+module ConnManager.RequestRunner
+(
+    runRequest,
+    runRequestJSON,
+    notFoundMeansNothing,
+    ConnManager,
+    HasReqParams(..)
+)
+
+ where
+
+
+import           ConnManager.Types
 
 import           ChanStore.Lib.Types
 import           ConnManager.Connection
@@ -9,6 +21,7 @@ import           Common.URLParam (pathParamEncode)
 import           Data.Bitcoin.PaymentChannel.Types (ReceiverPaymentChannel, Payment)
 import           Data.Bitcoin.PaymentChannel.Util (deserEither)
 
+import qualified Data.Aeson as JSON   (FromJSON, eitherDecode)
 import qualified Network.Haskoin.Transaction as HT
 import qualified Data.Binary as Bin
 import           Network.HTTP.Client
@@ -22,39 +35,39 @@ import           Control.Monad.Catch (SomeException(..))
 import           Data.String.Conversions (cs)
 import           Data.Typeable
 
-class ReqParams a where
-    rPath        :: a -> BS.ByteString
-    rMethod      :: a -> BS.ByteString
-    rBody        :: a -> Maybe BS.ByteString
-    rQueryStr    :: a -> Maybe BS.ByteString
-    rStatusErr   :: a -> Maybe (Status -> ResponseHeaders -> CookieJar -> Maybe E.SomeException)
-    rBody        = const Nothing
-    rQueryStr    = const Nothing
-    rStatusErr   = const Nothing
 
 
-requestFromParams :: ReqParams a => ConnManager -> a -> IO Request
+requestFromParams :: (HasReqParams a) => ConnManager -> a -> IO Request
 requestFromParams conn rp =
-    let maybeJustOrDefault _   (Just a) = a
-        maybeJustOrDefault def Nothing  = def
-    in
         getBaseRequest conn >>= \req -> return req {
             path = rPath rp,
             method = rMethod rp,
-            requestBody = RequestBodyBS $ maybeJustOrDefault BS.empty (rBody rp),
-            queryString = maybeJustOrDefault BS.empty (rQueryStr rp)
+            requestBody = RequestBodyBS . BL.toStrict $ rBody rp,
+            queryString = rQueryStr rp
     }
 
--- runRequest :: (ReqParams a, Bin.Binary b) => BS.ByteString -> Word -> ConnManager -> a -> IO b
--- runRequest host port conn@(Conn _ _ man) rp =
-runRequest :: (ReqParams a, Typeable b, Bin.Binary b) => ConnManager -> a -> IO b
+
+runRequest :: (HasReqParams a, Typeable b, Bin.Binary b) => ConnManager -> a -> IO b
 runRequest conn@(Conn _ _ man) rp =
-    requestFromParams conn rp >>= \req -> withResponse (installStatusHandler rp req) man
-        ( \resp -> failOnLeft . deserEither . cs =<< responseBodyUnless404 resp )
-            where failOnLeft = either (fail . ("failed to parse response: " ++)) return
-                  responseBodyUnless404 res =
-                       if responseStatus res == notFound404 then return BL.empty
-                            else BL.fromStrict . BS.concat <$> brConsume (responseBody res)
+    let
+        failOnLeft = either (fail . ("failed to parse binary response: " ++)) return
+        responseBodyUnless404 res = if responseStatus res == notFound404 then return BL.empty
+                                else BL.fromStrict . BS.concat <$> brConsume (responseBody res)
+        parseResponseOrFail resp = failOnLeft . deserEither . cs =<< responseBodyUnless404 resp
+    in
+        requestFromParams conn rp >>=
+            \req -> withResponse (installStatusHandler rp req) man parseResponseOrFail
+
+
+runRequestJSON :: (HasReqParams a, JSON.FromJSON b) => ConnManager -> a -> IO b
+runRequestJSON conn@(Conn _ _ connManager) rp =
+    let
+        failOnLeft = either (fail . ("failed to parse JSON response: " ++)) return
+        withRequestResponse reqType man f req = withResponse (installStatusHandler reqType req) man f
+        getResponseBody res = BL.fromStrict . BS.concat <$> brConsume (responseBody res)
+        parseResponseOrFail resp = failOnLeft . JSON.eitherDecode . cs =<< getResponseBody resp
+    in
+        requestFromParams conn rp >>= withRequestResponse rp connManager parseResponseOrFail
 
 
 installStatusHandler rp req =

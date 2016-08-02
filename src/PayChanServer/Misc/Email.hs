@@ -1,4 +1,4 @@
-module Email where
+module PayChanServer.Misc.Email where
 
 import Network.HaskellNet.SMTP.SSL
 
@@ -10,8 +10,7 @@ user = "myserverwatchdog@gmail.com"
 pass = "qV78wbj6wRYL3UXQ"
 
 
-
-settings = defaultSettingsSMTPSSL { sslPort = 587 }
+settings = defaultSettingsSMTPSSL { sslPort = 465 }
 
 
 main = doSMTPSSLWithSettings serverHostName settings $ \conn -> do

@@ -17,6 +17,10 @@ Cabal-version:       >= 1.2
 --    main-is:    Test/RunData.hs
 --    build-depends: base
 
+source-repository head
+  type:     git
+  location: https://github.com/runeksvendsen/restful-payment-channel-server
+
 Executable PayChanServer
   hs-source-dirs: src
   main-is: PayChanServer/Main.hs
@@ -66,7 +70,6 @@ Executable PayChanServer
   other-modules: PayChanServer.App,
                  Common.Types,
                  Bitcoind
-                 BlockchainAPI.Impl.BlockrIo
                  BlockchainAPI.Impl.ChainSo
                  BlockchainAPI.Types
                  ChanStore.Interface
@@ -208,7 +211,6 @@ Executable SigningService
     exceptions,
     filepath
   other-modules: Bitcoind
-                 BlockchainAPI.Impl.BlockrIo
                  BlockchainAPI.Impl.ChainSo
                  BlockchainAPI.Types
                  ChanStore.Interface
@@ -329,3 +331,16 @@ Executable RunTestData
 
   hs-source-dirs:       src
   default-language:     Haskell2010
+
+
+Executable Email
+  hs-source-dirs: src
+  main-is: PayChanServer/Misc/Email.hs
+  ghc-options: -W -main-is PayChanServer.Misc.Email
+
+  default-extensions: OverloadedStrings
+  Build-depends:
+    base                      >= 4     && < 5,
+    -- email
+    HaskellNet,
+    HaskellNet-SSL

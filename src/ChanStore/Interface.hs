@@ -26,7 +26,7 @@ module ChanStore.Interface
 )
 where
 
-import           ConnManager.RequestRunner (runRequest)
+import           ConnManager.RequestRunner (ConnManager, runRequest)
 
 import           ChanStore.Lib.ChanMap (isSettled)
 import           ChanStore.Lib.Types

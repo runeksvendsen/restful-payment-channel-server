@@ -9,7 +9,6 @@ import           PayChanServer.Types (OpenHandlerConf(..),ChanPayConfig(..),
 import           PayChanServer.Config.Types (App, pubKey, openMinConf, openConfig)
 import           PayChanServer.Util
 
-import           Common.Util
 import           Common.Types
 import           Common.ResourceURL (channelOpenPath)
 

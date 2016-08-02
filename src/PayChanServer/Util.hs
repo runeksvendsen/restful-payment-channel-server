@@ -10,12 +10,10 @@ import           Common.Types
 import           Common.Util
 import           Common.ResourceURL
 
-import           BlockchainAPI.Impl.BlockrIo (txIDFromAddr, fundingOutInfoFromTxId)
 import           BlockchainAPI.Types (txConfs, toFundingTxInfo,
                                 TxInfo(..), OutInfo(..))
 
 import           Snap
-import           Snap.Iteratee (Enumerator, enumBuilder)
 
 import           Data.Bitcoin.PaymentChannel.Types (PaymentChannel(..), ReceiverPaymentChannel,
                                                     ChannelParameters(..), PayChanError(..), FundingTxInfo
@@ -27,7 +25,6 @@ import           Data.Aeson (FromJSON, ToJSON, parseJSON, toJSON,
                             decode, encode)
 import           Text.Printf (printf)
 import           Data.String.Conversions (cs)
-import           Data.Aeson.Encode.Pretty (encodePretty)
 
 import qualified Network.Haskoin.Constants as HCC
 import           Control.Monad.IO.Class
@@ -35,11 +32,7 @@ import qualified Network.Haskoin.Crypto as HC
 import qualified Network.Haskoin.Transaction as HT
 
 import qualified Data.ByteString as BS
-import qualified Data.ByteString.Lazy as BL
-import qualified Data.ByteString.Char8 as C
-import Blaze.ByteString.Builder.ByteString (fromLazyByteString)
-import Data.Int (Int64)
-import           Data.Time.Clock (UTCTime, addUTCTime)
+import           Data.Time.Clock (UTCTime, addUTCTime, getCurrentTime)
 
 import qualified Data.Binary as Bin (Binary, encode, decodeOrFail)
 
@@ -47,11 +40,10 @@ import           Control.Lens (use)
 import           PayChanServer.Config.Types (App, pubKey, openConfig, OpenConfig(..))
 import           BlockchainAPI.Impl.ChainSo (chainSoAddressInfo, toEither)
 import           Test.GenData (deriveMockFundingInfo, convertMockFundingInfo)
-import           Data.Typeable
 -- Check expiration date
 import           ChanStore.Lib.Settlement (expiresEarlierThan)
 import           PayChanServer.Config.Types (openConfig, openMinLengthHours)
-import           Data.Time.Clock (getCurrentTime)
+
 
 
 
@@ -85,17 +77,17 @@ getServerPubKey :: Handler App App RecvPubKey
 getServerPubKey = use pubKey
 
 ---- Blockchain API ----
-txInfoFromAddr :: MonadSnap m => HC.Address -> m TxInfo
-txInfoFromAddr fundAddr = do
-    maybeTxId <- liftIO $ txIDFromAddr (toString fundAddr)
-    txId <- case maybeTxId of
-        Nothing ->  userError $
-            "Can't find any transactions paying to funding address " ++ cs (encode fundAddr)
-        Just txid -> return txid
-    eitherFundOut <- liftIO $ fundingOutInfoFromTxId (toString fundAddr) txId
-    -- The API has just provided us with a txid above, if it can't find said txid
-    -- something is wrong with the API, so we return an internal error in this case.
-    either (const $ internalError ("Can't find funding transaction: " ++ show txId)) return eitherFundOut
+-- txInfoFromAddr :: MonadSnap m => HC.Address -> m TxInfo
+-- txInfoFromAddr fundAddr = do
+--     maybeTxId <- liftIO $ txIDFromAddr (toString fundAddr)
+--     txId <- case maybeTxId of
+--         Nothing ->  userError $
+--             "Can't find any transactions paying to funding address " ++ cs (encode fundAddr)
+--         Just txid -> return txid
+--     eitherFundOut <- liftIO $ fundingOutInfoFromTxId (toString fundAddr) txId
+--     -- The API has just provided us with a txid above, if it can't find said txid
+--     -- something is wrong with the API, so we return an internal error in this case.
+--     either (const $ internalError ("Can't find funding transaction: " ++ show txId)) return eitherFundOut
 
 -- | Return (hash,idx) if sufficiently confirmed
 guardIsConfirmed :: MonadSnap m => Integer -> TxInfo -> m TxInfo

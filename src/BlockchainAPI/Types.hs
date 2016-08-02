@@ -1,6 +1,6 @@
 module BlockchainAPI.Types where
 
-import           Data.Bitcoin.PaymentChannel.Types (FundingTxInfo(..))
+import           Data.Bitcoin.PaymentChannel.Types (FundingTxInfo(..), BitcoinAmount)
 import           Data.Bitcoin.PaymentChannel.Util (parseJSONInt)
 import           Network.Haskoin.Transaction  (TxHash)
 import qualified Data.Text as T
@@ -28,6 +28,8 @@ data TxInfo = TxInfo {
     txOutInfo   ::  OutInfo
 } deriving Show
 
+parseBitcoinAmount :: Value -> Parser BitcoinAmount
+parseBitcoinAmount val = fmap fromIntegral (parseBTCAmount val)
 
 parseBTCAmount :: Value -> Parser Integer
 parseBTCAmount = withScientific "bitcoin amount" $

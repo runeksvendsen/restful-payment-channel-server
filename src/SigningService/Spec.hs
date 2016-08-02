@@ -2,7 +2,7 @@
 
 module SigningService.Spec where
 
-import           ConnManager.RequestRunner (ReqParams(..))
+import           ConnManager.RequestRunner (HasReqParams(..))
 import           ChanStore.Lib.Types
 import           ConnManager.Connection
 -- import           Data.Bitcoin.PaymentChannel.Util (deserEither)
@@ -28,13 +28,12 @@ data SettleChan = SettleChan ReceiverPaymentChannel BitcoinAmount
 basePath :: BS.ByteString
 basePath = "/"
 
-instance ReqParams GetPubKey where
+instance HasReqParams GetPubKey where
     rPath       = const $ basePath <> "get_pubkey"
     rMethod     = const "GET"
 
-instance ReqParams SettleChan where
+instance HasReqParams SettleChan where
     rPath       = const $ basePath <> "settle_channel"
     rMethod     = const "POST"
-    rQueryStr (SettleChan _ txFee) = Just $ "tx_fee=" <> pathParamEncode txFee
-    rBody (SettleChan rpc _) =
-        Just . BL.toStrict $ Bin.encode rpc
+    rQueryStr (SettleChan _ txFee) = "tx_fee=" <> pathParamEncode txFee
+    rBody (SettleChan rpc _) = Bin.encode rpc

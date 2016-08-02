@@ -26,7 +26,7 @@ import qualified Network.Haskoin.Transaction as HT
 
 
 finishSettlingChannel :: ChannelMap -> (Key,HT.TxHash) -> IO (MapItemResult Key ChanState)
-finishSettlingChannel (ChannelMap m _) (k,settleTxId)= do
+finishSettlingChannel (ChannelMap m _) (k,settleTxId) =
     head <$> mapGetItems m finishSettling (return [k])
     where
         finishSettling (SettlementInProgress rpc) = Just $
@@ -55,13 +55,13 @@ justRetrieveExpiringChannels chanMap currentTimeIsh =
 
 beginSettlingChannels :: ChannelMap -> STM [Key] -> IO [ReceiverPaymentChannel]
 beginSettlingChannels (ChannelMap m _) keyGetterAction = do
-    res <- mapGetItems m markAsSettlingIfOpen $ keyGetterAction
+    res <- mapGetItems m markAsSettlingIfOpen keyGetterAction
     return $ map gatherFromResults res
     where
-          markAsSettlingIfOpen (ReadyForPayment rpc)    = Just $ SettlementInProgress rpc
+          markAsSettlingIfOpen (ReadyForPayment rpc)  = Just $ SettlementInProgress rpc
           -- Should never be reached, as we're fetching the relevant keys and their corresponding items atomically
-          markAsSettlingIfOpen (SettlementInProgress _) = Nothing
-          markAsSettlingIfOpen (ChannelSettled _ _ _)     = Nothing
+          markAsSettlingIfOpen SettlementInProgress{} = Nothing
+          markAsSettlingIfOpen ChannelSettled{}       = Nothing
 
 -- | Important note: does not support 'LockTimeBlockHeight'. The library supports
 --      'LockTimeBlockHeight', but the protocol does not.
