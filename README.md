@@ -19,6 +19,9 @@ Under development. Mature enough to play with, but definitely not ready for prod
 ### Bugs/questions
 If you find a bug please create an issue here. If you need help, like if I haven't made it clear how to do something or just general support, creating an issue is fine too.
 
+### Technical details
+The Bitcoin payment channel type used is the *OP_CHECKLOCKTIMEVERIFY* payment channel, as explained in the section [*Non-interactive time-locked refunds*](https://github.com/bitcoin/bips/blob/master/bip-0065.mediawiki#Noninteractive_timelocked_refunds) of the *OP_CHECKLOCKTIMEVERIFY* Bitcoin Improvement Proposal ([BIP65](https://github.com/bitcoin/bips/blob/master/bip-0065.mediawiki)). The only limitation is that, for version 1 of [RESTful Bitcoin Payment Channel Protocol](http://paychandoc.runeks.me/), the channel expiration date cannot be specified as a block number, but only as a Unix timestamp.
+
 ### Architecture overview
 <img src="/doc/arch.png?raw=true" width="600">
 
