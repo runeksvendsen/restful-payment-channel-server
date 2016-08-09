@@ -115,20 +115,18 @@ chanSettle (StdConfig chanMap chanId clientPayment) settleChannel valRecvd = do
             paymentResultvalue_received = valRecvd,
             paymentResultsettlement_txid = Just settlementTxId
         }
-    modifyResponse $ setResponseStatus 202 "Channel closed"
+    modifyResponse $ setResponseStatus 200 "Channel closed"
 
 
 
 chanPay :: MonadSnap m => ChanPayConfig -> m (BitcoinAmount, ReceiverPaymentChannel)
-chanPay (PayConfig (StdConfig chanMap chanId payment) _) = do
-    existingChanState <- getChannelStateForPayment chanMap chanId
+chanPay (PayConfig (StdConfig dbConn chanId payment) _) = do
+    existingChanState <- getChannelStateForPayment dbConn chanId
     (valRecvd,newChanState) <- either
             (userError . show)
             return
             (recvPayment existingChanState payment)
-    -- TODO: chanState can have changed to Settled or SettlementInProgress inbetween
-    --  fetching and updating
-    updateResult <- tryDBRequest $ DBConn.chanUpdate chanMap chanId payment
+    updateResult <- tryDBRequest $ DBConn.chanUpdate dbConn chanId payment
     case updateResult of
         WasUpdated -> do
             modifyResponse $ setResponseStatus 200 (C.pack "Payment accepted")
@@ -137,15 +135,15 @@ chanPay (PayConfig (StdConfig chanMap chanId payment) _) = do
             errorWithDescription 410 "Channel closed or being closed"
 
 
-channelOpenHandler :: MonadSnap m =>
+channelOpenHandler ::
     OpenHandlerConf
-    -> m (BitcoinAmount, ReceiverPaymentChannel)
+    -> Handler App App (BitcoinAmount, ReceiverPaymentChannel)
 channelOpenHandler
     (OpenHandlerConf openPrice pubKeyServ chanMap fundingTxInfo@(CFundingTxInfo fundTxId fundIdx _)
-    basePath sendPK sendChgAddr lockTime payment) = do
+    sendPK sendChgAddr lockTime payment) = do
         let chanId = HT.OutPoint fundTxId fundIdx
 
-        confirmChannelDoesntExistOrAbort chanMap basePath chanId
+        confirmChannelDoesntExistOrAbort chanMap chanId
 
         (valRecvd,recvChanState) <- either (userError . show) return $
             channelFromInitialPayment
@@ -157,10 +155,10 @@ channelOpenHandler
                 show openPrice ++ ", received " ++ show valRecvd
 
         tryDBRequest $ DBConn.chanAdd chanMap recvChanState
-        modifyResponse $ setResponseStatus 201 (C.pack "Channel ready")
 
+        modifyResponse $ setResponseStatus 201 (C.pack "Channel ready")
         unless (channelIsExhausted recvChanState) $
-            httpLocationSetActiveChannel basePath chanId
+            httpLocationSetActiveChannel chanId
 
         return (valRecvd,recvChanState)
 

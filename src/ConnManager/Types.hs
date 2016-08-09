@@ -23,7 +23,9 @@ import           Control.Monad.Catch (SomeException(..))
 import           Data.String.Conversions (cs)
 import           Data.Typeable
 
+import           Servant.Client
 
+data ConnManager2 = Conn2 BaseUrl Manager
 
 -- Connection {
 type Host = BS.ByteString

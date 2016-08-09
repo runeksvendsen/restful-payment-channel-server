@@ -61,9 +61,8 @@ newChannelHandler debug = applyCORS' >>
     OpenHandlerConf <$>
         use finalOpenPrice <*>
         getServerPubKey <*>
-        use dbConn <*>
+        use dbInterface <*>
         blockchainGetFundingInfo debug <*>
-        use basePath <*>
         getClientPubKey <*>
         getQueryArg "change_address" <*>
         (getQueryArg "exp_time" >>= checkExpirationTime) <*>
@@ -73,10 +72,7 @@ newChannelHandler debug = applyCORS' >>
 paymentHandler :: Handler App App (BitcoinAmount, ReceiverPaymentChannel)
 paymentHandler = applyCORS' >>
     PayConfig <$>
-        (StdConfig <$>
-            use dbConn <*>
-            channelIDFromPathArgs <*>
-            getQueryArg "payment") <*>
+        getActiveChanConf <*>
         getOptionalQueryArg "change_address"
     >>= chanPay
 
@@ -85,9 +81,6 @@ settlementHandler valueReceived = do
     applyCORS'
 
     settleChanFunc <- use settleChanFunc
-    stdConf <- StdConfig <$>
-            use dbConn <*>
-            channelIDFromPathArgs <*>
-            getQueryArg "payment"
+    stdConf <- getActiveChanConf
     chanSettle stdConf settleChanFunc valueReceived
 

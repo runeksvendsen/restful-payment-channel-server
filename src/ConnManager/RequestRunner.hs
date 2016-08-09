@@ -13,6 +13,7 @@ module ConnManager.RequestRunner
 
 
 import           ConnManager.Types
+import           ConnManager.Servant
 
 import           ChanStore.Lib.Types
 import           ConnManager.Connection

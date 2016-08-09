@@ -23,17 +23,12 @@ import qualified System.Posix.Signals as Sig
 
 import           Data.Bitcoin.PaymentChannel.Types (ReceiverPaymentChannel, PaymentChannel(..), Payment)
 
-import qualified Network.Haskoin.Transaction as HT
-
 import           Snap -- (serveSnaplet)
-import           Snap.Http.Server -- (defaultConfig, httpServe)
 import           Control.Applicative ((<|>))
 
 import           Data.String.Conversions (cs)
-import           Control.Monad (unless)
 import           Control.Monad.IO.Class (liftIO, MonadIO)
 import           Control.Monad.Catch (bracket, finally, try)
-import           Control.Concurrent.STM (STM, atomically)
 import qualified Control.Exception as E
 
 
@@ -61,7 +56,6 @@ site map =
           , ("/store/by_id/:funding_outpoint"
              ,      method GET    ( get map    >>= writeBinary)
                 <|> method PUT    ( update map >>= writeBinary) )
---                 <|> method DELETE ( settle map >>= writeResponse) )
 
             -- expiring channels management/settlement interface
           , ("/settlement/begin/by_exp/:expiring_before"

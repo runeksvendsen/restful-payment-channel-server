@@ -12,23 +12,17 @@ Potato
 
 module ChanStore.Interface
 (
-    chanGet,
-    chanAdd,
-    chanUpdate,
-    settleByExpBegin,
-    settleByIdBegin,
-    settleFin,
-
-    isSettled,
-
-    ConnManager,
-    ChanState(..)
+    Interface(chanAdd , chanGet , chanUpdate
+            , settleByExpBegin
+            , settleByIdBegin , settleFin)
+  , mkChanStoreInterface
+  , ConnManager
+  , ChanState(..)
 )
 where
 
 import           ConnManager.RequestRunner (ConnManager, runRequest)
 
-import           ChanStore.Lib.ChanMap (isSettled)
 import           ChanStore.Lib.Types
 import           ChanStore.Spec
 
@@ -36,30 +30,49 @@ import           Data.Bitcoin.PaymentChannel.Types (ReceiverPaymentChannel, Paym
 import           Data.Time.Clock (UTCTime)
 import qualified Network.Haskoin.Transaction as HT
 
+mkChanStoreInterface :: ConnManager -> Interface
+mkChanStoreInterface connMan =
+    Interface
+        (chanAdd'           connMan)
+        (chanGet'           connMan)
+        (chanUpdate'        connMan)
+        (settleByExpBegin'  connMan)
+        (settleByIdBegin'   connMan)
+        (settleFin'         connMan)
+
+data Interface = Interface {
+    chanAdd             :: ReceiverPaymentChannel -> IO CreateResult
+  , chanGet             :: Key -> IO (Maybe ChanState)
+  , chanUpdate          :: Key -> Payment -> IO UpdateResult
+  , settleByExpBegin    :: UTCTime -> IO [ReceiverPaymentChannel]
+  , settleByIdBegin     :: Key -> IO ReceiverPaymentChannel
+  , settleFin           :: Key -> HT.TxHash -> IO ()
+}
+
 
 -- |Add item
-chanAdd :: ConnManager -> ReceiverPaymentChannel -> IO CreateResult
-chanAdd conn rpc = runRequest conn $ Create rpc
+chanAdd' :: ConnManager -> ReceiverPaymentChannel -> IO CreateResult
+chanAdd' conn rpc = runRequest conn $ Create rpc
 
 -- |Get item
-chanGet :: ConnManager -> Key -> IO (Maybe ChanState)
-chanGet conn key = runRequest conn (Get key) >>=
+chanGet' :: ConnManager -> Key -> IO (Maybe ChanState)
+chanGet' conn key = runRequest conn (Get key) >>=
     \(MaybeChanState maybeCS) -> return maybeCS     -- needed to avoid overlapping Binary instance
 
 -- |Update item
-chanUpdate :: ConnManager -> Key -> Payment -> IO UpdateResult
-chanUpdate conn key payment = runRequest conn $ Update key payment
+chanUpdate' :: ConnManager -> Key -> Payment -> IO UpdateResult
+chanUpdate' conn key payment = runRequest conn $ Update key payment
 
 -- |Get zero or more channel objects based on expiration date and simultaneously begin settlement
-settleByExpBegin :: ConnManager -> UTCTime -> IO [ReceiverPaymentChannel]
-settleByExpBegin conn expiringBefore =
+settleByExpBegin' :: ConnManager -> UTCTime -> IO [ReceiverPaymentChannel]
+settleByExpBegin' conn expiringBefore =
     runRequest conn $ ByExpSettleBegin expiringBefore
 
 -- |Get single channel object based on channel ID and simultaneously begin settlement
-settleByIdBegin :: ConnManager -> Key -> IO ReceiverPaymentChannel
-settleByIdBegin conn key =
+settleByIdBegin' :: ConnManager -> Key -> IO ReceiverPaymentChannel
+settleByIdBegin' conn key =
     runRequest conn $ ByIdSettleBegin key
 
 -- |Finish settlement for single channel object based on channel ID
-settleFin :: ConnManager -> Key -> HT.TxHash -> IO ()
-settleFin conn key settleTxId = runRequest conn $ SettleFin key settleTxId
+settleFin' :: ConnManager -> Key -> HT.TxHash -> IO ()
+settleFin' conn key settleTxId = runRequest conn $ SettleFin key settleTxId

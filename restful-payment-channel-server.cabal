@@ -28,17 +28,29 @@ Executable PayChanServer
                -main-is PayChanServer.Main
 
   default-extensions: OverloadedStrings
-  Build-depends:
+
+  build-depends:
     base                      >= 4     && < 5,
-    bytestring                >= 0.9.1 && < 0.11,
-    MonadCatchIO-transformers >= 0.2.1 && < 0.4,
+    -- Servant
+    servant                   == 0.7.1,
+    servant-server            == 0.7.1,
+    servant-client            == 0.7.1,
+    http-api-data,
+    -- Snap
+    monad-control             == 1.0.*,
     mtl                       >= 2     && < 3,
-    snap-core                 >= 0.9   && < 0.10,
-    snap-server               >= 0.9   && < 0.10,
-    snap,
+    snap-core                 == 1.0.*,
+    snap-server               == 1.0.*,
+    snap                      == 1.0.*,
+    io-streams,
+
+    bitcoin-payment-channel   == 0.2.1.0,
+--    haskoin-core              >= 0.3.0 && < 1.0.0,
+    haskoin-core              == 0.3.1,
+    bytestring                >= 0.9.1 && < 0.11,
     blaze-builder,
-    bitcoin-payment-channel   >= 0.1.1.0 && < 0.3,
-    haskoin-core              >= 0.3.0 && < 1.0.0,
+    -- APISpec.Blockchain
+    blockchain-restful-address-index,
     secp256k1,
     transformers,
     aeson, vector,
@@ -61,6 +73,8 @@ Executable PayChanServer
     unix,
     exceptions,
     filepath,
+
+
     -- email
     HaskellNet,
     HaskellNet-SSL
@@ -109,11 +123,12 @@ Executable ChanStore
   build-depends:
     base                      >= 4     && < 5,
     bytestring                >= 0.9.1 && < 0.11,
-    MonadCatchIO-transformers >= 0.2.1 && < 0.4,
+    monad-control             == 1.0.*,
     mtl                       >= 2     && < 3,
-    snap-core                 >= 0.9   && < 0.10,
-    snap-server               >= 0.9   && < 0.10,
-    snap,
+    snap-core                 == 1.0.*,
+    snap-server               == 1.0.*,
+    snap                      == 1.0.*,
+    io-streams,
     blaze-builder,
     bitcoin-payment-channel   >= 0.1.1.0 && < 0.3,
     haskoin-core              >= 0.3.0 && < 1.0.0,
@@ -180,11 +195,12 @@ Executable SigningService
   build-depends:
     base                      >= 4     && < 5,
     bytestring                >= 0.9.1 && < 0.11,
-    MonadCatchIO-transformers >= 0.2.1 && < 0.4,
+    monad-control             == 1.0.*,
     mtl                       >= 2     && < 3,
-    snap-core                 >= 0.9   && < 0.10,
-    snap-server               >= 0.9   && < 0.10,
-    snap,
+    snap-core                 == 1.0.*,
+    snap-server               == 1.0.*,
+    snap                      == 1.0.*,
+    io-streams,
     blaze-builder,
     bitcoin-payment-channel   >= 0.1.1.0 && < 0.3,
     haskoin-core              >= 0.3.0 && < 1.0.0,
@@ -275,10 +291,10 @@ Executable GenTestData
     Build-depends:
       base                      >= 4     && < 5,
       bytestring                >= 0.9.1 && < 0.11,
-      MonadCatchIO-transformers >= 0.2.1 && < 0.4,
+      monad-control             == 1.0.*,
       mtl                       >= 2     && < 3,
-      snap-core                 >= 0.9   && < 0.10,
-      snap-server               >= 0.9   && < 0.10,
+      snap-core                 == 1.0.*,
+      snap-server               == 1.0.*,
       directory,
       bitcoin-payment-channel   >= 0.1.1.0 && < 0.3,
       transformers,
@@ -306,10 +322,10 @@ Executable RunTestData
     Build-depends:
       base                      >= 4     && < 5,
       bytestring                >= 0.9.1 && < 0.11,
-      MonadCatchIO-transformers >= 0.2.1 && < 0.4,
+      monad-control             == 1.0.*,
       mtl                       >= 2     && < 3,
-      snap-core                 >= 0.9   && < 0.10,
-      snap-server               >= 0.9   && < 0.10,
+      snap-core                 == 1.0.*,
+      snap-server               == 1.0.*,
       directory,
       bitcoin-payment-channel   >= 0.1.1.0 && < 0.3,
       transformers,

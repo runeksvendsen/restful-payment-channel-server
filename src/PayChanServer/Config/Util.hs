@@ -7,7 +7,7 @@ getChanOpenConf,getServerSettleConfig,getSigningSettleConfig,
 getBitcoindConf,getSigningServiceConn,
 BitcoinNet,
 setBitcoinNetwork,
-getDBConf,
+getDBConf,getChanStoreIface,
 getServerDBConf,connFromDBConf,
 configDebugIsEnabled,
 -- re-exports
@@ -18,6 +18,7 @@ where
 
 import           PayChanServer.Config.Types
 import           ConnManager.Connection (newConnManager)
+import qualified ChanStore.Interface as Store
 import           Common.Util (fromHexString)
 import           Data.Bitcoin.PaymentChannel.Types (BitcoinAmount)
 
@@ -56,6 +57,9 @@ configLookupOrFail conf name =
 
 connFromDBConf :: DBConf -> IO ConnManager
 connFromDBConf (DBConf host port numConns) = newConnManager host port numConns
+
+getChanStoreIface :: DBConf -> IO Store.Interface
+getChanStoreIface dbConf = Store.mkChanStoreInterface <$> connFromDBConf dbConf
 
 getDBPath :: Config -> IO FilePath
 getDBPath cfg = configLookupOrFail cfg "storage.stateDir"

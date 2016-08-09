@@ -10,7 +10,8 @@ import           Data.Bitcoin.PaymentChannel.Types (ChannelParameters(..), Bitco
                                                     SendPubKey(..),RecvPubKey(..))
 import           Data.Bitcoin.PaymentChannel.Util (deserEither, getFundingAddress)
 import           Snap
-import           Snap.Iteratee (enumBuilder)
+import qualified System.IO.Streams as Streams
+import qualified Data.ByteString.Builder as Builder
 import           Data.Aeson (ToJSON)
 import           Data.String.Conversions (cs)
 import           Data.Aeson.Encode.Pretty (encodePretty)
@@ -20,8 +21,8 @@ import qualified Data.ByteString as BS
 import qualified Data.ByteString.Lazy as BL
 import qualified Data.ByteString.Base16 as B16
 import qualified Data.ByteString.Char8 as C
-import Blaze.ByteString.Builder.ByteString (fromLazyByteString)
-import Data.Int (Int64)
+
+import           Data.Word (Word64)
 import qualified Data.Binary as Bin (Binary, encode)
 import           Data.Typeable
 
@@ -72,9 +73,12 @@ encodeJSON :: ToJSON a => a -> BL.ByteString
 encodeJSON json = encodePretty json
 
 overwriteResponseBody :: MonadSnap m => BL.ByteString -> m ()
-overwriteResponseBody bs =
-    getResponse >>=
-    putResponse . setResponseBody (enumBuilder $ fromLazyByteString bs)
+overwriteResponseBody bs = putResponse $
+    setResponseBody
+        (\out ->
+            Streams.write (Just $ Builder.lazyByteString bs) out >>
+            return out)
+        emptyResponse
 
 writeJSON :: (MonadSnap m, ToJSON a) => a -> m ()
 writeJSON json = do
@@ -87,7 +91,7 @@ writeBinary obj = do
     modifyResponse $ setContentType "application/octet-stream"
     overwriteResponseBody $ Bin.encode obj
 
-decodeFromBody :: (MonadSnap m, Typeable a, Bin.Binary a) => Int64 -> m a
+decodeFromBody :: (MonadSnap m, Typeable a, Bin.Binary a) => Word64 -> m a
 decodeFromBody n =
     fmap (deserEither . cs) (readRequestBody n) >>=
      \eitherRes -> case eitherRes of

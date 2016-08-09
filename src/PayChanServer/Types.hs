@@ -6,13 +6,14 @@ import           Data.Bitcoin.PaymentChannel.Types (ReceiverPaymentChannel, Bitc
 import qualified Network.Haskoin.Crypto as HC
 import qualified Network.Haskoin.Transaction as HT
 
-import           ConnManager.Types (ConnManager)
+-- import           ConnManager.Types (ConnManager)
+import           ChanStore.Interface  as DBConn
 import qualified Data.ByteString as BS
 
 
 
 data StdConfig = StdConfig {
-    serverChanMap   :: ConnManager,
+    serverChanMap   :: DBConn.Interface,
     chanId          :: HT.OutPoint,
     chanPayment     :: Payment
 }
@@ -20,9 +21,8 @@ data StdConfig = StdConfig {
 data OpenHandlerConf = OpenHandlerConf {
     ocOpenPrice     :: BitcoinAmount
    ,ocServerPubKey  :: RecvPubKey
-   ,ocDBConn        :: ConnManager
+   ,ocDBConn        :: DBConn.Interface
    ,ocFundingInfo   :: FundingTxInfo
-   ,ocBasePath      :: BS.ByteString
    ,ocClientPubKey  :: SendPubKey
    ,ocClientChange  :: HC.Address
    ,ocExpTime       :: BitcoinLockTime

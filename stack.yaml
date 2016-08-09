@@ -1,3 +1,5 @@
+resolver: lts-6.4
+
 flags: {}
 
 extra-package-dbs: []
@@ -7,30 +9,37 @@ packages:
 - '.'
 - location:
     git: https://github.com/runeksvendsen/bitcoin-payment-channel.git
-    commit: 100a25f354761ea289238729fab79ce28ba07018
+    commit: a054570c2ec733612953a98fb684bdc6465510b1
   extra-dep: true
 - location:
     git: https://github.com/runeksvendsen/haskell-bitcoin-api.git
-    commit: 52d3685325c91eb3a8410d5295a4bd3b84742135
+    commit: 7ff62829fb4891ce2f7aeb88ac40ef02b69f37f3
+  extra-dep: true
+## APISpec.Blockchain:
+- location:
+    git: https://github.com/runeksvendsen/blockchain-restful-address-index.git
+    commit: 894177fc0865e84adc4655b0f1513e4489e3a7c1
   extra-dep: true
 
-flags:
-    snap-server:
-        openssl: true
+#flags:
+#    snap-server:
+#        openssl: true
 
 extra-deps:
-- haskoin-core-0.3.0
-- snap-server-0.9.5.1
-- murmur3-1.0.1
+# Haskoin
+- haskoin-core-0.3.1
+- murmur3-1.0.2
 - pbkdf-1.1.1.1
-- secp256k1-0.4.5
-- text-1.2.2.0
-#- JsonGrammar-1.0.4
-#- language-typescript-0.0.4
-#- stack-prism-0.1.5
-#- snap-cors-1.2.9
-#- higher-leveldb-0.3.1.0
+- secp256k1-0.4.6
+# Snap
+- snap-1.0.0.0
+- snap-core-1.0.0.0
+- snap-server-1.0.0.0
+- heist-1.0.0.0
+- xmlhtml-0.2.3.5
+- io-streams-haproxy-1.0.0.0
+# _Other
 - spawn-0.3
 
 
-resolver: lts-5.2
+

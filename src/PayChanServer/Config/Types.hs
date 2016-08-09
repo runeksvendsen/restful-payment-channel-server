@@ -5,6 +5,7 @@
 module  PayChanServer.Config.Types where
 
 import           ConnManager.Types (ConnManager)
+import qualified ChanStore.Interface as Store
 import           Data.Bitcoin.PaymentChannel.Types (ReceiverPaymentChannel, BitcoinAmount,
                                                     RecvPubKey)
 
@@ -27,7 +28,7 @@ data OpenConfig = OpenConfig {
    ,openMinLengthHours  :: Word }          -- minDurationHours
 
 data App = App
- { _dbConn          :: ConnManager
+ { _dbInterface     :: Store.Interface
  , _pubKey          :: RecvPubKey
  , _openConfig      :: OpenConfig
  , _finalOpenPrice  :: BitcoinAmount

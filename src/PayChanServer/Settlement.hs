@@ -37,37 +37,37 @@ logImportantErrorThenFail e = logImportantError e >> error e
 
 -- | Fully settle a given payment channel; return settlement txid
 settleChannel ::
-    ConnManager
+    DBConn.Interface
     -> ConnManager
     -> BTCRPCInfo
     -> BitcoinAmount
     -> ReceiverPaymentChannel
     -> IO HT.TxHash
-settleChannel dbConn signConn rpcInfo txFee rpc =
-    tryRequest "BeginSettle" (DBConn.settleByIdBegin dbConn (getChannelID rpc))
-        >>= finishSettleChannel dbConn signConn rpcInfo txFee
+settleChannel dbIface signConn rpcInfo txFee rpc =
+    tryRequest "BeginSettle" (DBConn.settleByIdBegin dbIface (getChannelID rpc))
+        >>= finishSettleChannel dbIface signConn rpcInfo txFee
 
 -- | Thread that queries the ChanStore for channels close to expiriry,
 --   and settles them
 settlementThread ::
-    ConnManager
+    DBConn.Interface
     -> ConnManager
     -> ServerSettleConfig
     -> BTCRPCInfo
     -> Int -- ^ Check interval in seconds
     -> IO ()
-settlementThread dbConn signConn settleConf rpcInfo delaySecs =
+settlementThread dbIface signConn settleConf rpcInfo delaySecs =
     let delayMicroSecs = delaySecs * round 1e6 in
     (handleAll  -- Log uncaught errors from settling channels
         ( logImportantError . ("Error in settlement thread (needs attention): " ++) . show )
         ( threadDelay delayMicroSecs >>
-          settleExpiringChannels dbConn signConn (settleConf, rpcInfo) >>=
+          settleExpiringChannels dbIface signConn (settleConf, rpcInfo) >>=
           (mapM ( putStrLn . ("Settled channel: " ++) . show ) ) >>
           return ()
         )
     )
     `finally` (    -- Regardless of what happens, keep thread running
-        settlementThread dbConn signConn settleConf rpcInfo delaySecs )
+        settlementThread dbIface signConn settleConf rpcInfo delaySecs )
 
 -- | After getting the channel state (ReceiverPaymentChannel) from the DB while
 --   simultaneously marking it as being closed, this function is used
@@ -76,30 +76,30 @@ settlementThread dbConn signConn settleConf rpcInfo delaySecs =
 --   the Bitcoin network, and finally mark the channel as completely closed
 --   in the ChanStore.
 finishSettleChannel ::
-    ConnManager
+    DBConn.Interface
     -> ConnManager
     -> BTCRPCInfo
     -> BitcoinAmount
     -> ReceiverPaymentChannel
     -> IO HT.TxHash
-finishSettleChannel dbConn signConn rpcInfo txFee rpc = do
+finishSettleChannel dbIface signConn rpcInfo txFee rpc = do
     settlementTx   <- tryRequest "Signing" (signSettlementTx signConn txFee rpc)
     settlementTxId <- tryBitcoind =<< bitcoindNetworkSumbitTx rpcInfo settlementTx -- HEY
-    tryRequest "FinishSettle" (DBConn.settleFin dbConn (getChannelID rpc) settlementTxId)
+    tryRequest "FinishSettle" (DBConn.settleFin dbIface (getChannelID rpc) settlementTxId)
     return settlementTxId
         where tryBitcoind = either logImportantErrorThenFail return
 
 
 --- Time-based settlement
 settleExpiringChannels ::
-    ConnManager
+    DBConn.Interface
     -> ConnManager
     -> (ServerSettleConfig, BTCRPCInfo)
     -> IO [HT.TxHash]
-settleExpiringChannels dbConn signConn (ServerSettleConfig txFee settlePeriod,rpcInfo) = do
+settleExpiringChannels dbIface signConn (ServerSettleConfig txFee settlePeriod,rpcInfo) = do
     settlementTimeCutoff <- getExpirationDateCutoff settlePeriod
-    expiringChannels <- tryRequest "BeginSettle" (DBConn.settleByExpBegin dbConn settlementTimeCutoff)
-    forM expiringChannels (finishSettleChannel dbConn signConn rpcInfo txFee)
+    expiringChannels <- tryRequest "BeginSettle" (DBConn.settleByExpBegin dbIface settlementTimeCutoff)
+    forM expiringChannels (finishSettleChannel dbIface signConn rpcInfo txFee)
 
 getExpirationDateCutoff :: Int -> IO UTCTime
 getExpirationDateCutoff settlePeriodHours = do

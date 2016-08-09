@@ -29,8 +29,8 @@ import           Data.Maybe (isNothing)
 
 
 
-appInit :: Config -> ConnManager -> SnapletInit App App
-appInit cfg databaseConn = makeSnaplet "PayChanServer" "RESTful Bitcoin payment channel server" Nothing $ do
+appInit :: Config -> SnapletInit App App
+appInit cfg = makeSnaplet "PayChanServer" "RESTful Bitcoin payment channel server" Nothing $ do
     -- Debug
     debug <- liftIO $ configDebugIsEnabled cfg
     when debug $ liftIO $
@@ -48,10 +48,10 @@ appInit cfg databaseConn = makeSnaplet "PayChanServer" "RESTful Bitcoin payment 
 
     signingServiceConn <- liftIO $ getSigningServiceConn cfg
     bitcoindRPCConf <- liftIO $ getBitcoindConf cfg
-    let settleChanFunc = settleChannel databaseConn signingServiceConn bitcoindRPCConf settleFee
 
-    liftIO $ putStr $ "Testing database connection... "
-    maybeRes <- liftIO . initWaitConnect "database" $ DBConn.chanGet databaseConn dummyKey
+    dbIface <- liftIO $ getChanStoreIface =<< getDBConf cfg
+    liftIO $ putStr "Testing database connection... "
+    maybeRes <- liftIO . initWaitConnect "database" $ DBConn.chanGet dbIface dummyKey
     liftIO $ putStrLn $ if isNothing maybeRes then "success." else "success... but dummy key is present in database."
 
     liftIO $ putStr "Contacting SigningService for public key... "
@@ -61,8 +61,10 @@ appInit cfg databaseConn = makeSnaplet "PayChanServer" "RESTful Bitcoin payment 
     let basePathVersion = "/v1"
     addRoutes $ mainRoutes debug basePathVersion
 
+    let settleChanFunc = settleChannel dbIface signingServiceConn bitcoindRPCConf settleFee
+
     settlePeriod <- liftIO $ configLookupOrFail cfg "settlement.settlementPeriodHours"
-    return $ App databaseConn pubKey
+    return $ App dbIface pubKey
                  openConfig confOpenPrice settlePeriod
                  basePathVersion settleChanFunc
 

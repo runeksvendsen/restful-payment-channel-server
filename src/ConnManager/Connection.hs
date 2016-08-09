@@ -2,17 +2,12 @@ module ConnManager.Connection where --TODO: move
 
 import           ConnManager.Types
 
-import           ChanStore.Lib.Types
-import ChanStore.Lib.ChanMap
--- impor  PayChanServer.Config.Types
+-- import           ChanStore.Lib.Types
+-- import           ChanStore.Lib.ChanMap
 
-import Control.Concurrent.STM (STM, atomically, throwSTM)
-import qualified Control.Concurrent.STM.TVar as TVar
-import qualified Network.Haskoin.Transaction as HT
-import qualified Control.Exception.Base as Fail
+
 
 import qualified Data.ByteString as BS
-import           Text.Printf        (printf)
 
 import           Network.HTTP.Client
 

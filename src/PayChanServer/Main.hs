@@ -39,18 +39,17 @@ wrapArg main' = do
 
 main :: IO ()
 main = wrapArg $ \cfg cfgFilePath -> do
-    dbConn <- connFromDBConf =<< getDBConf cfg
     --  Start thread that settles channels before expiration date
-    _ <- forkIO $ startSettlementThread cfg dbConn (60 * 5)  -- run every 5 minutes
+    _ <- forkIO $ startSettlementThread cfg (60 * 5)  -- run every 5 minutes
     -- Shut down on TERM signal
     mainThread <- myThreadId
     _ <- installHandlerKillThreadOnSig Sig.sigTERM mainThread
     -- Start server
-    runApp (F.dropExtension cfgFilePath) cfg dbConn
+    runApp (F.dropExtension cfgFilePath) cfg
 
-runApp :: String -> Config -> ConnManager -> IO ()
-runApp env cfg chanMapConn = do
-    (_, app, _) <- runSnaplet (Just env) (appInit cfg chanMapConn)
+runApp :: String -> Config -> IO ()
+runApp env cfg = do
+    (_, app, _) <- runSnaplet (Just env) (appInit cfg)
     --  Get port from PORT environment variable, if it contains a valid port number
     maybePort <- return . maybe Nothing readMaybe =<< lookupEnv "PORT"
     let conf = case maybePort :: Maybe Word of
@@ -62,9 +61,10 @@ runApp env cfg chanMapConn = do
 -- |Close payment channels before we reach the expiration date,
 --  because if we don't, the client can reclaim all the funds sent to us,
 --  leaving us with nothing.
-startSettlementThread cfg dbConn i = do
+startSettlementThread cfg i = do
+    dbIface <- getChanStoreIface =<< getDBConf cfg
     settleConf <- getServerSettleConfig cfg
     signConn <- getSigningServiceConn cfg
     bitcoindConf <- getBitcoindConf cfg
     putStrLn "Started settlement thread." >>
-        settlementThread dbConn signConn settleConf bitcoindConf i
+        settlementThread dbIface signConn settleConf bitcoindConf i
