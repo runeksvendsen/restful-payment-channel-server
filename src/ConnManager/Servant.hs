@@ -1,22 +1,9 @@
 module ConnManager.Servant where
 
-import ConnManager.Types
-
-import Control.Monad.Trans.Except (ExceptT, runExceptT)
-import Data.Aeson
-import Data.Proxy
-import GHC.Generics
-import Network.HTTP.Client (Manager, newManager, defaultManagerSettings)
-import Servant.API
-import Servant.Client
-import           Servant
-import qualified Control.Monad.Error.Class as Except
+import qualified Control.Monad.Trans.Except as ExceptT
+import qualified Servant.Client as SC
+import           Data.EitherR (fmapL)
 
 
-
-    -- runReq :: ConnManager2 -> Handler a
-    -- runReq (Conn2 baseUrl man) = do
-    --   res <- runExceptT (unspentOutputs addr man baseUrl)
-    --   case res of
-    --     Left err -> Except.throwError $ err500 { errBody = cs $ show err }
-    --     Right a -> return a
+runReq :: ExceptT.ExceptT SC.ServantError IO a -> IO (Either String a)
+runReq = fmap (fmapL show) . ExceptT.runExceptT

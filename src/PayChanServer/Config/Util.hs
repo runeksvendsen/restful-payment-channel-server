@@ -4,7 +4,7 @@ module  PayChanServer.Config.Util
 (
 loadConfig,configLookupOrFail,
 getChanOpenConf,getServerSettleConfig,getSigningSettleConfig,
-getBitcoindConf,getSigningServiceConn,
+getBlockchainIface,getSigningServiceConn,
 BitcoinNet,
 setBitcoinNetwork,
 getDBConf,getChanStoreIface,
@@ -34,10 +34,14 @@ import           Data.Ratio
 import           Data.Configurator.Types
 import qualified Data.Configurator as Conf
 import           Data.String.Conversions (cs)
-import           ConnManager.Types (ConnManager)
+import           ConnManager.Types (ConnManager, ConnManager2)
 import           PayChanServer.Types
-import           Bitcoind (BTCRPCInfo(..))
 
+import qualified BlockchainAPI.Impl.Bitcoind.Interface as Btc
+import qualified Servant.Common.BaseUrl as BaseUrl
+import qualified ConnManager.RequestRunner as Req
+import qualified Network.HTTP.Client as HTTP
+import qualified Network.HTTP.Client.TLS as HTTPS
 
 
 -- |Optional. If set to True, bypasses funding/settlement in order to enable testing
@@ -54,6 +58,24 @@ configLookupOrFail conf name =
         (fail $ "ERROR: Failed to read key \"" ++ cs name ++
             "\" in config (key not present or invalid)")
         return
+
+getBlockchainHost :: Config -> IO BaseUrl.BaseUrl
+getBlockchainHost cfg = BaseUrl.BaseUrl <$>
+    configLookupOrFail cfg "blockchain.protocol" <*>
+    configLookupOrFail cfg "blockchain.host" <*>
+    configLookupOrFail cfg "blockchain.port" <*>
+    return ""
+
+getBlockchainIface :: Config -> IO Btc.Interface
+getBlockchainIface cfg = do
+    debug <- configDebugIsEnabled cfg
+    baseUrl@(BaseUrl.BaseUrl scheme _ _ _) <- getBlockchainHost cfg
+    man <- HTTP.newManager $ if scheme == BaseUrl.Http then HTTP.defaultManagerSettings else HTTPS.tlsManagerSettings
+    -- Produce dummy settlement/funding functions in case we're in debug mode
+    return $ if not debug then
+            Btc.mkBtcInterface (Req.Conn2 baseUrl man)
+        else
+            Btc.dummyBtcInterface
 
 connFromDBConf :: DBConf -> IO ConnManager
 connFromDBConf (DBConf host port numConns) = newConnManager host port numConns
@@ -101,14 +123,6 @@ getSigningSettleConfig :: Config -> IO SigningSettleConfig
 getSigningSettleConfig cfg = SigningSettleConfig <$>
         configLookupOrFail cfg "settlement.privKeySeed" <*>
         configLookupOrFail cfg "settlement.fundsDestinationAddress"
-
-getBitcoindConf :: Config -> IO BTCRPCInfo
-getBitcoindConf cfg = BTCRPCInfo <$>
-    configLookupOrFail cfg "bitcoin.bitcoindRPC.ip" <*>
-    configLookupOrFail cfg "bitcoin.bitcoindRPC.port" <*>
-    configLookupOrFail cfg "bitcoin.bitcoindRPC.user" <*>
-    configLookupOrFail cfg "bitcoin.bitcoindRPC.pass" <*>
-    configDebugIsEnabled cfg
 
 -- | Roughly accurate (±10%-ish), because we know the two possible sizes (one/two outputs)
 --  of the settlement transaction. Could use refinement.

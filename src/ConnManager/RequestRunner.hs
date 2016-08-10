@@ -5,7 +5,7 @@ module ConnManager.RequestRunner
     runRequest,
     runRequestJSON,
     notFoundMeansNothing,
-    ConnManager,
+    ConnManager,ConnManager2(..),
     HasReqParams(..)
 )
 
@@ -47,14 +47,16 @@ requestFromParams conn rp =
             queryString = rQueryStr rp
     }
 
+getResponseBody :: Response BodyReader -> IO BL.ByteString
+getResponseBody res = BL.fromStrict . BS.concat <$> brConsume (responseBody res)
 
 runRequest :: (HasReqParams a, Typeable b, Bin.Binary b) => ConnManager -> a -> IO b
 runRequest conn@(Conn _ _ man) rp =
     let
-        failOnLeft = either (fail . ("failed to parse binary response: " ++)) return
-        responseBodyUnless404 res = if responseStatus res == notFound404 then return BL.empty
-                                else BL.fromStrict . BS.concat <$> brConsume (responseBody res)
+        is404 res = responseStatus res == notFound404
+        responseBodyUnless404 res = if is404 res then return BL.empty else getResponseBody res
         parseResponseOrFail resp = failOnLeft . deserEither . cs =<< responseBodyUnless404 resp
+        failOnLeft = either (fail . ("failed to parse binary response: " ++)) return
     in
         requestFromParams conn rp >>=
             \req -> withResponse (installStatusHandler rp req) man parseResponseOrFail
@@ -63,10 +65,9 @@ runRequest conn@(Conn _ _ man) rp =
 runRequestJSON :: (HasReqParams a, JSON.FromJSON b) => ConnManager -> a -> IO b
 runRequestJSON conn@(Conn _ _ connManager) rp =
     let
-        failOnLeft = either (fail . ("failed to parse JSON response: " ++)) return
         withRequestResponse reqType man f req = withResponse (installStatusHandler reqType req) man f
-        getResponseBody res = BL.fromStrict . BS.concat <$> brConsume (responseBody res)
         parseResponseOrFail resp = failOnLeft . JSON.eitherDecode . cs =<< getResponseBody resp
+        failOnLeft = either (fail . ("failed to parse JSON response: " ++)) return
     in
         requestFromParams conn rp >>= withRequestResponse rp connManager parseResponseOrFail
 

@@ -20,15 +20,14 @@ import           ChanStore.Interface  as DBConn
 
 import           Data.Bitcoin.PaymentChannel.Types (ReceiverPaymentChannel, BitcoinAmount,
                                                     PaymentChannel(getChannelID))
-import           Bitcoind (BTCRPCInfo, bitcoindNetworkSumbitTx)
 import           SigningService.Interface (signSettlementTx)
 
 import qualified Network.Haskoin.Transaction as HT
 import           Data.Time.Clock (UTCTime, getCurrentTime, addUTCTime)
-import           Control.Monad.Catch (finally, handleAll)
-import           Control.Concurrent  (threadDelay)
+import           Control.Monad.Catch (handleAll)
+import           Control.Concurrent as Concurrent
 import           Control.Monad (forM)
-
+import qualified BlockchainAPI.Impl.Bitcoind.Interface as Btc
 
 -- TODO: Figure out how to alert the server operator of important errors
 -- Send email? (first step implementation: PayChanServer.Misc.Email)
@@ -39,7 +38,7 @@ logImportantErrorThenFail e = logImportantError e >> error e
 settleChannel ::
     DBConn.Interface
     -> ConnManager
-    -> BTCRPCInfo
+    -> Btc.Interface
     -> BitcoinAmount
     -> ReceiverPaymentChannel
     -> IO HT.TxHash
@@ -53,21 +52,20 @@ settlementThread ::
     DBConn.Interface
     -> ConnManager
     -> ServerSettleConfig
-    -> BTCRPCInfo
+    -> Btc.Interface
     -> Int -- ^ Check interval in seconds
     -> IO ()
-settlementThread dbIface signConn settleConf rpcInfo delaySecs =
-    let delayMicroSecs = delaySecs * round 1e6 in
-    (handleAll  -- Log uncaught errors from settling channels
+settlementThread dbIface signConn settleConf btcIface delaySecs = do
+    let delayMicroSecs = delaySecs * round 1e6
+    threadDelay delayMicroSecs
+
+    forkIO $ settlementThread dbIface signConn settleConf btcIface delaySecs
+    handleAll  -- Log uncaught errors from settling channels
         ( logImportantError . ("Error in settlement thread (needs attention): " ++) . show )
-        ( threadDelay delayMicroSecs >>
-          settleExpiringChannels dbIface signConn (settleConf, rpcInfo) >>=
-          (mapM ( putStrLn . ("Settled channel: " ++) . show ) ) >>
-          return ()
+        ( settleExpiringChannels dbIface signConn settleConf btcIface >>=
+          mapM_ ( putStrLn . ("Settled channel: " ++) . show )
         )
-    )
-    `finally` (    -- Regardless of what happens, keep thread running
-        settlementThread dbIface signConn settleConf rpcInfo delaySecs )
+
 
 -- | After getting the channel state (ReceiverPaymentChannel) from the DB while
 --   simultaneously marking it as being closed, this function is used
@@ -78,13 +76,13 @@ settlementThread dbIface signConn settleConf rpcInfo delaySecs =
 finishSettleChannel ::
     DBConn.Interface
     -> ConnManager
-    -> BTCRPCInfo
+    -> Btc.Interface
     -> BitcoinAmount
     -> ReceiverPaymentChannel
     -> IO HT.TxHash
-finishSettleChannel dbIface signConn rpcInfo txFee rpc = do
+finishSettleChannel dbIface signConn btcIface txFee rpc = do
     settlementTx   <- tryRequest "Signing" (signSettlementTx signConn txFee rpc)
-    settlementTxId <- tryBitcoind =<< bitcoindNetworkSumbitTx rpcInfo settlementTx -- HEY
+    settlementTxId <- tryBitcoind =<< Btc.publishTx btcIface settlementTx -- HEY
     tryRequest "FinishSettle" (DBConn.settleFin dbIface (getChannelID rpc) settlementTxId)
     return settlementTxId
         where tryBitcoind = either logImportantErrorThenFail return
@@ -94,12 +92,13 @@ finishSettleChannel dbIface signConn rpcInfo txFee rpc = do
 settleExpiringChannels ::
     DBConn.Interface
     -> ConnManager
-    -> (ServerSettleConfig, BTCRPCInfo)
+    -> ServerSettleConfig
+    -> Btc.Interface
     -> IO [HT.TxHash]
-settleExpiringChannels dbIface signConn (ServerSettleConfig txFee settlePeriod,rpcInfo) = do
+settleExpiringChannels dbIface signConn (ServerSettleConfig txFee settlePeriod) btcIface = do
     settlementTimeCutoff <- getExpirationDateCutoff settlePeriod
     expiringChannels <- tryRequest "BeginSettle" (DBConn.settleByExpBegin dbIface settlementTimeCutoff)
-    forM expiringChannels (finishSettleChannel dbIface signConn rpcInfo txFee)
+    forM expiringChannels (finishSettleChannel dbIface signConn btcIface txFee)
 
 getExpirationDateCutoff :: Int -> IO UTCTime
 getExpirationDateCutoff settlePeriodHours = do

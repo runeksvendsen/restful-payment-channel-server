@@ -8,7 +8,7 @@ import           Data.DiskMap (getAllItems,
 
 import           PayChanServer.Types (ServerSettleConfig(..), SigningSettleConfig(..))
 
-import           Bitcoind (BTCRPCInfo, bitcoindNetworkSumbitTx)
+
 
 import           Data.Bitcoin.PaymentChannel.Types (ReceiverPaymentChannel, PaymentChannel(..),
                                                     BitcoinLockTime(..),

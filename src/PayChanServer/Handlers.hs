@@ -2,6 +2,10 @@
 
 module  PayChanServer.Handlers where
 
+
+import           Snap.Core
+import           Snap (Handler)
+
 import           Prelude hiding (userError)
 
 import           PayChanServer.Types (OpenHandlerConf(..),ChanPayConfig(..),
@@ -16,9 +20,6 @@ import           Common.Util
 import           PayChanServer.DB (tryDBRequest, trySigningRequest,
                             getChannelStateForPayment, getChannelStateForSettlement,
                             confirmChannelDoesntExistOrAbort, getChannelStateOr404)
-import           BlockchainAPI.Impl.ChainSo (chainSoAddressInfo, toEither)
-import           BlockchainAPI.Types (toFundingTxInfo,
-                                TxInfo(..), OutInfo(..))
 
 import qualified ChanStore.Interface as DBConn
 import           ChanStore.Lib.Types (UpdateResult(..))
@@ -26,10 +27,6 @@ import           ChanStore.Lib.Types (UpdateResult(..))
 import           Control.Monad.IO.Class (liftIO)
 import           Control.Monad (unless, when)
 
-
-import           Snap.Core
-
-import           Snap (Handler)
 
 import           Data.Bitcoin.PaymentChannel
 import           Data.Bitcoin.PaymentChannel.Types (ReceiverPaymentChannel, PaymentChannel(..),
@@ -39,19 +36,12 @@ import           Data.Bitcoin.PaymentChannel.Types (ReceiverPaymentChannel, Paym
                                                     channelValueLeft, usesBlockHeight)
 import           Data.Bitcoin.PaymentChannel.Util (setSenderChangeAddress, BitcoinLockTime(..))
 
-import qualified Network.Haskoin.Constants as HCC
-import           Control.Lens (use)
-
-import qualified Network.Haskoin.Crypto as HC
 import qualified Network.Haskoin.Transaction as HT
 
 import           Data.Aeson (toJSON)
 
-import qualified Data.ByteString as BS
 import qualified Data.ByteString.Char8 as C
-import Text.Printf (printf)
 import Data.String.Conversions (cs)
-import Test.GenData (deriveMockFundingInfo, convertMockFundingInfo)
 
 
 

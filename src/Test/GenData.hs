@@ -25,7 +25,7 @@ import System.Entropy (getEntropy)
 import Crypto.Secp256k1 (secKey)
 import Data.Time.Clock.POSIX (getPOSIXTime)
 -- import Server.Config (pubKeyServer, fundsDestAddr, openPrice)
-import BlockchainAPI.Types (TxInfo(..), OutInfo(..))
+import BlockchainAPI.Types (TxInfo(..))
 
 mockChangeAddress = "mmA2XECa7bVERzQKkyy1pNBQ3PC4HnxTC5"
 nUM_PAYMENTS = 100 :: Int
@@ -111,9 +111,9 @@ getSessionData (ChannelSession endPoint cp fundAddr initPay payList) =
 
 
 
+-- | Deprecated
 convertMockFundingInfo :: FundingTxInfo -> TxInfo
-convertMockFundingInfo (CFundingTxInfo txid vout val)  =
-    TxInfo txid 27 (OutInfo "" (fromIntegral val) (fromIntegral vout))
+convertMockFundingInfo = TxInfo 27
 
 deriveMockFundingInfo :: ChannelParameters -> FundingTxInfo
 deriveMockFundingInfo (CChannelParameters sendPK _ expTime) =

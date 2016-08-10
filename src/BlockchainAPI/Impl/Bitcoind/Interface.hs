@@ -13,39 +13,60 @@ a single confirmation has been obtained.
 
 {-# LANGUAGE OverloadedStrings, DataKinds, TypeOperators #-}
 
-module BlockchainAPI.Impl.Bitcoind.Interface where
+module BlockchainAPI.Impl.Bitcoind.Interface
+(
+    Interface(publishTx, unspentOuts)
+  , mkBtcInterface
+  , dummyBtcInterface
+  , module BlockchainAPI.Impl.Bitcoind.Types
+)
 
-import Control.Monad.Trans.Except (ExceptT, runExceptT)
-import Data.Aeson
-import Data.Proxy
-import GHC.Generics
-import Network.HTTP.Client (Manager, newManager, defaultManagerSettings)
-import Servant.API
-import Servant.Client
+where
 
--- import           BlockchainAPI.Impl.Bitcoind.Spec
+import           BlockchainAPI.Types
+
+import qualified ConnManager.Servant as Servant
+import           ConnManager.Types
+
+import           Data.Proxy
+import           Servant.API
+import           Servant.Client
+
+import qualified APISpec.Blockchain as APISpec
 import           BlockchainAPI.Impl.Bitcoind.Types
--- import           ConnManager.RequestRunner (ConnManager, runRequestJSON)
 
-import           APISpec.Blockchain (api)
+import           Data.Bitcoin.PaymentChannel.Types (FundingTxInfo(..))
 
+import qualified Network.Haskoin.Transaction as HT
 import qualified Network.Haskoin.Crypto as HC
 
-testAddrTestnet = "2N414xMNQaiaHCT5D7JamPz7hJEc9RG7469"
 
-unspentOutputs :<|> publishTx = client api
-
-test1 = unspentOutputs
-
-test2 = publishTx
-
-t = unspentOutputs testAddrTestnet (BaseUrl Http "localhost" 8000 "")
-
-getUnspent :: ConnManager -> HC.Address -> IO [AddressFundingInfo]
-getUnspent conn addr = runRequestJSON conn $ GetUnspent addr
-
-
-data BtcInterface = BtcInteface {
+data Interface = Interface {
     publishTx   ::  HT.Tx       -> IO (Either String HT.TxHash)
-  , unspentOuts ::  HC.Address  -> IO
+  , unspentOuts ::  HC.Address  -> IO (Either String [AddressFundingInfo])
 }
+
+mkBtcInterface :: ConnManager2 -> Interface
+mkBtcInterface (Conn2 baseUrl man) =
+    Interface
+        (\tx    -> Servant.runReq $ publishTx' tx man baseUrl)
+        (\addr  -> Servant.runReq $ unspentOutputs' addr man baseUrl)
+
+-- |Used for testing
+dummyBtcInterface :: Interface
+dummyBtcInterface = Interface (return . Right . HT.txHash) (const $ return . Right $ [])
+
+api :: Proxy APISpec.BlockchainApi
+api = Proxy
+
+unspentOutputs' :<|> publishTx' = client api
+
+
+instance BlockchainAPI Interface where
+    listUnspentOutputs (Interface _ listUnspent) addr =
+        fmap (map toTxInfo) <$> listUnspent addr
+    publishTx (Interface pubTx _) = pubTx
+
+toTxInfo :: AddressFundingInfo -> TxInfo
+toTxInfo (AddressFundingInfo _ txid vout numConfs val) =
+    TxInfo numConfs $ CFundingTxInfo txid vout (fromIntegral val)

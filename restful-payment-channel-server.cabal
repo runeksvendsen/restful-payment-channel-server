@@ -67,7 +67,7 @@ Executable PayChanServer
     string-conversions,
     errors,
     hexstring,
-    http-client, http-types,
+    http-client, http-client-tls, http-types,
     bitcoin-api, bitcoin-tx,
     case-insensitive,
     unix,
@@ -83,8 +83,7 @@ Executable PayChanServer
 
   other-modules: PayChanServer.App,
                  Common.Types,
-                 Bitcoind
-                 BlockchainAPI.Impl.ChainSo
+                 BlockchainAPI.Impl.ChainSo.ChainSo
                  BlockchainAPI.Types
                  ChanStore.Interface
                  ChanStore.Lib.ChanMap
@@ -221,13 +220,13 @@ Executable SigningService
     errors,
     hexstring,
     http-client,
+    http-client-tls,
     bitcoin-api, bitcoin-tx,
     case-insensitive,
     unix,
     exceptions,
     filepath
-  other-modules: Bitcoind
-                 BlockchainAPI.Impl.ChainSo
+  other-modules: BlockchainAPI.Impl.ChainSo.ChainSo
                  BlockchainAPI.Types
                  ChanStore.Interface
                  ChanStore.Lib.ChanMap
@@ -347,16 +346,3 @@ Executable RunTestData
 
   hs-source-dirs:       src
   default-language:     Haskell2010
-
-
-Executable Email
-  hs-source-dirs: src
-  main-is: PayChanServer/Misc/Email.hs
-  ghc-options: -W -main-is PayChanServer.Misc.Email
-
-  default-extensions: OverloadedStrings
-  Build-depends:
-    base                      >= 4     && < 5,
-    -- email
-    HaskellNet,
-    HaskellNet-SSL

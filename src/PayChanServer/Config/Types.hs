@@ -18,7 +18,10 @@ import           Data.Configurator.Types
 import           Common.Util (fromHexString)
 import           Data.Ratio
 import           Data.String.Conversions (cs)
+import qualified Servant.Common.BaseUrl as BaseUrl
+import qualified  Network.HTTP.Client as HTTP
 
+import qualified BlockchainAPI.Types as BtcType
 
 
 data OpenConfig = OpenConfig {
@@ -29,12 +32,14 @@ data OpenConfig = OpenConfig {
 
 data App = App
  { _dbInterface     :: Store.Interface
+ , _listUnspent     :: HC.Address  -> IO (Either String [BtcType.TxInfo])
+ , _settleChannel   :: ReceiverPaymentChannel -> IO HT.TxHash    -- Dummy function if debug is enabled
  , _pubKey          :: RecvPubKey
  , _openConfig      :: OpenConfig
  , _finalOpenPrice  :: BitcoinAmount
  , _settlePeriod    :: Word
  , _basePath        :: BS.ByteString
- , _settleChanFunc  :: ReceiverPaymentChannel -> IO HT.TxHash
+ , _areWeDebugging  :: Bool
  }
 
 -- Template Haskell magic
@@ -46,6 +51,10 @@ data DBConf       = DBConf       Host Word Int
 data ServerDBConf = ServerDBConf String Word
 type Host = BS.ByteString
 
+instance Configured BaseUrl.Scheme where
+    convert (String "http") = return BaseUrl.Http
+    convert (String "https") = return BaseUrl.Https
+    convert _ = Nothing
 
 instance Configured BitcoinNet where
     convert (String "live") = return Mainnet

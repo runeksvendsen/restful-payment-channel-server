@@ -2,13 +2,10 @@
 
 module  PayChanServer.Main where
 
-import           Common.Util -- (Config, loadConfig, configLookupOrFail, getSettleConfig, getBitcoindConf, getDBConf)
 import           PayChanServer.Init (appInit, installHandlerKillThreadOnSig)
-import           ConnManager.Types (ConnManager)
 import           PayChanServer.Settlement (settlementThread)
 import           PayChanServer.Config.Util
 
-import           Snap (serveSnaplet)
 import           Snap.Snaplet (runSnaplet)
 import           Snap.Http.Server (defaultConfig, httpServe)
 import           Snap.Http.Server.Config (setPort)
@@ -16,12 +13,8 @@ import           Snap.Http.Server.Config (setPort)
 import           System.Environment (lookupEnv, getArgs, getProgName)
 import           Text.Read (readMaybe)
 
-import           Control.Monad (unless)
-import           Control.Monad.Catch (bracket, finally)
-import           Control.Concurrent (forkIO, throwTo, myThreadId)
-import qualified Control.Exception as E
 import qualified System.Posix.Signals as Sig
-import           Control.Concurrent (ThreadId, forkIO, killThread, threadDelay)
+import           Control.Concurrent (ThreadId, forkIO, killThread, threadDelay, myThreadId)
 import qualified System.FilePath as F
 
 
@@ -43,7 +36,7 @@ main = wrapArg $ \cfg cfgFilePath -> do
     _ <- forkIO $ startSettlementThread cfg (60 * 5)  -- run every 5 minutes
     -- Shut down on TERM signal
     mainThread <- myThreadId
-    _ <- installHandlerKillThreadOnSig Sig.sigTERM mainThread
+    installHandlerKillThreadOnSig Sig.sigTERM mainThread
     -- Start server
     runApp (F.dropExtension cfgFilePath) cfg
 
@@ -51,7 +44,7 @@ runApp :: String -> Config -> IO ()
 runApp env cfg = do
     (_, app, _) <- runSnaplet (Just env) (appInit cfg)
     --  Get port from PORT environment variable, if it contains a valid port number
-    maybePort <- return . maybe Nothing readMaybe =<< lookupEnv "PORT"
+    maybePort <- maybe Nothing readMaybe <$> lookupEnv "PORT"
     let conf = case maybePort :: Maybe Word of
             Nothing     -> defaultConfig
             Just port   -> setPort (fromIntegral port) defaultConfig
@@ -65,6 +58,6 @@ startSettlementThread cfg i = do
     dbIface <- getChanStoreIface =<< getDBConf cfg
     settleConf <- getServerSettleConfig cfg
     signConn <- getSigningServiceConn cfg
-    bitcoindConf <- getBitcoindConf cfg
+    btcIface <- getBlockchainIface cfg
     putStrLn "Started settlement thread." >>
-        settlementThread dbIface signConn settleConf bitcoindConf i
+        settlementThread dbIface signConn settleConf btcIface i
