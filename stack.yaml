@@ -18,7 +18,7 @@ packages:
 ## APISpec.Blockchain:
 - location:
     git: https://github.com/runeksvendsen/blockchain-restful-address-index.git
-    commit: a01a254459c978f385256c39b7caa1dda9abe7a4
+    commit: f627f1699405e13ac3bf31fcea23f4f4c14440cd
   extra-dep: true
 
 #flags:
