@@ -72,7 +72,6 @@ mkFundingInfo openPrice' minConf settleHours recvPK sendPK lockTime rootURL =
     cs $ rootURL ++ channelOpenPath sendPK lockTime)
 
 
-
 chanSettle :: MonadSnap m =>
     StdConfig
     -> (ReceiverPaymentChannel -> IO HT.TxHash)
@@ -95,7 +94,6 @@ chanSettle (StdConfig chanMap chanId clientPayment) settleChannel valRecvd = do
             (DBConn.ChannelSettled settleTxId _ rpc) -> do
                 confirmClientPayment $ getNewestPayment rpc
                 return (settleTxId, channelValueLeft rpc)
-
     --write response
     writeJSON . toJSON $ PaymentResult {
             paymentResultchannel_status = ChannelClosed,
@@ -105,7 +103,9 @@ chanSettle (StdConfig chanMap chanId clientPayment) settleChannel valRecvd = do
             paymentResultvalue_received = valRecvd,
             paymentResultsettlement_txid = Just settlementTxId
         }
-    modifyResponse $ setResponseStatus 200 "Channel closed"
+    when (valRecvd == 0) $
+        -- Did we get here from a channel close request, or because a payment exhausted the channel?
+        modifyResponse $ setResponseStatus 200 "Channel closed"
 
 
 

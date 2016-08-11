@@ -47,7 +47,7 @@ init :: Conf.Config -> SnapletInit AppConf AppConf
 init cfg = makeSnaplet "SigningService" "Settlement transaction producer" Nothing $ do
     settleConfig@(SigningSettleConfig privKey _) <- liftIO $ getSigningSettleConfig cfg
     let confPubKey = MkRecvPubKey $ HC.derivePubKey privKey
-    addRoutes $ site
+    addRoutes site
     return $ AppConf confPubKey $ produceSettlementTx settleConfig
 
 main :: IO ()

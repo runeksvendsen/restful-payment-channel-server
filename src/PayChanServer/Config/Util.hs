@@ -19,22 +19,14 @@ where
 import           PayChanServer.Config.Types
 import           ConnManager.Connection (newConnManager)
 import qualified ChanStore.Interface as Store
-import           Common.Util (fromHexString)
 import           Data.Bitcoin.PaymentChannel.Types (BitcoinAmount)
 
-import qualified Network.Haskoin.Transaction as HT
-import qualified Network.Haskoin.Crypto as HC
 import qualified Network.Haskoin.Constants as HCC
-import qualified Crypto.Secp256k1 as Secp
 
-import           Control.Applicative (liftA2)
-import           Control.Lens.TH (makeLenses)
-import qualified Data.ByteString as BS
-import           Data.Ratio
 import           Data.Configurator.Types
 import qualified Data.Configurator as Conf
 import           Data.String.Conversions (cs)
-import           ConnManager.Types (ConnManager, ConnManager2)
+import           ConnManager.Types (ConnManager)
 import           PayChanServer.Types
 
 import qualified BlockchainAPI.Impl.Bitcoind.Interface as Btc

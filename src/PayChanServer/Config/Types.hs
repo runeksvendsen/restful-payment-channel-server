@@ -22,6 +22,18 @@ import qualified Servant.Common.BaseUrl as BaseUrl
 import qualified  Network.HTTP.Client as HTTP
 
 import qualified BlockchainAPI.Types as BtcType
+import qualified Data.Tagged as Tag
+
+
+--- Tagged types
+getVal = Tag.unTagged
+
+type BtcConf        = Tag.Tagged BlockchainConf Word
+type SettlePeriod   = Tag.Tagged Hours Word
+
+data BlockchainConf = BlockchainConf
+data Hours   = Hours
+--
 
 
 data OpenConfig = OpenConfig {
