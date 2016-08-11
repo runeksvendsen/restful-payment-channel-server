@@ -1,0 +1,38 @@
+Name:                signing-service
+Version:             0.1.0
+Synopsis:            SigningService
+Description:         TODO
+License:             PublicDomain
+Author:              Rune K. Svendsen
+Maintainer:          runesvend@gmail.com
+Stability:           Experimental
+Homepage:            https://github.com/runeksvendsen/restful-payment-channel-server
+bug-reports:         https://github.com/runeksvendsen/restful-payment-channel-server/issues
+category:            Bitcoin, Finance, Network
+Build-type:          Simple
+Cabal-version:       >= 1.2
+
+Executable SigningService
+  hs-source-dirs: src
+  main-is: SigningService/Main.hs
+  ghc-options: -W -O2 -main-is SigningService.Main
+  default-extensions: OverloadedStrings
+  build-depends:
+    base                      >= 4     && < 5,
+    bytestring                >= 0.9.1 && < 0.11,
+    monad-control             == 1.0.*,
+    snap-core                 == 1.0.*,
+    snap-server               == 1.0.*,
+    snap                      == 1.0.*,
+    mtl                       >= 2     && < 3,
+    io-streams,
+    blaze-builder,
+    bitcoin-payment-channel   >= 0.1.1.0 && < 0.3,
+    haskoin-core              >= 0.3.0 && < 1.0.0,
+    secp256k1,
+    configurator,
+    binary,
+    string-conversions,
+    errors
+  other-modules: 
+
