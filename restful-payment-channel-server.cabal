@@ -104,6 +104,11 @@ Executable PayChanServer
                  SigningService.Interface
                  SigningService.Spec
                  Test.GenData
+                 BlockchainAPI.Impl.Bitcoind.Interface
+                 BlockchainAPI.Impl.Bitcoind.Types
+                 ConnManager.Servant
+                 ConnManager.Types
+                 Test.Dummy
 
 
 Executable ChanStore
@@ -176,11 +181,18 @@ Executable ChanStore
                      PayChanServer.Util
                      SigningService.Interface
                      SigningService.Spec
+                     BlockchainAPI.Impl.Bitcoind.Interface
+                     BlockchainAPI.Impl.Bitcoind.Types
+                     BlockchainAPI.Types
+                     ConnManager.Servant
+                     ConnManager.Types
+                     Test.Dummy
+                     Test.GenData
 
 Executable SigningService
   hs-source-dirs: src
   main-is: SigningService/Main.hs
-  ghc-options: -W -O2 -threaded -with-rtsopts=-N -main-is SigningService.Main
+  ghc-options: -W -O2 -main-is SigningService.Main
   default-extensions: OverloadedStrings
   build-depends:
     base                      >= 4     && < 5,
@@ -199,40 +211,44 @@ Executable SigningService
     binary,
     string-conversions,
     errors
-  other-modules: BlockchainAPI.Impl.ChainSo.ChainSo
-                 BlockchainAPI.Types
-                 ChanStore.Interface
-                 ChanStore.Lib.ChanMap
-                 ChanStore.Lib.Settlement
-                 ChanStore.Lib.Types
-                 ChanStore.Spec
-                 Common.ResourceURL
-                 Common.Types
-                 Common.URLParam
-                 Common.Util
-                 ConnManager.Connection
-                 ConnManager.RequestRunner
-                 Data.DiskMap
-                 Data.DiskMap.Internal.Helpers
-                 Data.DiskMap.Internal.Update
-                 Data.DiskMap.Sync.Deferred
-                 Data.DiskMap.Sync.Sync
-                 Data.DiskMap.Types
-                 PayChanServer.App
-                 PayChanServer.Config.Types
-                 PayChanServer.Config.Util
-                 PayChanServer.DB
-                 PayChanServer.Handlers
-                 PayChanServer.Init
-                 PayChanServer.Main
-                 PayChanServer.Settlement
-                 PayChanServer.Types
-                 PayChanServer.Util
-                 SigningService.Interface
-                 SigningService.Spec
-                 SigningService.Types
-                 SigningService.Util
-                 Test.GenData
+  other-modules:     BlockchainAPI.Impl.Bitcoind.Interface
+                     BlockchainAPI.Impl.Bitcoind.Types
+                     BlockchainAPI.Types
+                     ChanStore.Interface
+                     ChanStore.Lib.ChanMap
+                     ChanStore.Lib.Settlement
+                     ChanStore.Lib.Types
+                     ChanStore.Spec
+                     Common.ResourceURL
+                     Common.Types
+                     Common.URLParam
+                     Common.Util
+                     ConnManager.Connection
+                     ConnManager.RequestRunner
+                     ConnManager.Servant
+                     ConnManager.Types
+                     Data.DiskMap
+                     Data.DiskMap.Internal.Helpers
+                     Data.DiskMap.Internal.Update
+                     Data.DiskMap.Sync.Deferred
+                     Data.DiskMap.Sync.Sync
+                     Data.DiskMap.Types
+                     PayChanServer.App
+                     PayChanServer.Config.Types
+                     PayChanServer.Config.Util
+                     PayChanServer.DB
+                     PayChanServer.Handlers
+                     PayChanServer.Init
+                     PayChanServer.Main
+                     PayChanServer.Settlement
+                     PayChanServer.Types
+                     PayChanServer.Util
+                     SigningService.Interface
+                     SigningService.Spec
+                     SigningService.Types
+                     SigningService.Util
+                     Test.Dummy
+                     Test.GenData
 
 
 Library
