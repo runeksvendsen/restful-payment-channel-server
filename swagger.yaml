@@ -19,7 +19,7 @@ schemes:
 paths:
   /fundingInfo:
     get:
-      summary: Retrieve information about how to fund a new payment channel.
+      summary: Retrieve information about how to fund a new payment channel
       description: |
         Before opening a payment channel with the server, the client must first acquire the server public key, in order to calculate a funding address for the channel.
       
@@ -36,7 +36,7 @@ paths:
           schema:
             $ref: "#/definitions/FundingInfo"
         400:
-          description: Invalid input (see status message for error description)
+          description: Invalid parameter (see status message for error description)
   
   /channels/new:
     post:
@@ -66,10 +66,6 @@ paths:
               description: "URL of the newly opened channel"
               type: string
               format: uri
-        202:
-          description: Channel created, but initial payment exhausted channel so it has been closed (should be rare).
-          schema:
-            $ref: "#/definitions/PaymentResult"
         409:
           description: Channel already exists
           headers:
@@ -78,9 +74,9 @@ paths:
                 type: string
                 format: uri
         400:
-          description: Invalid input (see status message for error description)
+          description: Invalid parameter (see status message for error description)
           
-  /channels/{funding_txid}/{funding_vout}:
+  /channels/{funding_txid}/{funding_vout}/pay:
     put:
       summary: Make payment over an existing payment channel
       #description: 
@@ -99,12 +95,11 @@ paths:
           description: Payment received
           schema:
             $ref: "#/definitions/PaymentResult"
-        202:
-          description: Payment received, channel closed. The payment has been received, but there is no value left to send over the channel so it has been closed.
         400:
-          description: Invalid input (see status message for error description)
-        404:
-          description: No such payment channel
+          description: Invalid parameter (see status message for error description)
+        410:
+          description: The channel is in the process of being closed. Performing a DELETE request on the channel in a few seconds should return information about the closed channel.
+  /channels/{funding_txid}/{funding_vout}:
     delete:
       summary: Delete an existing payment channel
       description: The payment included here is the most recent payment sent over the channel. This payment is included as a form of authentication token, making sure only the client can close the channel.
@@ -119,12 +114,12 @@ paths:
       produces:
         - application/json
       responses:
-        202:
+        200:
           description: Channel closed, funds settled. The settling transaction has been published to the Bitcoin network.
+          schema:
+            $ref: "#/definitions/PaymentResult"
         400:
-          description: Invalid input (see status message for error description)
-        404:
-          description: No such payment channel
+          description: Invalid parameter (see status message for error description)
 
 parameters:
     #networkParam:
@@ -205,6 +200,7 @@ definitions:
       - channel_status
       - channel_value_left
       - value_received
+      - settlement_txid
     properties:
       channel_status:
         description: Equal to "open" if the channel is still open, otherwise "closed". The channel is automatically closed when there is no value left to send. If a payment sends all remaining channel value to the server, the server will close the channel and set this field to "closed".
@@ -220,5 +216,10 @@ definitions:
         type: integer
         minimum: 0
         example: 1000
+      settlement_txid:
+        description: |
+          If channel_status equals "closed": the transaction ID of the Bitcoin transaction which settles the channel; otherwise null.
+        type: string
+        example: "4d2c20ea63729a8f248904faf585bd52dc9bd52c59ea36b0c6cea5e425f0c4e9"
   
       
