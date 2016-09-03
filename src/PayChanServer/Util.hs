@@ -42,7 +42,6 @@ import           Test.GenData (deriveMockFundingInfo, convertMockFundingInfo)
 
 
 
-
 dummyKey :: HT.OutPoint
 dummyKey = HT.OutPoint dummyTxId 0
 
@@ -78,20 +77,6 @@ getActiveChanConf = Types.StdConfig <$>
     use Conf.dbInterface <*>
     channelIDFromPathArgs <*>
     getQueryArg "payment"
-
-
----- Blockchain API ----
--- txInfoFromAddr :: MonadSnap m => HC.Address -> m TxInfo
--- txInfoFromAddr fundAddr = do
---     maybeTxId <- liftIO $ txIDFromAddr (toString fundAddr)
---     txId <- case maybeTxId of
---         Nothing ->  userError $
---             "Can't find any transactions paying to funding address " ++ cs (encode fundAddr)
---         Just txid -> return txid
---     eitherFundOut <- liftIO $ fundingOutInfoFromTxId (toString fundAddr) txId
---     -- The API has just provided us with a txid above, if it can't find said txid
---     -- something is wrong with the API, so we return an internal error in this case.
---     either (const $ internalError ("Can't find funding transaction: " ++ show txId)) return eitherFundOut
 
 -- | Return (hash,idx) if sufficiently confirmed
 guardIsConfirmed :: MonadSnap m => Integer -> TxInfo -> m TxInfo
@@ -134,18 +119,18 @@ writePaymentResult (valRecvd,recvChanState) =
             return (chanStatus,valRecvd)
 
 
-checkExpirationTime :: BitcoinLockTime -> Handler Conf.App Conf.App  BitcoinLockTime
+checkExpirationTime :: BitcoinLockTime -> Handler Conf.App Conf.App BitcoinLockTime
 checkExpirationTime lockTime = do
     minDurationHours <- Conf.openMinLengthHours <$> use Conf.openConfig
     case lockTime of
         LockTimeBlockHeight _ ->
-            userError "Block number as channel expiration date unsupported"
+            userError "Block index/number as channel expiration date is unsupported"
         LockTimeDate _ -> do
             now <- liftIO getCurrentTime
             let offsetSecs = fromIntegral $ minDurationHours * 3600
             if expiresEarlierThan (offsetSecs `addUTCTime` now) lockTime then
-                    userError $ "Expiration date too early. Minimum channel duration: " ++
-                        show minDurationHours ++ " hours"
+                    userError $ "Insufficient time until expiration date." ++
+                        " Minimum channel duration: " ++ show minDurationHours ++ " hours"
                 else
                     return lockTime
 

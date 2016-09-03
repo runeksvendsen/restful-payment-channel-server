@@ -62,6 +62,8 @@ site map =
              ,      method PUT    ( settleByExp map >>= writeBinary ))
           , ("/settlement/begin/by_id/:funding_outpoint"
              ,      method PUT    ( settleByKey map >>= writeBinary ))
+          , ("/settlement/begin/by_value/:min_value"
+             ,      method PUT    ( settleByVal map >>= writeBinary ))
 
           , ("/settlement/finish/by_id/:funding_outpoint"
              ,      method POST   ( settleFin map >>= writeBinary ))]
@@ -101,6 +103,11 @@ settleByExp :: ChannelMap -> Snap [ReceiverPaymentChannel]
 settleByExp m = do
     settlementTimeCutoff <- getPathArg "expiring_before"
     liftIO $ beginSettlingExpiringChannels m settlementTimeCutoff
+
+settleByVal :: ChannelMap -> Snap [ReceiverPaymentChannel]
+settleByVal m = do
+    minValue <- getPathArg "min_value"
+    liftIO $ beginSettlingExpiringChannels m minValue
 
 settleFin :: ChannelMap -> Snap ()
 settleFin m = do
