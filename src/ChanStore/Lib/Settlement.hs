@@ -23,6 +23,7 @@ import           Data.Ord (comparing, Down(Down))
 import           Control.Concurrent.STM (STM, atomically)
 import           Control.Exception.Base     (Exception, throw)
 import           Data.Time.Clock (UTCTime)
+import qualified Data.List as List
 
 import qualified Network.Haskoin.Transaction as HT
 
@@ -91,11 +92,11 @@ beginSettlingChannelsByValue chanMap minValue =
 fewestChannelsCoveringValue :: ChannelMap -> BitcoinAmount -> STM [ReceiverPaymentChannel]
 fewestChannelsCoveringValue  (ChannelMap m _) minValue =
     Util.accumulateWhile collectUntilEnoughValue .
-        sortBy descendingValueReceived .
+        List.sortBy descendingValueReceived .
         fmap getOpenChanState <$> getFilteredItems m isOpen
     where
-        isOpen (ReadyForPayment cs) = True
-        isOpen _                    = False
+        isOpen (ReadyForPayment _) = True
+        isOpen _                   = False
         collectUntilEnoughValue accumulatedItems _ =
             sum (map valueToMe accumulatedItems) < minValue
         -- 'Down' reverses standard (ascending) sort order

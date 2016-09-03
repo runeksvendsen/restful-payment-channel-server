@@ -20,6 +20,10 @@ packages:
     git: https://github.com/runeksvendsen/blockchain-restful-address-index.git
     commit: f627f1699405e13ac3bf31fcea23f4f4c14440cd
   extra-dep: true
+- location:
+    git: https://github.com/runeksvendsen/haskell-stm-diskmap.git
+    commit: 12f4749810424da84e8d1f0f1da506a9edebbb93
+  extra-dep: true
 
 #flags:
 #    snap-server:
