@@ -47,21 +47,16 @@ data Interface = Interface {
 }
 
 mkBtcInterface :: ConnManager2 -> Interface
-mkBtcInterface cm = --(Conn2 baseUrl man) =
+mkBtcInterface cm =
     Interface
         (runReq . publishTx')
         (runReq . unspentOutputs')
     where runReq = Servant.runReq' cm
 
--- |Used for testing
-dummyBtcInterface :: Interface
-dummyBtcInterface = Interface (return . Right . HT.txHash) (const $ return . Right $ [])
-
 api :: Proxy APISpec.BlockchainApi
 api = Proxy
 
 unspentOutputs' :<|> publishTx' = client api
-
 
 instance BlockchainAPI Interface where
     listUnspentOutputs (Interface _ listUnspent) addr =
@@ -71,3 +66,7 @@ instance BlockchainAPI Interface where
 toTxInfo :: AddressFundingInfo -> TxInfo
 toTxInfo (AddressFundingInfo _ txid vout numConfs val) =
     TxInfo numConfs $ CFundingTxInfo txid vout (fromIntegral val)
+
+-- |Used for testing
+dummyBtcInterface :: Interface
+dummyBtcInterface = Interface (return . Right . HT.txHash) (const $ return . Right $ [])

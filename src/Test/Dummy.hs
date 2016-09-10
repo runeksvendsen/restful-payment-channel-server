@@ -15,7 +15,7 @@ getAddr :: IO HC.Address
 getAddr =
     let
         dummyAddrTestnet = "2N414xMNQaiaHCT5D7JamPz7hJEc9RG7469"
-        dummyAddrLivenet = "14wjVnwHwMAXDr6h5Fw38shCWUB6RSEa63"
+        dummyAddrLivenet = "1DCczXkxD3i2r8jHJfzRmnXdvpX5P5K78Q"
     in
         if HCC.getNetworkName HCC.getNetwork == "testnet" then
                 return dummyAddrTestnet
