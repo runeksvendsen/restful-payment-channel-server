@@ -28,9 +28,9 @@ Executable PayChanServer
   build-depends:
     base                      >= 4     && < 5,
     -- Servant
-    servant                   == 0.7.1,
-    servant-server            == 0.7.1,
-    servant-client            == 0.7.1,
+    servant                   >= 0.7   && < 0.9,
+    servant-server            >= 0.7   && < 0.9,
+    servant-client            >= 0.7   && < 0.9,
     http-api-data,
     -- Snap
     monad-control             == 1.0.*,

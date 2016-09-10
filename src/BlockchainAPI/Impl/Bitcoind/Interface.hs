@@ -47,10 +47,11 @@ data Interface = Interface {
 }
 
 mkBtcInterface :: ConnManager2 -> Interface
-mkBtcInterface (Conn2 baseUrl man) =
+mkBtcInterface cm = --(Conn2 baseUrl man) =
     Interface
-        (\tx    -> Servant.runReq $ publishTx' tx man baseUrl)
-        (\addr  -> Servant.runReq $ unspentOutputs' addr man baseUrl)
+        (runReq . publishTx')
+        (runReq . unspentOutputs')
+    where runReq = Servant.runReq' cm
 
 -- |Used for testing
 dummyBtcInterface :: Interface

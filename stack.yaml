@@ -24,6 +24,14 @@ packages:
     git: https://github.com/runeksvendsen/haskell-stm-diskmap.git
     commit: 12f4749810424da84e8d1f0f1da506a9edebbb93
   extra-dep: true
+- location:
+    git: https://github.com/haskell-servant/servant.git
+    commit: 040db21152ebe0da106e08550e7c11983453918a
+  extra-dep: true
+  subdirs:
+    - servant
+    - servant-client
+    - servant-server
 
 #flags:
 #    snap-server:
@@ -44,6 +52,10 @@ extra-deps:
 - io-streams-haproxy-1.0.0.0
 # _Other
 - spawn-0.3
+# TEST
+#- servant-0.8.1
+#- servant-client-0.8.1
+#- servant-server-0.8.1
 
 
 
