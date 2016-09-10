@@ -32,29 +32,49 @@ finishSettlingChannel :: ChannelMap -> (Key,HT.TxHash) -> IO (MapItemResult Key 
 finishSettlingChannel (ChannelMap m _) (k,settleTxId) =
     head <$> mapGetItems m finishSettling (return [k])
     where
-        finishSettling (SettlementInProgress rpc) = Just $
-            ChannelSettled settleTxId (getNewestPayment rpc) rpc
+        finishSettling (BeingSettled (SettlementInitiated rpc)) = Just $
+            BeingSettled $ ChannelSettled settleTxId (getNewestPayment rpc) rpc
         finishSettling _ = Nothing
 
-beginSettlingChannel :: ChannelMap -> Key -> IO ReceiverPaymentChannel
-beginSettlingChannel chanMap k = head <$> beginSettlingChannels chanMap (return [k])
+beginCloseChannel :: ChannelMap -> Key -> IO ReceiverPaymentChannel
+beginCloseChannel chanMap k = head <$> beginSettlingChannels chanMap (return [k]) SettleClose
 
 -- |Given a list of Keys in STM, retrieve the channel states in question from the map while
 -- simultaneously marking them as in the process of being settled.
-beginSettlingChannels :: ChannelMap -> STM [Key] -> IO [ReceiverPaymentChannel]
-beginSettlingChannels (ChannelMap m _) keyGetterAction = do
-    res <- mapGetItems m markAsSettlingIfOpen keyGetterAction
+beginSettlingChannels :: ChannelMap -> STM [Key] -> SettleReason -> IO [ReceiverPaymentChannel]
+beginSettlingChannels (ChannelMap m _) keyGetterAction settleReason = do
+    res <- mapGetItems m (getMarkFunction settleReason) keyGetterAction
     return $ map gatherFromResults res
+
+-- |Mark items by returning "Just newItem", or ignore by returning Nothing
+getMarkFunction :: SettleReason -> (ChanState -> Maybe ChanState)
+getMarkFunction SettleClose = closeBegin
     where
-          markAsSettlingIfOpen (ReadyForPayment rpc)  = Just $ SettlementInProgress rpc
-          -- Should never be reached, as we're fetching the relevant keys and their corresponding items atomically
-          markAsSettlingIfOpen SettlementInProgress{} = Nothing
-          markAsSettlingIfOpen ChannelSettled{}       = Nothing
+        closeBegin (ChanOpen (ReadyForPayment ps)) =
+            Just $ ChanClosed $ CloseSignWait (getStateForClose ps)
+        closeBegin (ChanOpen (MoveSignWait _))     = Nothing
+        closeBegin (ChanClosed _)                  = Nothing
+getMarkFunction SettleMove = moveBegin
+    where
+        moveBegin (ChanOpen (ReadyForPayment ps)) =
+            Just $ ChanClosed $ CloseSignWait (getStateForClose ps)
+        moveBegin (ChanOpen (MoveSignWait _))     = Nothing
+        moveBegin (ChanClosed _)                  = Nothing
+
+getStateForClose :: PaymentState -> ReceiverPaymentChannel
+getStateForClose (NeverMoved rpc) = rpc
+getStateForClose (MoveUnconfirmed _ rpc) = rpc
+getStateForClose (MoveConfirmed _ rpc) = rpc
+
+canBeMoved :: PaymentState -> Bool
+canBeMoved (NeverMoved _) = True
+canBeMoved (MoveUnconfirmed _ rpc) = rpc
+canBeMoved (MoveConfirmed _ rpc) = rpc
 
 -- Time-based settlement {
 
 -- |Return a list of 'ReceiverPaymentChannel's expiring before specified point in time,
---      and simultanesouly mark them as in the process of being settled ('SettlementInProgress')
+--      and simultanesouly mark them as in the process of being settled ('SettlementInitiated')
 beginSettlingExpiringChannels :: ChannelMap -> UTCTime -> IO [ReceiverPaymentChannel]
 beginSettlingExpiringChannels chanMap currentTimeIsh =
     beginSettlingChannels chanMap $
@@ -95,7 +115,7 @@ fewestChannelsCoveringValue  (ChannelMap m _) minValue =
         List.sortBy descendingValueReceived .
         fmap getOpenChanState <$> getFilteredItems m isOpen
     where
-        isOpen (ReadyForPayment _) = True
+        isOpen (ChaneOpen _) = True
         isOpen _                   = False
         collectUntilEnoughValue accumulatedItems _ =
             sum (map valueToMe accumulatedItems) < minValue
@@ -109,11 +129,11 @@ fewestChannelsCoveringValue  (ChannelMap m _) minValue =
 gatherFromResults :: MapItemResult HT.OutPoint ChanState -> ReceiverPaymentChannel
 gatherFromResults res = case res of
       (ItemUpdated _ cs) -> gatherPayChan cs
-      NotUpdated -> error "BUG: Should not be possible since irrelevant keys have been filtered off"
+      (NotUpdated _ _)   -> error "BUG: Should not be possible since irrelevant keys have been filtered off"
       NoSuchItem -> error "BUG: Tried to mark non-existing channel state item as settling"
 
 gatherPayChan :: ChanState -> ReceiverPaymentChannel
 gatherPayChan cs = case cs of
-    (SettlementInProgress rpc) -> rpc
-    _ -> error "BUG: 'markAsSettlingIfOpen' should only update an item to 'SettlementInProgress'"
+    (SettlementInitiated rpc) -> rpc
+    _ -> error "BUG: 'markAsSettlingIfOpen' should only update an item to 'SettlementInitiated'"
 

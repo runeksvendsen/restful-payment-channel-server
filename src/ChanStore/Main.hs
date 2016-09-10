@@ -8,7 +8,7 @@ import           Prelude hiding (userError)
 import           ChanStore.Lib.Types
 import           ChanStore.Init (init_chanMap, destroy_chanMap)
 import           ChanStore.Lib.ChanMap
-import           ChanStore.Lib.Settlement (beginSettlingExpiringChannels, beginSettlingChannel,
+import           ChanStore.Lib.Settlement (beginSettlingExpiringChannels, beginCloseChannel,
                                                        finishSettlingChannel)
 import           PayChanServer.Main (wrapArg)
 import           PayChanServer.Config.Util (Config, loadConfig, configLookupOrFail,
@@ -49,7 +49,7 @@ main = wrapArg $ \cfg _ -> do
 site :: ChannelMap -> Snap ()
 site map =
     route [
-            -- store/db
+            -- Database Interface
             ("/store/by_id/"
              ,      method POST   $ create map >>= writeBinary)
 
@@ -57,15 +57,20 @@ site map =
              ,      method GET    ( get map    >>= writeBinary)
                 <|> method PUT    ( update map >>= writeBinary) )
 
-            -- expiring channels management/settlement interface
-          , ("/settlement/begin/by_exp/:expiring_before"
+            --      == Channel Management Interface ==
+            -- Close a single channel, by id
+          , ("/settle/begin/by_id/:funding_outpoint/close"
+                       ,      method PUT    ( settleByKey map >>= writeBinary ))
+            -- Close multiple channels, based on channel expiration date
+          , ("/settle/begin/by_exp/:expiring_before/close"
              ,      method PUT    ( settleByExp map >>= writeBinary ))
-          , ("/settlement/begin/by_id/:funding_outpoint"
-             ,      method PUT    ( settleByKey map >>= writeBinary ))
-          , ("/settlement/begin/by_value/:min_value"
+            -- Move received channel funds on the blockchain, in order to make
+            -- them available at the server-controlled address, but keep the
+            -- channel open
+          , ("/settle/begin/by_value/:min_value/move"
              ,      method PUT    ( settleByVal map >>= writeBinary ))
-
-          , ("/settlement/finish/by_id/:funding_outpoint"
+            -- Finish settling a channel
+          , ("/settle/finish/by_id/:funding_outpoint"
              ,      method POST   ( settleFin map >>= writeBinary ))]
 
 create :: ChannelMap -> Snap CreateResult
@@ -97,7 +102,7 @@ update map = do
 settleByKey :: ChannelMap -> Snap ReceiverPaymentChannel
 settleByKey m = do
     key <- getPathArg "funding_outpoint"
-    liftIO $ beginSettlingChannel m key
+    liftIO $ beginCloseChannel m key
 
 settleByExp :: ChannelMap -> Snap [ReceiverPaymentChannel]
 settleByExp m = do

@@ -89,7 +89,7 @@ chanSettle (StdConfig chanMap chanId clientPayment) settleChannel valRecvd = do
                 confirmClientPayment $ getNewestPayment rpc
                 settleTxId <- liftIO (settleChannel rpc)
                 return (settleTxId, channelValueLeft rpc)
-            (DBConn.SettlementInProgress _) ->
+            (DBConn.SettlementInitiated _) ->
                 errorWithDescription 410 "Channel is being closed"
             (DBConn.ChannelSettled settleTxId _ rpc) -> do
                 confirmClientPayment $ getNewestPayment rpc

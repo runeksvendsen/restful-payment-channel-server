@@ -61,6 +61,11 @@ api = Proxy
 
 unspentOutputs' :<|> publishTx' = client api
 
+hey :<|> ho = enter (client api)
+    (Nat $ \x -> runClientM x
+        (ClientEnv defaultManagerSettings (BaseUrl Http "localhost" 8081 ""))
+    )
+
 
 instance BlockchainAPI Interface where
     listUnspentOutputs (Interface _ listUnspent) addr =

@@ -90,7 +90,7 @@ getChannelStateForPayment :: MonadSnap m => DBConn.Interface -> HT.OutPoint -> m
 getChannelStateForPayment chanMap chanId =
     getChannelStateForSettlement chanMap chanId >>=
     -- When the channel has changed from ReadyForPayment to
-    --  SettlementInProgress, the "/pay" resource is gone
+    --  SettlementInitiated, the "/pay" resource is gone
     either (const $ errorWithDescription 404 "No such payment resource") return
 
 -- |Return either open ChanState or settlement txid and most recent payment in case
@@ -101,7 +101,7 @@ getChannelStateForSettlement chanMap chanId =
     \chanState -> case chanState of
         (DBConn.ReadyForPayment rpc) ->
             return $ Right rpc
-        (DBConn.SettlementInProgress _) ->
+        (DBConn.SettlementInitiated _) ->
             errorWithDescription 410 "Channel is being closed"
         (DBConn.ChannelSettled txid paym _) ->
             return $ Left (txid,paym)

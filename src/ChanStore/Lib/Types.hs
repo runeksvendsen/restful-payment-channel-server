@@ -36,19 +36,45 @@ data CloseResult  = Closed | DoesntExist
 data UpdateResult = WasUpdated | WasNotUpdated
 
 -- |Holds state for payment channel
+--  Possible state transitions:
+--      * ReadyForPayment -> BeingSettled  (return client change)
+--      * ReadyForPayment -> BeingRolled   (free value received by server)
 data ChanState =
-    ReadyForPayment         ReceiverPaymentChannel
-  | ChannelSettled          HT.TxHash Payment ReceiverPaymentChannel    -- Save the old channel state in the map for now. We can always purge it later to save space.
-  | SettlementInProgress    ReceiverPaymentChannel
+    ChanOpen     OpenState
+  | ChanClosed   CloseState
       deriving Show
 
+data OpenState =
+    -- |Payments can be accepted
+    ReadyForPayment PaymentState
+    -- |Move initiated; waiting for signed settlement tx.
+    -- Temporary disruption lasting at most a few seconds.
+  | MoveSignWait    ReceiverPaymentChannel
+
+
+data PaymentState =
+    -- |The channel funds have never moved from the original funding outpoint
+    NeverMoved      ReceiverPaymentChannel
+    -- |Waiting for blockchain confirmations; use both. Temporary redirect.
+  | MoveUnconfirmed ReceiverPaymentChannel ReceiverPaymentChannel
+    -- |Done; use new. Permanent redirect.
+  | MoveConfirmed   HT.OutPoint            ReceiverPaymentChannel
+
+
+-- |Closing the channel means we return any change left to the client.
+data CloseState =
+    -- |Ephemeral state: only used while we haven't received a signed settlement tx yet
+    CloseSignWait   ReceiverPaymentChannel
+    -- |Always ends up here. These can be purged after some time.
+  | ChannelClosed   HT.TxHash Payment ReceiverPaymentChannel    -- Save the old channel state in the map for now. We can always purge it later to save space.
+      deriving Show
+
+data SettleReason =
+    SettleClose
+  | SettleMove
 
 -- Needed for Binary instance non-overlap
 newtype MaybeChanState = MaybeChanState (Maybe ChanState)
-
-
-
-
 
 
 instance Bin.Binary CreateResult where
@@ -102,7 +128,7 @@ instance Bin.Binary ChanState where
     put (ChannelSettled txid payment s) =
         Bin.putWord8 0x03 >>
         Bin.put txid >> Bin.put payment >> Bin.put s
-    put (SettlementInProgress s) =
+    put (SettlementInitiated s) =
         Bin.putWord8 0x04 >>
         Bin.put s
 
@@ -110,7 +136,7 @@ instance Bin.Binary ChanState where
         (\byte -> case byte of
             0x02    -> ReadyForPayment   <$> Bin.get
             0x03    -> ChannelSettled   <$> Bin.get <*> Bin.get <*> Bin.get
-            0x04    -> SettlementInProgress <$> Bin.get
+            0x04    -> SettlementInitiated <$> Bin.get
             n       -> fail $ "unknown start byte: " ++ show n)
 
 instance Bin.Binary MaybeChanState where

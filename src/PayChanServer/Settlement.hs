@@ -82,10 +82,16 @@ finishSettleChannel ::
     -> IO HT.TxHash
 finishSettleChannel dbIface signConn btcIface txFee rpc = do
     settlementTx   <- tryRequest "Signing" (signSettlementTx signConn txFee rpc)
-    settlementTxId <- tryBitcoind =<< Btc.publishTx btcIface settlementTx -- HEY
+    let settlementTxId = HT.txHash settlementTx
     tryRequest "FinishSettle" (DBConn.settleFin dbIface (getChannelID rpc) settlementTxId)
-    return settlementTxId
-        where tryBitcoind = either logImportantErrorThenFail return
+    btcdSettlementTxId <- tryBitcoind =<< Btc.publishTx btcIface settlementTx
+    if btcdSettlementTxId /= settlementTxId then
+        -- TODO: Throw proper exception
+        error $ "Calculated settlement txid and txid returned by " ++
+              "Bitcoin Core 'publishrawtransaction' do not match."
+        else
+            return settlementTxId
+    where tryBitcoind = either logImportantErrorThenFail return
 
 
 --- Time-based settlement
