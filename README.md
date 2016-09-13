@@ -88,6 +88,4 @@ On my 2015 Macbook Pro I get ~900 payments per second running the `benchPayChanS
 [https://paychantest.runeks.me](https://paychantest.runeks.me/v1/fundingInfo?client_pubkey=03a67afebe772b05fcdf2a1f337bdaaf52343d62049793768d866b06194042e0cf&exp_time=1466539800)
 
 ### TODO
-* Local *bitcoind*-based address funding lookup
-* Write test for expiration-based settlement
-* Clean up imports
+* `ChanStore`: Properly handle out-of-memory errors
