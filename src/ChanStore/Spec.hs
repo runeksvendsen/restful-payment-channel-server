@@ -28,11 +28,6 @@ data ByValueSettleBegin = ByValueSettleBegin    BitcoinAmount               deri
 data SettleFin          = SettleFin HT.OutPoint HT.TxHash                   deriving Typeable
 
 
--- basePath :: BS.ByteString
--- basePath = "/channels/"
-
--- TODO: Tie the knot: create routing table ('ChanStore.Main.site') from instances below
-
 instance HasReqParams Create where
     rPath _                 = "/store/by_id/"
     rMethod                 = const "POST"
@@ -49,20 +44,20 @@ instance HasReqParams Update where
     rBody (Update _ paym)   = Bin.encode paym
 
 instance HasReqParams ByIdSettleBegin where
-    rPath (ByIdSettleBegin key)     = "/settlement/begin/by_id/" <> pathParamEncode key
+    rPath (ByIdSettleBegin key)     = "/settle/begin/by_id/" <> pathParamEncode key
     rMethod                         = const "PUT"
 
 instance HasReqParams ByExpSettleBegin where
-    rPath (ByExpSettleBegin expDate)= "/settlement/begin/by_exp/" <> pathParamEncode expDate
+    rPath (ByExpSettleBegin expDate)= "/settle/begin/by_exp/" <> pathParamEncode expDate
     rMethod                         = const "PUT"
 
 -- Begin settling the smallest number of payment channels possible to cover the
 --  specified amount.
 instance HasReqParams ByValueSettleBegin where
-    rPath (ByValueSettleBegin minVal) = "/settlement/begin/by_value/" <> pathParamEncode minVal
+    rPath (ByValueSettleBegin minVal) = "/settle/begin/by_value/" <> pathParamEncode minVal
     rMethod                             = const "PUT"
 
 instance HasReqParams SettleFin where
-    rPath (SettleFin key _)         = "/settlement/finish/by_id/" <> pathParamEncode key
+    rPath (SettleFin key settleTxId) = "/settle/finish/by_id/" <> pathParamEncode key <> "/"
+        <> pathParamEncode settleTxId
     rMethod                         = const "POST"
-    rBody (SettleFin _ settleTxId)  = Bin.encode settleTxId

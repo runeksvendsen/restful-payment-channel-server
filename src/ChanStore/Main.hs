@@ -41,9 +41,9 @@ main = wrapArg $ \cfg _ -> do
     _ <- installHandlerKillThreadOnSig Sig.sigTERM mainThread
 
     bracket
-        (getServerDBConf cfg >>= init_chanMap)  -- 1. first do this
+        (getServerDBConf cfg >>= init_chanMap) -- 1. first do this
         destroy_chanMap                         -- 3. at the end always do this
-        (\map -> httpServe conf $ site map)     -- 2. in the meantime do this
+        (httpServe conf . site)                 -- 2. in the meantime do this
 
 
 site :: ChannelMap -> Snap ()
@@ -58,14 +58,14 @@ site map =
                 <|> method PUT    ( update map >>= writeBinary) )
 
             -- expiring channels management/settlement interface
-          , ("/settlement/begin/by_exp/:expiring_before"
+          , ("/settle/begin/by_exp/:expiring_before"
              ,      method PUT    ( settleByExp map >>= writeBinary ))
-          , ("/settlement/begin/by_id/:funding_outpoint"
+          , ("/settle/begin/by_id/:funding_outpoint"
              ,      method PUT    ( settleByKey map >>= writeBinary ))
-          , ("/settlement/begin/by_value/:min_value"
+          , ("/settle/begin/by_value/:min_value"
              ,      method PUT    ( settleByVal map >>= writeBinary ))
 
-          , ("/settlement/finish/by_id/:funding_outpoint"
+          , ("/settle/finish/by_id/:funding_outpoint/:settle_txid"
              ,      method POST   ( settleFin map >>= writeBinary ))]
 
 create :: ChannelMap -> Snap CreateResult
@@ -75,13 +75,11 @@ create map = do
     tryDBRequest $ addChanState map key newChanState
 
 
-get :: ChannelMap -> Snap ChanState
+get :: ChannelMap -> Snap MaybeChanState
 get map = do
     outPoint <- getPathArg "funding_outpoint"
     maybeItem <- liftIO $ getChanState map outPoint
-    case maybeItem of
-        Nothing -> errorWithDescription 404 "No such channel"
-        Just item -> return item
+    return $ MaybeChanState maybeItem
 
 update :: ChannelMap -> Snap UpdateResult
 update map = do
@@ -112,7 +110,7 @@ settleByVal m = do
 settleFin :: ChannelMap -> Snap ()
 settleFin m = do
     key <- getPathArg "funding_outpoint"
-    settleTxId <- decodeFromBody 32
+    settleTxId <- getPathArg "settle_txid"
     res <- tryDBRequest $ finishSettlingChannel m (key,settleTxId)
     case res of
         (ItemUpdated _ _) -> liftIO . putStrLn $
