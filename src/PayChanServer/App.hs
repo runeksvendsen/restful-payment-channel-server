@@ -19,7 +19,7 @@ import           Control.Lens (use)
 import qualified Data.ByteString as BS
 import           Snap
 import           Data.Monoid ((<>))
-import           Data.EitherR (fmapL)
+
 
 
 mainRoutes :: BS.ByteString -> [(BS.ByteString, Handler App App ())]

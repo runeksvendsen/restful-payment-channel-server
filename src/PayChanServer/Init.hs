@@ -22,13 +22,14 @@ import           Common.URLParam (pathParamEncode)
 
 import           Snap (SnapletInit, makeSnaplet, addRoutes)
 import           Data.String.Conversions (cs)
-import           Control.Monad          (when, unless, void)
+import           Control.Monad          (when, unless, void, forM)
 import           Control.Monad.IO.Class (liftIO)
 import qualified System.Posix.Signals as Sig
 import           Control.Concurrent (ThreadId, throwTo)
 import qualified Control.Exception as E
 import           Data.Maybe (isNothing)
 import           System.IO (hFlush, stdout)
+import qualified Data.ByteString as BS
 
 
 appConfInit :: Config -> IO App
@@ -80,8 +81,13 @@ appConfInit cfg = do
 
 appInit :: Config -> SnapletInit App App
 appInit cfg = makeSnaplet "PayChanServer" "RESTful Bitcoin payment channel server" Nothing $ do
-    appConf@(App _ _ _ _ _ _ _ basePathVersion _) <- liftIO $ appConfInit cfg
-    addRoutes $ mainRoutes basePathVersion
+    appConf <- liftIO $ appConfInit cfg
+
+    let appRoutes = mainRoutes (_basePath appConf)
+    addRoutes appRoutes
+    liftIO $ putStrLn "Active routes: "
+    liftIO $ forM (map fst appRoutes :: [BS.ByteString]) (putStrLn . (++) "\t" . cs)
+
     return appConf
 
 installHandlerKillThreadOnSig :: Sig.Signal -> ThreadId -> IO ()
