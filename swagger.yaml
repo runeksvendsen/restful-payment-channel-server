@@ -16,7 +16,7 @@ info:
       * Instead of the client specifying a change address upon opening a channel, the channel funding address is instead used as the change address for the purpose of making payments, and now the client only needs to specify a change address when it wishes to close the channel. 
     
     
-host: paychan.runeks.me #Bitcoin testnet server
+host: paychantest.runeks.me #Bitcoin testnet server
 basePath: /v2
 schemes:
   - https
@@ -41,10 +41,10 @@ paths:
           schema:
             $ref: "#/definitions/FundingInfo"
         400:
-          description: Invalid parameter (see status message for error description)
+          description: Invalid parameter
   /funding/{client_pubkey}/{exp_time}/begin_open:
     get:
-      summary: Retrieve information about how to fund a new payment channel
+      summary: After sending funds to the channel funding address, and waiting the specified number of confirmations, the client will retrieve the resource URI of not-yet-open payment channel here, and POST the first channel payment to 'channel_uri' in order to open the channel.
       description: |
         Before opening a ...
       operationId: fundingBeginOpen
@@ -52,15 +52,19 @@ paths:
         - $ref: "#/parameters/clientPubKeyParam"
         - $ref: "#/parameters/expTimeParam"
       responses:
-        204:
-          description: Proceed with funding
+        200:
+          description: Channel ready to open
+          schema:
+            $ref: "#/definitions/ChannelInfo"
         400:
-          description: Invalid parameter (see status message for error description)
+          description: Invalid parameter
+        409:
+          description: Insufficient confirmation count for funding transaction
   /channels/{client_pubkey}/{exp_time}/{funding_txid}/{funding_vout}:
     post:
       summary: Create a new payment channel
       description: |
-        After publishing the funding Bitcoin transaction, and waiting for the specified number of confirmations, the client will POST a payment, paying the server's specified channel open price, to the channel open URL.
+        After publishing the funding Bitcoin transaction, and waiting for the specified number of confirmations, the client will POST a payment, paying the server's specified channel open price, to this URL. Subsequent channel payments will be PUT on this same URL.
         
       operationId: createPaymentChannel
       parameters:
@@ -87,7 +91,7 @@ paths:
                 type: string
                 format: uri
         400:
-          description: Invalid parameter (see status message for error description)
+          description: Invalid parameter
     put:
       summary: |
         Make payment over an existing payment channel.
@@ -124,7 +128,7 @@ paths:
               type: string
               format: uri
         400:
-          description: Invalid parameter (see status message for error description)
+          description: Invalid parameter
         410:
           description: The channel is in the process of being closed. Performing a DELETE request on the resource in a few seconds should return information about the closed channel.
     delete:
@@ -151,7 +155,7 @@ paths:
           schema:
             $ref: "#/definitions/PaymentResult"
         400:
-          description: Invalid parameter (see status message for error description)
+          description: Invalid parameter
           
 
 
@@ -197,6 +201,17 @@ parameters:
         $ref: "#/definitions/PaymentData"
       
 definitions:
+  ChannelInfo:
+    type: object
+    required:
+      - channel_uri
+    properties:
+      channel_uri:
+        description: The URL of the resource which must the POSTed to in order to open a new payment channel, after which further payments can be PUT on this resource. Close the payment channel by issuing a DELETE request on the resource.
+        type: string
+        example: |
+          https://paychan.runeks.me/v2/channels/03da3afe4f58992a8cc909522c2ec859ef218fd92fda0a67c23fb40e0303030405/1502183072/a615e0fa211f5644b0262489790151b5104c085ce84c80a265af4475b5c6c8da/2
+
   FundingInfo:
     type: object
     required:
@@ -213,7 +228,9 @@ definitions:
         type: string
         example: 029b5549e8cac42d27051956925d8176408b2183ba357850f58320ad5876b9c13f
       dust_limit:
-        description: The server will not accept payments where the client change amount is less than this amount. This "dust limit" is necessary in order to avoid producing a settlement transaction that will not circulate in the Bitcoin P2P network because it contains an output of minuscule value. Consequently, the maximum amount, that can be sent over the payment channel, is the amount sent to the funding address minus this "dust limit".
+        description: (Satoshis) The server will not accept payments where the client change amount is less than this amount. This "dust limit" is necessary in order to avoid producing a settlement transaction that will not circulate in the Bitcoin P2P network because it contains an output of minuscule value. Consequently, the maximum amount, that can be sent over the payment channel, is the amount sent to the funding address minus this "dust limit".
+        type: integer
+        format: int64
       funding_address_copy:
         description: Server derived channel funding address. The client will confirm that its own derived funding address matches this one, before paying to it.
         type: string
@@ -244,12 +261,28 @@ definitions:
     description: Contains information about a payment. A payment contains a signature over a hash of a Bitcoin transaction which redeems the outpoint pointed to by the resource's 'funding_txid' and 'funding_vout' parameters.
     type: object
     required:
+      - funding_txid
+      - funding_vout
       - signature_data
       - change_value
       - change_address
+      - redeem_script
     properties:
+      redeem_script:
+        description: The contract of the payment channel. Needed to generate the signature over the payment transaction.
+        type: string
+        example: "TODO"
+      funding_txid:
+        description: The transaction ID of the Bitcoin transaction paying to the channel funding address.
+        type: string
+        example: "88173df15ec17490288cabaa9a0becfdef3614d9526eec16f670886d7d229301"
+      funding_vout:
+        description: The output index/"vout" of the output (in the transaction) payingto the channel funding address.
+        type: integer
+        example: 1
       signature_data:
-        description: Hex-encoded SIGHASH_SINGLE|ANYONECANPAY signature over the the "payment transaction", which is a Bitcoin transaction that redeems the outpoint specified by 'funding_txid' and 'funding_vout', and has one output which sends 'change_value' to 'change_address'.
+        description: |
+          DER-encoded ECDSA signature (in hex). This is a SIGHASH_SINGLE|ANYONECANPAY signature over the the "payment transaction", which is a Bitcoin transaction that: redeems the outpoint specified by 'funding_txid' and 'funding_vout' using the redeem script defined in 'redeem_script', with an output which sends 'change_value' to 'change_address'.
         type: string
         example: "304402202... (71-72 bytes ending in 0x83)"
       change_value:
