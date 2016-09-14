@@ -9,21 +9,29 @@ packages:
 - '.'
 - location:
     git: https://github.com/runeksvendsen/bitcoin-payment-channel.git
-    commit: a1630fc3d45140510f4fb6361976a1e7f0421069
+    commit: 529f6f99be390925b9234c053512b7d3776feb9b
   extra-dep: true
 - location:
     git: https://github.com/runeksvendsen/haskell-bitcoin-api.git
-    commit: 7ff62829fb4891ce2f7aeb88ac40ef02b69f37f3
+    commit: 41747640f0ee964db2ca2edefc3420a4cf201b33
   extra-dep: true
 ## APISpec.Blockchain:
 - location:
     git: https://github.com/runeksvendsen/blockchain-restful-address-index.git
-    commit: f627f1699405e13ac3bf31fcea23f4f4c14440cd
+    commit: 1aca098c0a26fe4c39d9901199696c648b2987c0
   extra-dep: true
 - location:
     git: https://github.com/runeksvendsen/haskell-stm-diskmap.git
     commit: 12f4749810424da84e8d1f0f1da506a9edebbb93
   extra-dep: true
+#- location:
+#    git: https://github.com/haskell-servant/servant.git
+#    commit: 040db21152ebe0da106e08550e7c11983453918a
+#  extra-dep: true
+#  subdirs:
+#    - servant
+#    - servant-client
+#    - servant-server
 
 #flags:
 #    snap-server:
@@ -31,8 +39,8 @@ packages:
 
 extra-deps:
 # Haskoin
-- haskoin-core-0.3.1
-- murmur3-1.0.2
+- haskoin-core-0.4.0
+- murmur3-1.0.3
 - pbkdf-1.1.1.1
 - secp256k1-0.4.6
 # Snap

@@ -42,3 +42,11 @@ data SigningSettleConfig = SigningSettleConfig {
     confSettleRecvAddr    :: HC.Address
 }
 
+
+
+
+
+
+
+
+

@@ -28,9 +28,9 @@ Executable PayChanServer
   build-depends:
     base                      >= 4     && < 5,
     -- Servant
-    servant                   == 0.7.1,
-    servant-server            == 0.7.1,
-    servant-client            == 0.7.1,
+    servant                   >= 0.7   && < 0.9,
+    servant-server            >= 0.7   && < 0.9,
+    servant-client            >= 0.7   && < 0.9,
     http-api-data,
     -- Snap
     monad-control             == 1.0.*,
@@ -40,8 +40,8 @@ Executable PayChanServer
     snap                      == 1.0.*,
     io-streams,
 
-    bitcoin-payment-channel   == 0.2.2.0,
-    haskoin-core              == 0.3.1,
+    bitcoin-payment-channel   == 0.3.0.1,
+    haskoin-core              == 0.4.0,
     bytestring                >= 0.9.1 && < 0.11,
     blaze-builder,
     -- APISpec.Blockchain
@@ -56,7 +56,7 @@ Executable PayChanServer
     aeson-pretty,
     stm-containers,
     configurator,
-    binary, cereal,
+    cereal,
     hashable,
     string-conversions,
     errors,
@@ -116,8 +116,8 @@ Executable ChanStore
     snap                      == 1.0.*,
     io-streams,
     blaze-builder,
-    bitcoin-payment-channel   >= 0.1.1.0 && < 0.3,
-    haskoin-core              >= 0.3.0 && < 1.0.0,
+    bitcoin-payment-channel   == 0.3.0.1,
+    haskoin-core              == 0.4.0,
     haskell-stm-diskmap,
     secp256k1,
     transformers,
@@ -130,7 +130,7 @@ Executable ChanStore
     aeson-pretty,
     stm-containers,
     configurator,
-    binary, cereal,
+    cereal,
     hashable,
     string-conversions,
     errors,
@@ -191,11 +191,10 @@ Executable SigningService
     mtl                       >= 2     && < 3,
     io-streams,
     blaze-builder,
-    bitcoin-payment-channel   >= 0.1.1.0 && < 0.3,
-    haskoin-core              >= 0.3.0 && < 1.0.0,
+    bitcoin-payment-channel   == 0.3.0.1,
+    haskoin-core              == 0.4.0,
     secp256k1,
     configurator,
-    binary,
     string-conversions,
     errors
   other-modules:     BlockchainAPI.Impl.Bitcoind.Interface
@@ -247,7 +246,7 @@ Executable GenTestData
       snap-core                 == 1.0.*,
       snap-server               == 1.0.*,
       directory,
-      bitcoin-payment-channel   >= 0.1.1.0 && < 0.3,
+      bitcoin-payment-channel   == 0.3.0.1,
       transformers,
       haskoin-core,
       aeson,
@@ -278,7 +277,7 @@ Executable RunTestData
       snap-core                 == 1.0.*,
       snap-server               == 1.0.*,
       directory,
-      bitcoin-payment-channel   >= 0.1.1.0 && < 0.3,
+      bitcoin-payment-channel   == 0.3.0.1,
       transformers,
       haskoin-core,
       aeson,
@@ -298,3 +297,4 @@ Executable RunTestData
 
   hs-source-dirs:       src
   default-language:     Haskell2010
+

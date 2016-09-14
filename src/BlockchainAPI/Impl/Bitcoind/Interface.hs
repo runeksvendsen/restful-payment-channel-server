@@ -31,6 +31,7 @@ import           ConnManager.Types
 import           Data.Proxy
 import           Servant.API
 import           Servant.Client
+import           Network.HTTP.Client (Manager)
 
 import qualified APISpec.Blockchain as APISpec
 import           BlockchainAPI.Impl.Bitcoind.Types
@@ -59,7 +60,23 @@ dummyBtcInterface = Interface (return . Right . HT.txHash) (const $ return . Rig
 api :: Proxy APISpec.BlockchainApi
 api = Proxy
 
-unspentOutputs' :<|> publishTx' = client api
+unspentOutputs' :: HC.Address -> Manager -> BaseUrl -> ClientM [AddressFundingInfo]
+publishTx'      :: HT.Tx      -> Manager -> BaseUrl -> ClientM HT.TxHash
+(_ :<|> unspentOutputs' :<|> publishTx') = client api
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 instance BlockchainAPI Interface where

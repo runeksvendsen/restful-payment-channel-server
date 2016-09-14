@@ -137,7 +137,7 @@ channelOpenHandler
 
         (valRecvd,recvChanState) <- either (userError . show) return $
             channelFromInitialPayment
-                (CChannelParameters sendPK pubKeyServ lockTime)
+                (CChannelParameters sendPK pubKeyServ lockTime 0) --TODO: dust limit
                 fundingTxInfo sendChgAddr payment
 
         when (valRecvd < openPrice) $

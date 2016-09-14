@@ -12,9 +12,7 @@ import           Data.Bitcoin.PaymentChannel.Types
     (Payment, ChannelParameters(..), FundingTxInfo(..), SendPubKey(..), RecvPubKey(..), IsPubKey(getPubKey))
 import qualified Network.Haskoin.Transaction as HT
 import qualified Network.Haskoin.Crypto as HC
-import qualified Network.Haskoin.Constants as HCC
-import qualified Data.Binary as Bin
-import qualified Data.ByteString as BS
+import qualified Data.Serialize as Bin
 import           Data.Aeson         (object, ToJSON, toJSON, (.=), encode,
                                      Value(Object), parseJSON, FromJSON, (.:))
 import Control.Monad (mzero)
@@ -58,7 +56,7 @@ data ChannelSession = ChannelSession {
 }
 
 -- | Generate payment of value 1 satoshi
-iterateFunc (p,s) = sendPayment s 1
+iterateFunc (_,_,s) = sendPayment s 1
 
 genChannelSession :: T.Text -> Int -> HC.PrvKey -> HC.PubKey -> BitcoinLockTime -> ChannelSession
 genChannelSession endPoint numPayments privClient pubServer expTime =
@@ -66,11 +64,13 @@ genChannelSession endPoint numPayments privClient pubServer expTime =
         cp = CChannelParameters
                 (MkSendPubKey $ HC.derivePubKey privClient) (MkRecvPubKey pubServer)
                 expTime
+                0
         fundInfo = deriveMockFundingInfo cp
-        (initPay,initState) = channelWithInitialPaymentOf cp fundInfo
+        (amt,initPay,initState) = channelWithInitialPaymentOf cp fundInfo
                 (`HC.signMsg` privClient) mockChangeAddress 100000
-        payStateList = tail $ iterate iterateFunc (initPay,initState)
-        payList = map fst payStateList
+        payStateList = tail $ iterate iterateFunc (amt,initPay,initState)
+        payList = map getPayment payStateList
+        getPayment (_,p,_) = p
     in
         ChannelSession endPoint cp (getFundingAddress cp) initPay (take numPayments payList)
 --------
@@ -96,9 +96,9 @@ instance FromJSON PaySessionData where
 
 
 getSessionData :: ChannelSession -> PaySessionData
-getSessionData (ChannelSession endPoint cp fundAddr initPay payList) =
+getSessionData (ChannelSession endPoint cp _ initPay payList) =
     let
-        (CFundingTxInfo txid vout val) = deriveMockFundingInfo cp
+        (CFundingTxInfo txid vout _) = deriveMockFundingInfo cp
         chanId = HT.OutPoint txid (fromIntegral vout)
         openURL = channelOpenURL False (cs endPoint) "/v1" (cpSenderPubKey cp)
                 (cpLockTime cp) ++ mkOpenQueryParams mockChangeAddress initPay
@@ -116,7 +116,7 @@ convertMockFundingInfo :: FundingTxInfo -> TxInfo
 convertMockFundingInfo = TxInfo 27
 
 deriveMockFundingInfo :: ChannelParameters -> FundingTxInfo
-deriveMockFundingInfo (CChannelParameters sendPK _ expTime) =
+deriveMockFundingInfo (CChannelParameters sendPK _ expTime _) =
     CFundingTxInfo
         (HT.TxHash $ HC.hash256 $ cs . Bin.encode $ sendPK)
         (toWord32 expTime `mod` 7)

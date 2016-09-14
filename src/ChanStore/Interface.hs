@@ -57,7 +57,7 @@ chanAdd' conn rpc = runRequest conn $ Create rpc
 -- |Get item
 chanGet' :: ConnManager -> Key -> IO (Maybe ChanState)
 chanGet' conn key = runRequest conn (Get key) >>=
-    \(MaybeChanState maybeCS) -> return maybeCS     -- needed to avoid overlapping Binary instance
+    \(MaybeChanState maybeCS) -> return maybeCS
 
 -- |Update item
 chanUpdate' :: ConnManager -> Key -> Payment -> IO UpdateResult

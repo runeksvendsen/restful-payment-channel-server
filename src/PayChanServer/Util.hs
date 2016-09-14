@@ -176,7 +176,8 @@ test_GetDerivedFundingInfo :: RecvPubKey -> Handler Conf.App Conf.App TxInfo
 test_GetDerivedFundingInfo pubKeyServer = do
     cp <- flip CChannelParameters pubKeyServer <$>
             getClientPubKey <*>
-            getQueryArg "exp_time"
+            getQueryArg "exp_time" <*>
+            return 0
     return $ convertMockFundingInfo . deriveMockFundingInfo $ cp
 --- Funding ---
 

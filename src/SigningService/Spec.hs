@@ -10,7 +10,7 @@ import           Common.URLParam (pathParamEncode)
 
 import           Data.Bitcoin.PaymentChannel.Types (ReceiverPaymentChannel, BitcoinAmount)
 import qualified Network.Haskoin.Transaction as HT
-import qualified Data.Binary as Bin
+import qualified Data.Serialize as Bin
 import           Network.HTTP.Client
 import           Network.HTTP.Types.Status
 import           Network.HTTP.Types.Header

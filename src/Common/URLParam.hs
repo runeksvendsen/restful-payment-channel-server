@@ -13,7 +13,7 @@ import qualified Network.Haskoin.Transaction as HT
 import qualified Network.Haskoin.Crypto as HC
 import qualified Network.Haskoin.Util as HU
 import qualified Data.ByteString as BS
-import qualified Data.Binary as Bin
+import qualified Data.Serialize as Bin
 import           Data.Word (Word32)
 import           Data.EitherR (fmapL)
 import           Data.String.Conversions (cs)
@@ -70,7 +70,7 @@ class URLParamEncode a => URLParamDecode a where
 instance URLParamDecode HC.PubKey where
     pathParamDecode bs =
         decodeHex bs >>=
-        fmapL ("failed to decode public key: " ++) . HU.decodeToEither
+        fmapL ("failed to decode public key: " ++) . Bin.decode
 
 instance URLParamDecode HT.TxHash where
     pathParamDecode bs =
@@ -80,7 +80,7 @@ instance URLParamDecode HT.TxHash where
 instance URLParamDecode HT.OutPoint where
     pathParamDecode bs =
         decodeHex bs >>=
-        fmapL ("failed to decode outpoint: " ++) . HU.decodeToEither
+        fmapL ("failed to decode outpoint: " ++) . Bin.decode
 
 instance URLParamDecode BitcoinLockTime where
     pathParamDecode bs = maybe

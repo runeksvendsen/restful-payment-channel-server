@@ -24,7 +24,7 @@ import           Data.Bitcoin.PaymentChannel.Util (deserEither)
 
 import qualified Data.Aeson as JSON   (FromJSON, eitherDecode)
 import qualified Network.Haskoin.Transaction as HT
-import qualified Data.Binary as Bin
+import qualified Data.Serialize as Bin
 import           Network.HTTP.Client
 import           Network.HTTP.Types.Status
 import           Network.HTTP.Types.Header
@@ -43,19 +43,19 @@ requestFromParams conn rp =
         getBaseRequest conn >>= \req -> return req {
             path = rPath rp,
             method = rMethod rp,
-            requestBody = RequestBodyBS . BL.toStrict $ rBody rp,
+            requestBody = RequestBodyBS $ rBody rp,
             queryString = rQueryStr rp
     }
 
-getResponseBody :: Response BodyReader -> IO BL.ByteString
-getResponseBody res = BL.fromStrict . BS.concat <$> brConsume (responseBody res)
+getResponseBody :: Response BodyReader -> IO BS.ByteString
+getResponseBody res = BS.concat <$> brConsume (responseBody res)
 
-runRequest :: (HasReqParams a, Typeable b, Bin.Binary b) => ConnManager -> a -> IO b
+runRequest :: (HasReqParams a, Typeable b, Bin.Serialize b) => ConnManager -> a -> IO b
 runRequest conn@(Conn _ _ man) rp =
     let
         is404 res = responseStatus res == notFound404
-        responseBodyUnless404 res = if is404 res then return BL.empty else getResponseBody res
-        parseResponseOrFail resp = failOnLeft . deserEither . cs =<< responseBodyUnless404 resp
+        responseBodyUnless404 res = if is404 res then return BS.empty else getResponseBody res
+        parseResponseOrFail resp = failOnLeft . deserEither =<< responseBodyUnless404 resp
         failOnLeft = either (fail . ("failed to parse binary response: " ++)) return
     in
         requestFromParams conn rp >>=

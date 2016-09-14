@@ -12,7 +12,7 @@ import           Data.Bitcoin.PaymentChannel.Util (deserEither)
 
 import qualified Network.Haskoin.Transaction as HT
 import qualified Data.ByteString as BS
-import qualified Data.Binary as Bin
+import qualified Data.Serialize as Bin
 import qualified Data.ByteString.Lazy as BL
 import           Data.Time.Clock (UTCTime)
 import           Data.Monoid ((<>))

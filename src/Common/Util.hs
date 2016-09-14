@@ -23,7 +23,7 @@ import qualified Data.ByteString.Base16 as B16
 import qualified Data.ByteString.Char8 as C
 
 import           Data.Word (Word64)
-import qualified Data.Binary as Bin (Binary, encode)
+import qualified Data.Serialize as Bin
 import           Data.Typeable
 
 
@@ -69,14 +69,14 @@ errorWithDescription code errStr = do
 
 
 --- HTTP decode/write data
-encodeJSON :: ToJSON a => a -> BL.ByteString
-encodeJSON json = encodePretty json
+encodeJSON :: ToJSON a => a -> BS.ByteString
+encodeJSON = BL.toStrict . encodePretty
 
-overwriteResponseBody :: MonadSnap m => BL.ByteString -> m ()
+overwriteResponseBody :: MonadSnap m => BS.ByteString -> m ()
 overwriteResponseBody bs = putResponse $
     setResponseBody
         (\out ->
-            Streams.write (Just $ Builder.lazyByteString bs) out >>
+            Streams.write (Just $ Builder.byteString bs) out >>
             return out)
         emptyResponse
 
@@ -86,12 +86,12 @@ writeJSON json = do
     overwriteResponseBody $ encodeJSON json
     writeBS "\n"
 
-writeBinary :: (MonadSnap m, Bin.Binary a) => a -> m ()
+writeBinary :: (MonadSnap m, Bin.Serialize a) => a -> m ()
 writeBinary obj = do
     modifyResponse $ setContentType "application/octet-stream"
     overwriteResponseBody $ Bin.encode obj
 
-decodeFromBody :: (MonadSnap m, Typeable a, Bin.Binary a) => Word64 -> m a
+decodeFromBody :: (MonadSnap m, Typeable a, Bin.Serialize a) => Word64 -> m a
 decodeFromBody n =
     fmap (deserEither . cs) (readRequestBody n) >>=
      \eitherRes -> case eitherRes of
@@ -112,7 +112,7 @@ applyCORS' = do
 ----Helpers
 getFundingAddress' :: SendPubKey -> RecvPubKey -> BitcoinLockTime -> HC.Address
 getFundingAddress' sendPK recvPK blt =
-    getFundingAddress $ CChannelParameters sendPK recvPK blt
+    getFundingAddress $ CChannelParameters sendPK recvPK blt 0
 
 toString :: HC.Address -> String
 toString = C.unpack . HC.addrToBase58

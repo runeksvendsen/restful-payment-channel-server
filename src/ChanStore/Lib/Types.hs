@@ -19,9 +19,9 @@ import           Data.Bitcoin.PaymentChannel.Types (ReceiverPaymentChannel, Paym
 import           Data.Bitcoin.PaymentChannel.Util (deserEither)
 import qualified Network.Haskoin.Transaction as HT
 import qualified Data.ByteString.Lazy as BL
-import qualified Data.Binary as Bin
-import qualified Data.Binary.Get as BinGet
-import qualified Data.Binary.Put as BinPut
+import qualified Data.Serialize as Bin
+import qualified Data.Serialize.Get as BinGet
+import qualified Data.Serialize.Put as BinPut
 import Data.String.Conversions (cs)
 import           Control.Concurrent (ThreadId)
 
@@ -51,7 +51,7 @@ newtype MaybeChanState = MaybeChanState (Maybe ChanState)
 
 
 
-instance Bin.Binary CreateResult where
+instance Bin.Serialize CreateResult where
     put Created = Bin.putWord8 1
     put AlreadyExists = Bin.putWord8 2
     get = Bin.getWord8 >>= \w -> case w of
@@ -59,7 +59,7 @@ instance Bin.Binary CreateResult where
             2 -> return AlreadyExists
             _ -> fail "unknown byte"
 
-instance Bin.Binary UpdateResult where
+instance Bin.Serialize UpdateResult where
     put WasUpdated = Bin.putWord8 1
     put WasNotUpdated = Bin.putWord8 2
     get = Bin.getWord8 >>= \w -> case w of
@@ -67,7 +67,7 @@ instance Bin.Binary UpdateResult where
             2 -> return WasNotUpdated
             _ -> fail "unknown byte"
 
-instance Bin.Binary CloseResult where
+instance Bin.Serialize CloseResult where
     put Closed = Bin.putWord8 1
     put DoesntExist = Bin.putWord8 2
     get = Bin.getWord8 >>= \w -> case w of
@@ -84,18 +84,18 @@ instance Hashable HT.OutPoint where
         salt `hashWithSalt` serialize op
 
 instance Serializable HT.OutPoint where
-    serialize   = BL.toStrict . Bin.encode
+    serialize   = Bin.encode
     deserialize = deserEither . cs
 
 instance Serializable PaymentChannelState where
-    serialize   = BL.toStrict . Bin.encode
+    serialize   = Bin.encode
     deserialize = deserEither . cs
 
 instance Serializable ChanState where
-    serialize   = BL.toStrict . Bin.encode
+    serialize   = Bin.encode
     deserialize = deserEither . cs
 
-instance Bin.Binary ChanState where
+instance Bin.Serialize ChanState where
     put (ReadyForPayment s) =
         Bin.putWord8 0x02 >>
         Bin.put s
@@ -113,7 +113,7 @@ instance Bin.Binary ChanState where
             0x04    -> SettlementInProgress <$> Bin.get
             n       -> fail $ "unknown start byte: " ++ show n)
 
-instance Bin.Binary MaybeChanState where
+instance Bin.Serialize MaybeChanState where
     put (MaybeChanState (Just chs)) = Bin.put chs
     put (MaybeChanState Nothing  ) = BinPut.putLazyByteString BL.empty
 
