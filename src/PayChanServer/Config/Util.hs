@@ -26,7 +26,7 @@ import qualified Network.Haskoin.Constants as HCC
 import           Data.Configurator.Types
 import qualified Data.Configurator as Conf
 import           Data.String.Conversions (cs)
-import           ConnManager.Types (ConnManager)
+import           ConnManager.Types (ConnManager, fromCM)
 import           PayChanServer.Types
 
 import qualified BlockchainAPI.Impl.Bitcoind.Interface as Btc
@@ -73,7 +73,7 @@ connFromDBConf :: DBConf -> IO ConnManager
 connFromDBConf (DBConf host port numConns) = newConnManager host port numConns
 
 getChanStoreIface :: DBConf -> IO Store.Interface
-getChanStoreIface dbConf = Store.mkChanStoreInterface <$> connFromDBConf dbConf
+getChanStoreIface dbConf = Store.mkChanStoreInterface . fromCM <$> connFromDBConf dbConf
 
 getDBPath :: Config -> IO FilePath
 getDBPath cfg = configLookupOrFail cfg "storage.stateDir"

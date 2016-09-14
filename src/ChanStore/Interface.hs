@@ -12,14 +12,17 @@ Potato
 
 module ChanStore.Interface
 (
-    Interface(chanAdd , chanGet , chanUpdate
+    New.Interface(chanAdd , chanGet , chanUpdate
             , settleByExpBegin
             , settleByIdBegin , settleFin)
-  , mkChanStoreInterface
+  , New.mkChanStoreInterface
   , ConnManager
   , ChanState(..)
 )
 where
+
+-- Don't use the stuff below
+import qualified ChanStore.API as New
 
 import           ConnManager.RequestRunner (ConnManager, runRequest)
 

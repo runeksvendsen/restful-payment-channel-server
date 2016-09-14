@@ -16,8 +16,15 @@ import qualified Data.ByteString.Lazy as BL
 import qualified Control.Exception as E
 
 import           Servant.Client
+import qualified Servant.Common.BaseUrl as BaseUrl
+import           Data.String.Conversions (cs)
+
 
 data ConnManager2 = Conn2 BaseUrl Manager
+
+fromCM :: ConnManager -> ConnManager2
+fromCM (Conn host port man) =
+    Conn2 (BaseUrl.BaseUrl BaseUrl.Http (cs host) (fromIntegral port) "") man
 
 -- Connection {
 type Host = BS.ByteString

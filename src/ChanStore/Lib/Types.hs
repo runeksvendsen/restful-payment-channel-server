@@ -44,7 +44,7 @@ data ChanState =
 
 
 -- Needed for Binary instance non-overlap
-newtype MaybeChanState = MaybeChanState (Maybe ChanState)
+newtype MaybeChanState = MaybeChanState { getMaybe :: Maybe ChanState }
 
 
 
