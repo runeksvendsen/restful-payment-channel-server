@@ -1,23 +1,28 @@
 swagger: '2.0'
 
 info:
-  version: "0.2.0"
+  version: "2.0.0"
   title: RESTful Bitcoin payment channel protocol
   description: |
-    A Bitcoin payment channel enables instant, secure transfer of bitcoins from one party to another. The intended use is consumer-to-merchant payments, allowing a consumer to make many small payments to a merchant - with whom the consumer has an open payment channel - while only paying the Bitcoin transaction fee once, when the channel is closed.
+    A Bitcoin payment channel enables instant, secure & fee-less transfer of bitcoins from one party to another. The intended use is consumer-to-merchant payments, allowing a consumer to make many small payments to a merchant - with whom the consumer has an open payment channel - while only paying the Bitcoin transaction fee once, when the channel is closed.
     
     The payment server speaking this protocol is the recipient of value, operating on behalf of a content delivery server who receives value from a customer/client. The content delivery server passes requests supplied by the client (payer) to the payment server, and delivers content to the client dependent on the response from the payment server. 
     
     * Server implementation: https://github.com/runeksvendsen/restful-payment-channel-server
     * Client library: https://github.com/runeksvendsen/paychanjs-client
     
+    Changes from version 1 to 2:
+      * The outpoint that the payment transaction redeems is now no longer static, but will change when the server needs to free the value it has received over the channel. This enables the server to make use of the value it has received without closing the payment channel. If a client attempts to make a payment over a channel whose source of funding has changed, it will receive a "301 Moved" response, and the payment must now use the funding outpoint specified by the new location URL.
+      * Instead of the client specifying a change address upon opening a channel, the channel funding address is instead used as the change address for the purpose of making payments, and now the client only needs to specify a change address when it wishes to close the channel. 
+    
+    
 host: paychan.runeks.me #Bitcoin testnet server
-basePath: /v1
+basePath: /v2
 schemes:
   - https
 
 paths:
-  /fundingInfo:
+  /funding/{client_pubkey}/{exp_time}/info:
     get:
       summary: Retrieve information about how to fund a new payment channel
       description: |
@@ -37,8 +42,21 @@ paths:
             $ref: "#/definitions/FundingInfo"
         400:
           description: Invalid parameter (see status message for error description)
-  
-  /channels/new:
+  /funding/{client_pubkey}/{exp_time}/begin_open:
+    get:
+      summary: Retrieve information about how to fund a new payment channel
+      description: |
+        Before opening a ...
+      operationId: fundingBeginOpen
+      parameters:
+        - $ref: "#/parameters/clientPubKeyParam"
+        - $ref: "#/parameters/expTimeParam"
+      responses:
+        204:
+          description: Proceed with funding
+        400:
+          description: Invalid parameter (see status message for error description)
+  /channels/{client_pubkey}/{exp_time}/{funding_txid}/{funding_vout}:
     post:
       summary: Create a new payment channel
       description: |
@@ -46,16 +64,11 @@ paths:
         
       operationId: createPaymentChannel
       parameters:
-        #- $ref: "#/parameters/networkParam"
         - $ref: "#/parameters/clientPubKeyParam"
         - $ref: "#/parameters/expTimeParam"
-        - $ref: "#/parameters/paymentParam"
-        - name: change_address
-          in: query
-          description: Client/value sender change address. When the channel is closed, any value not transferred to the server over the channel is returned to this address.
-          type: string
-          required: true
-        
+        - $ref: "#/parameters/fundingSourceTxIdParam"
+        - $ref: "#/parameters/fundingSourceVoutParam"
+        - $ref: "#/parameters/paymentBodyParam"
       responses:
         201:
           description: Channel created
@@ -70,45 +83,64 @@ paths:
           description: Channel already exists
           headers:
             Location:
-                description: "URL of the already-open channel"
+                description: "URL of the already open channel"
                 type: string
                 format: uri
         400:
           description: Invalid parameter (see status message for error description)
-          
-  /channels/{funding_txid}/{funding_vout}/pay:
     put:
-      summary: Make payment over an existing payment channel
-      #description: 
+      summary: |
+        Make payment over an existing payment channel.
+        
+        The payment comprises a signature over a predefined Bitcoin transaction template
       operationId: payPaymentChannel
       consumes:
         - application/json
       produces:
         - application/json
       parameters:
-        #- $ref: "#/parameters/networkParam"
-        - $ref: "#/parameters/fundingTxIdParam"
-        - $ref: "#/parameters/fundingTxVoutParam"
-        - $ref: "#/parameters/paymentParam"
+        - $ref: "#/parameters/clientPubKeyParam"
+        - $ref: "#/parameters/expTimeParam"
+        - $ref: "#/parameters/fundingSourceTxIdParam"
+        - $ref: "#/parameters/fundingSourceVoutParam"
+        - $ref: "#/parameters/paymentBodyParam"
       responses:
         200:
-          description: Payment received
+          description: Value received
           schema:
             $ref: "#/definitions/PaymentResult"
+        310:
+          description: Payment 1/2 accepted. However, it is required that the client also perform a request on the payment resource pointed to (same as 307 but request data needs to be updated).
+          headers:
+            Location:
+              description: "Location of payment resource also requiring payment data"
+              type: string
+              format: uri
+        311:
+          description: The payment resource has moved permanently. Perform the payment request on the specified resource instead (same as 308 but request data needs to be updated).
+          headers:
+            Location:
+              description: "New payment resource location"
+              type: string
+              format: uri
         400:
           description: Invalid parameter (see status message for error description)
         410:
-          description: The channel is in the process of being closed. Performing a DELETE request on the channel in a few seconds should return information about the closed channel.
-  /channels/{funding_txid}/{funding_vout}:
+          description: The channel is in the process of being closed. Performing a DELETE request on the resource in a few seconds should return information about the closed channel.
     delete:
       summary: Delete an existing payment channel
-      description: The payment included here is the most recent payment sent over the channel. This payment is included as a form of authentication token, making sure only the client can close the channel.
+      description: In order to enable the server to return change to the client, the client must create a new payment with the desired change address, and supply this pay as well as the change address in the appropriate query parameters.
       operationId: deletePaymentChannel
       parameters:
-        # - $ref: "#/parameters/networkParam"
-        - $ref: "#/parameters/fundingTxIdParam"
-        - $ref: "#/parameters/fundingTxVoutParam"
-        - $ref: "#/parameters/paymentParam"
+        # path
+        - $ref: "#/parameters/clientPubKeyParam"
+        - $ref: "#/parameters/expTimeParam"
+        - $ref: "#/parameters/fundingSourceTxIdParam"
+        - $ref: "#/parameters/fundingSourceVoutParam"
+        # body
+        - $ref: "#/parameters/paymentBodyParam"
+        # query
+        - $ref: "#/parameters/changeAddressParam"
       consumes:
         - application/json
       produces:
@@ -120,51 +152,58 @@ paths:
             $ref: "#/definitions/PaymentResult"
         400:
           description: Invalid parameter (see status message for error description)
+          
+
 
 parameters:
-    #networkParam:
-    #  name: net
-    #  in: path
-    #  required: true
-    #  description: Bitcoin network. Use "live" for mainnet and "test" for testnet3.
-    #  type: string
-    paymentParam:
-      name: payment
+    
+    changeAddressParam:
+      name: change_address
       in: query
-      description: Payment data, base64-encoded (see client library for specification)
-      required: true
+      description: Client/value sender change address. When the channel is closed, any value not transferred to the server over the channel is sent to this address.
       type: string
-    clientPubKeyParam:
-      name: client_pubkey
-      in: query
-      description: Client/value sender public key. Hex-encoded, compressed Secp256k1 pubkey, 33 bytes.
       required: true
-      type: string
     expTimeParam:
       name: exp_time
-      in: query
-      description: The expiration date/time for the channel (Unix timestamp). After this point in time the channel refund transaction becomes valid, allowing the client to reclaim the channel funds in case the server goes missing.
+      in: path
+      description: Expiration date/time for the channel (Unix timestamp)
       required: true
       type: integer
       format: int64
-    fundingTxIdParam:
+    clientPubKeyParam:
+      name: client_pubkey
+      in: path
+      description: Client/value sender public key. Hex-encoded, compressed Secp256k1 pubkey, 33 bytes.
+      required: true
+      type: string
+    fundingSourceTxIdParam:
       name: funding_txid
       in: path
-      description: Transaction ID of the transaction which pays to the channel funding address.
-      required: true
+      description: The Bitcoin transaction ID part of the outpoint in the Blockchain which holds the client's channel balance.
       type: string
-    fundingTxVoutParam:
+      required: true
+    fundingSourceVoutParam:
       name: funding_vout
       in: path
-      description: Output index/vout of the output in the transaction paying to the channel funding address.
-      required: true
+      description: The output index part of the outpoint in the Blockchain which holds the client's channel balance.
       type: string
+      required: true
+    paymentBodyParam:
+      name: payment_data
+      in: body
+      description: Payment data
+      required: true
+      schema:
+        $ref: "#/definitions/PaymentData"
+      
 definitions:
   FundingInfo:
     type: object
     required:
       - server_pubkey
+      - dust_limit
       - funding_address_copy
+      - redeem_script_copy
       - open_price
       - funding_tx_min_conf
       - settlement_period_hours
@@ -173,10 +212,16 @@ definitions:
         description: Server/value receiver public key. Hex-encoded, compressed Secp256k1 pubkey, 33 bytes.
         type: string
         example: 029b5549e8cac42d27051956925d8176408b2183ba357850f58320ad5876b9c13f
+      dust_limit:
+        description: The server will not accept payments where the client change amount is less than this amount. This "dust limit" is necessary in order to avoid producing a settlement transaction that will not circulate in the Bitcoin P2P network because it contains an output of minuscule value. Consequently, the maximum amount, that can be sent over the payment channel, is the amount sent to the funding address minus this "dust limit".
       funding_address_copy:
-        description: Server's calculated channel funding address. The client will confirm that its own calculated funding address matches this one, before paying to it.
+        description: Server derived channel funding address. The client will confirm that its own derived funding address matches this one, before paying to it.
         type: string
         example: 2NCTirSGjFM8T7hUow3AcfyFaw1N1APnYuP
+      redeem_script_copy:
+        description: Server derived channel redeem script. Defines sender, receiver and channel expiration date. Used to construct the input in the payment transaction. The client will also verify that this matches what it expects. Hex-encoded.
+        type: string
+        example: "010344... (xx bytes)"
       open_price:
         description: Price (in satoshis) for opening a channel with the given {exp_time}. This amount is paid in the initial channel payment when creating a new channel. May be zero, in which case a payment of zero value is transferred, ensuring that the channel can be closed at any time.
         type: integer
@@ -194,6 +239,28 @@ definitions:
         type: integer
         minimum: 0
         example: 12
+  
+  PaymentData:
+    description: Contains information about a payment. A payment contains a signature over a hash of a Bitcoin transaction which redeems the outpoint pointed to by the resource's 'funding_txid' and 'funding_vout' parameters.
+    type: object
+    required:
+      - signature_data
+      - change_value
+      - change_address
+    properties:
+      signature_data:
+        description: Hex-encoded SIGHASH_SINGLE|ANYONECANPAY signature over the the "payment transaction", which is a Bitcoin transaction that redeems the outpoint specified by 'funding_txid' and 'funding_vout', and has one output which sends 'change_value' to 'change_address'.
+        type: string
+        example: "304402202... (71-72 bytes ending in 0x83)"
+      change_value:
+        description: The value sent back to the client in the payment transaction. The total amount transferred to the server is this amount subtracted from the value sent to the channel funding address.
+        type: integer
+        format: int64
+        example: 1000000
+      change_address:
+        description: The client change address as used in the only output of the payment transaction.
+        type: string
+        example: "19xUUsSomTCbS9Ar3m1e6j3zqGBANz6d6t"
   PaymentResult:
     type: object
     required:
@@ -221,5 +288,4 @@ definitions:
           If channel_status equals "closed": the transaction ID of the Bitcoin transaction which settles the channel; otherwise null.
         type: string
         example: "4d2c20ea63729a8f248904faf585bd52dc9bd52c59ea36b0c6cea5e425f0c4e9"
-  
-      
+        

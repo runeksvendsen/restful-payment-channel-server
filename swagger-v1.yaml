@@ -1,0 +1,225 @@
+swagger: '2.0'
+
+info:
+  version: "0.2.0"
+  title: RESTful Bitcoin payment channel protocol
+  description: |
+    A Bitcoin payment channel enables instant, secure transfer of bitcoins from one party to another. The intended use is consumer-to-merchant payments, allowing a consumer to make many small payments to a merchant - with whom the consumer has an open payment channel - while only paying the Bitcoin transaction fee once, when the channel is closed.
+    
+    The payment server speaking this protocol is the recipient of value, operating on behalf of a content delivery server who receives value from a customer/client. The content delivery server passes requests supplied by the client (payer) to the payment server, and delivers content to the client dependent on the response from the payment server. 
+    
+    * Server implementation: https://github.com/runeksvendsen/restful-payment-channel-server
+    * Client library: https://github.com/runeksvendsen/paychanjs-client
+    
+host: paychan.runeks.me #Bitcoin testnet server
+basePath: /v1
+schemes:
+  - https
+
+paths:
+  /fundingInfo:
+    get:
+      summary: Retrieve information about how to fund a new payment channel
+      description: |
+        Before opening a payment channel with the server, the client must first acquire the server public key, in order to calculate a funding address for the channel.
+      
+        The client will first calculate the funding address, confirm that it matches the server's, then pay to the funding address, and wait until the funding transaction has the server-specified number of confirmations ("funding_tx_min_conf").
+        
+        After this, the client will create a new payment of value equal to the server-specified channel open price ("open_price"), and POST this to the channel-open URL in order to open the channel.
+      operationId: getFundingInfo
+      parameters:
+        - $ref: "#/parameters/clientPubKeyParam"
+        - $ref: "#/parameters/expTimeParam"
+      responses:
+        200:
+          description: Proceed with funding
+          schema:
+            $ref: "#/definitions/FundingInfo"
+        400:
+          description: Invalid parameter (see status message for error description)
+  
+  /channels/new:
+    post:
+      summary: Create a new payment channel
+      description: |
+        After publishing the funding Bitcoin transaction, and waiting for the specified number of confirmations, the client will POST a payment, paying the server's specified channel open price, to the channel open URL.
+        
+      operationId: createPaymentChannel
+      parameters:
+        #- $ref: "#/parameters/networkParam"
+        - $ref: "#/parameters/clientPubKeyParam"
+        - $ref: "#/parameters/expTimeParam"
+        - $ref: "#/parameters/paymentParam"
+        - name: change_address
+          in: query
+          description: Client/value sender change address. When the channel is closed, any value not transferred to the server over the channel is returned to this address.
+          type: string
+          required: true
+        
+      responses:
+        201:
+          description: Channel created
+          schema:
+            $ref: "#/definitions/PaymentResult"
+          headers:
+            Location:
+              description: "URL of the newly opened channel"
+              type: string
+              format: uri
+        409:
+          description: Channel already exists
+          headers:
+            Location:
+                description: "URL of the already-open channel"
+                type: string
+                format: uri
+        400:
+          description: Invalid parameter (see status message for error description)
+          
+  /channels/{funding_txid}/{funding_vout}/pay:
+    put:
+      summary: Make payment over an existing payment channel
+      #description: 
+      operationId: payPaymentChannel
+      consumes:
+        - application/json
+      produces:
+        - application/json
+      parameters:
+        #- $ref: "#/parameters/networkParam"
+        - $ref: "#/parameters/fundingTxIdParam"
+        - $ref: "#/parameters/fundingTxVoutParam"
+        - $ref: "#/parameters/paymentParam"
+      responses:
+        200:
+          description: Payment received
+          schema:
+            $ref: "#/definitions/PaymentResult"
+        400:
+          description: Invalid parameter (see status message for error description)
+        410:
+          description: The channel is in the process of being closed. Performing a DELETE request on the channel in a few seconds should return information about the closed channel.
+  /channels/{funding_txid}/{funding_vout}:
+    delete:
+      summary: Delete an existing payment channel
+      description: The payment included here is the most recent payment sent over the channel. This payment is included as a form of authentication token, making sure only the client can close the channel.
+      operationId: deletePaymentChannel
+      parameters:
+        # - $ref: "#/parameters/networkParam"
+        - $ref: "#/parameters/fundingTxIdParam"
+        - $ref: "#/parameters/fundingTxVoutParam"
+        - $ref: "#/parameters/paymentParam"
+      consumes:
+        - application/json
+      produces:
+        - application/json
+      responses:
+        200:
+          description: Channel closed, funds settled. The settling transaction has been published to the Bitcoin network.
+          schema:
+            $ref: "#/definitions/PaymentResult"
+        400:
+          description: Invalid parameter (see status message for error description)
+
+parameters:
+    #networkParam:
+    #  name: net
+    #  in: path
+    #  required: true
+    #  description: Bitcoin network. Use "live" for mainnet and "test" for testnet3.
+    #  type: string
+    paymentParam:
+      name: payment
+      in: query
+      description: Payment data, base64-encoded (see client library for specification)
+      required: true
+      type: string
+    clientPubKeyParam:
+      name: client_pubkey
+      in: query
+      description: Client/value sender public key. Hex-encoded, compressed Secp256k1 pubkey, 33 bytes.
+      required: true
+      type: string
+    expTimeParam:
+      name: exp_time
+      in: query
+      description: The expiration date/time for the channel (Unix timestamp). After this point in time the channel refund transaction becomes valid, allowing the client to reclaim the channel funds in case the server goes missing.
+      required: true
+      type: integer
+      format: int64
+    fundingTxIdParam:
+      name: funding_txid
+      in: path
+      description: Transaction ID of the transaction which pays to the channel funding address.
+      required: true
+      type: string
+    fundingTxVoutParam:
+      name: funding_vout
+      in: path
+      description: Output index/vout of the output in the transaction paying to the channel funding address.
+      required: true
+      type: string
+definitions:
+  FundingInfo:
+    type: object
+    required:
+      - server_pubkey
+      - funding_address_copy
+      - open_price
+      - funding_tx_min_conf
+      - settlement_period_hours
+    properties:
+      server_pubkey:
+        description: Server/value receiver public key. Hex-encoded, compressed Secp256k1 pubkey, 33 bytes.
+        type: string
+        example: 029b5549e8cac42d27051956925d8176408b2183ba357850f58320ad5876b9c13f
+      funding_address_copy:
+        description: Server's calculated channel funding address. The client will confirm that its own calculated funding address matches this one, before paying to it.
+        type: string
+        example: 2NCTirSGjFM8T7hUow3AcfyFaw1N1APnYuP
+      open_price:
+        description: Price (in satoshis) for opening a channel with the given {exp_time}. This amount is paid in the initial channel payment when creating a new channel. May be zero, in which case a payment of zero value is transferred, ensuring that the channel can be closed at any time.
+        type: integer
+        format: int64
+        minimum: 0
+        example: 25000
+      funding_tx_min_conf:
+        description: Minimum confirmation count that the funding transaction must have before proceeding with opening a new channel.
+        type: integer
+        format: int32
+        minimum: 0
+        example: 6
+      settlement_period_hours:
+        description: The server reserves the right to close the payment channel this many hours before the specified expiration date. The server hasn't received any actual value until it publishes a payment transaction to the Bitcoin network, so it needs a window of time in which the client can no longer send payments over the channel, and yet the channel refund transaction hasn't become valid. 
+        type: integer
+        minimum: 0
+        example: 12
+  PaymentResult:
+    type: object
+    required:
+      - channel_status
+      - channel_value_left
+      - value_received
+      - settlement_txid
+    properties:
+      channel_status:
+        description: Equal to "open" if the channel is still open, otherwise "closed". The channel is automatically closed when there is no value left to send. If a payment sends all remaining channel value to the server, the server will close the channel and set this field to "closed".
+        type: string
+        example: "open"
+      channel_value_left:
+        description: Remaining channel value. This is the amount that the client/sender would receive if the channel was closed now.
+        type: integer
+        minimum: 0
+        example: 1700000
+      value_received:
+        description: Value of the payment that was just received. This is the additional value assigned to the receiver/server with this payment.
+        type: integer
+        minimum: 0
+        example: 1000
+      settlement_txid:
+        description: |
+          If channel_status equals "closed": the transaction ID of the Bitcoin transaction which settles the channel; otherwise null.
+        type: string
+        example: "4d2c20ea63729a8f248904faf585bd52dc9bd52c59ea36b0c6cea5e425f0c4e9"
+  
+      
