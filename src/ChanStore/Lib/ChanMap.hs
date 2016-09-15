@@ -41,7 +41,7 @@ destroyChanMap (ChannelMap chanMap (Just (syncAction,syncThreadId))) = do
     makeReadOnly chanMap
     killThread syncThreadId
     syncNow syncAction
-destroyChanMap (ChannelMap chanMap Nothing) = return ()
+destroyChanMap (ChannelMap _ Nothing) = return ()
 
 getChanState :: ChannelMap -> Key -> IO (Maybe ChanState)
 getChanState (ChannelMap chanMap _) = getItem chanMap

@@ -23,13 +23,13 @@ type RPC = ReceiverPaymentChannel
 
 -- |The API exposed by this server.
 type ChanStore =
-        "store/by_id"                         :> ReqBody '[OctetStream] RPC       :> Post '[OctetStream] CreateResult
-  :<|>  "store/by_id" :> Capture "key" Key                                        :> Get  '[OctetStream] MaybeChanState
-  :<|>  "store/by_id" :> Capture "key" Key    :> ReqBody '[OctetStream] Payment   :> Put  '[OctetStream] UpdateResult
-  :<|>  "settle/begin/by_id"    :> Capture "key" Key                              :> Put  '[OctetStream] ReceiverPaymentChannel
-  :<|>  "settle/begin/by_exp"   :> Capture "exp" UTCTime                          :> Put  '[OctetStream] [ReceiverPaymentChannel]
-  :<|>  "settle/begin/by_value" :> Capture "val" BitcoinAmount                    :> Put  '[OctetStream] [ReceiverPaymentChannel]
-  :<|>  "settle/finish/by_id"   :> Capture "key" Key  :> Capture "out" HT.TxHash  :> Post '[OctetStream] NoContent
+       "store"  :> "by_id"                                        :> ReqBody '[OctetStream] RPC         :> Post '[OctetStream] CreateResult
+  :<|> "store"  :> "by_id"                :> Capture "id" Key                                           :> Get  '[OctetStream] MaybeChanState
+  :<|> "store"  :> "by_id"                :> Capture "id" Key     :> ReqBody '[OctetStream] Payment     :> Put  '[OctetStream] UpdateResult
+  :<|> "settle" :> "begin"  :> "by_id"    :> Capture "id" Key                                           :> Put  '[OctetStream] RPC
+  :<|> "settle" :> "begin"  :> "by_exp"   :> Capture "exp" UTCTime                                      :> Put  '[OctetStream] [RPC]
+  :<|> "settle" :> "begin"  :> "by_value" :> Capture "val" BitcoinAmount                                :> Put  '[OctetStream] [RPC]
+  :<|> "settle" :> "finish" :> "by_id"    :> Capture "id" Key     :> Capture "out" HT.TxHash            :> Post '[OctetStream] NoContent
 
 
 

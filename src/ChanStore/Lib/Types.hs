@@ -18,10 +18,8 @@ import           Data.DiskMap (DiskMap, SyncAction,
 import           Data.Bitcoin.PaymentChannel.Types (ReceiverPaymentChannel, PaymentChannelState, Payment)
 import           Data.Bitcoin.PaymentChannel.Util (deserEither)
 import qualified Network.Haskoin.Transaction as HT
-import qualified Data.ByteString.Lazy as BL
 import qualified Data.Serialize as Bin
 import qualified Data.Serialize.Get as BinGet
-import qualified Data.Serialize.Put as BinPut
 import Data.String.Conversions (cs)
 import           Control.Concurrent (ThreadId)
 
@@ -114,12 +112,13 @@ instance Bin.Serialize ChanState where
             n       -> fail $ "unknown start byte: " ++ show n)
 
 instance Bin.Serialize MaybeChanState where
-    put (MaybeChanState (Just chs)) = Bin.put chs
-    put (MaybeChanState Nothing  ) = BinPut.putLazyByteString BL.empty
+    put (MaybeChanState (Just chs)) = Bin.putWord8 0x01 >> Bin.put chs
+    put (MaybeChanState Nothing)    = Bin.putWord8 0x00
 
-    get = BinGet.isEmpty >>= \empty ->
-        if not empty then MaybeChanState . Just <$> Bin.get else return (MaybeChanState Nothing)
-
+    get = BinGet.getWord8 >>= \w -> case w of
+        0x01 -> MaybeChanState . Just <$> Bin.get
+        0x00 -> return (MaybeChanState Nothing)
+        n    -> fail $ "unknown start byte: " ++ show n
 
 
 

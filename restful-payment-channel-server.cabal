@@ -147,8 +147,8 @@ Executable ChanStore
      , servant-server
      , http-api-data
      , http-media
---     , wai
---     , warp
+     , wai
+     , warp
   other-modules:
                      ChanStore.Init
                      ChanStore.Interface
