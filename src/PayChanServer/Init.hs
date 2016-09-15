@@ -2,13 +2,10 @@
 
 module  PayChanServer.Init where
 
-
-import           PayChanServer.App  (mainRoutes)
-
+import           Common.Util
 import           PayChanServer.Util (dummyKey)
 import           PayChanServer.Config.Types
 import           PayChanServer.Config.Util
-import           PayChanServer.Types (ServerSettleConfig(..))
 import qualified PayChanServer.Settlement as Settle
 import qualified Test.Dummy as Dummy
 
@@ -18,18 +15,12 @@ import           SigningService.Interface (getPubKey)
 import qualified BlockchainAPI.Impl.Bitcoind.Interface as Btc
 import qualified BlockchainAPI.Types as BtcAPI
 
-import           Common.URLParam (pathParamEncode)
-
-import           Snap (SnapletInit, makeSnaplet, addRoutes)
-import           Data.String.Conversions (cs)
-import           Control.Monad          (when, unless, void, forM)
-import           Control.Monad.IO.Class (liftIO)
+import           Control.Monad                  (void)
 import qualified System.Posix.Signals as Sig
-import           Control.Concurrent (ThreadId, throwTo)
+import           Control.Concurrent             (ThreadId, throwTo)
 import qualified Control.Exception as E
-import           Data.Maybe (isNothing)
-import           System.IO (hFlush, stdout)
-import qualified Data.ByteString as BS
+import           Data.Maybe                     (isNothing)
+import           System.IO                      (hFlush, stdout)
 
 
 appConfInit :: Config -> IO App
@@ -46,8 +37,7 @@ appConfInit cfg = do
 
     (ServerSettleConfig settleFee _) <- getServerSettleConfig cfg
 
-    openConfig@(OpenConfig _ basePrice addSettleFee _) <- getChanOpenConf cfg
-    let confOpenPrice = if addSettleFee then basePrice + settleFee else basePrice
+    chanConfig <- getChanConf cfg
 
     signingServiceConn <- getSigningServiceConn cfg
     btcIface <- getBlockchainIface cfg
@@ -75,20 +65,9 @@ appConfInit cfg = do
     return $ App dbIface
                  (BtcAPI.listUnspentOutputs btcIface) settleFunc
                  pubKey
-                 openConfig confOpenPrice settlePeriod
+                 chanConfig settlePeriod
                  basePathVersion
                  debug
-
-appInit :: Config -> SnapletInit App App
-appInit cfg = makeSnaplet "PayChanServer" "RESTful Bitcoin payment channel server" Nothing $ do
-    appConf <- liftIO $ appConfInit cfg
-
-    let appRoutes = mainRoutes (_basePath appConf)
-    addRoutes appRoutes
-    liftIO $ putStrLn "Active routes: "
-    liftIO $ forM (map fst appRoutes :: [BS.ByteString]) (putStrLn . (++) "\t" . cs)
-
-    return appConf
 
 installHandlerKillThreadOnSig :: Sig.Signal -> ThreadId -> IO ()
 installHandlerKillThreadOnSig sig tid =

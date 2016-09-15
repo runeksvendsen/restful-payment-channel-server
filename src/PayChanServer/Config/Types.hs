@@ -1,13 +1,18 @@
 {-# LANGUAGE TemplateHaskell #-}
-{-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE FlexibleInstances #-}
+{-# LANGUAGE OverloadedStrings, DataKinds, FlexibleContexts, LambdaCase, TypeOperators #-}
 
-module  PayChanServer.Config.Types where
+module  PayChanServer.Config.Types
+(
+   module PayChanServer.Config.Types
+ , Config
+)
 
-import           ConnManager.Types (ConnManager)
+where
+
+import           Common.Util
 import qualified ChanStore.Interface as Store
-import           Data.Bitcoin.PaymentChannel.Types (ReceiverPaymentChannel, BitcoinAmount,
-                                                    RecvPubKey)
+import           Data.Bitcoin.PaymentChannel.Types (ReceiverPaymentChannel, BitcoinAmount)
 
 import qualified Network.Haskoin.Transaction as HT
 import qualified Network.Haskoin.Crypto as HC
@@ -15,40 +20,46 @@ import qualified Crypto.Secp256k1 as Secp
 import           Control.Lens.TH (makeLenses)
 import qualified Data.ByteString as BS
 import           Data.Configurator.Types
-import           Common.Util (fromHexString)
+
 import           Data.Ratio
-import           Data.String.Conversions (cs)
 import qualified Servant.Common.BaseUrl as BaseUrl
-import qualified  Network.HTTP.Client as HTTP
 
 import qualified BlockchainAPI.Types as BtcType
 import qualified Data.Tagged as Tag
 
+import Debug.Trace
+
+-- import           Servant.Server.Internal.Context (Context(EmptyContext, (:.)))
 
 --- Tagged types
 getVal = Tag.unTagged
 
-type BtcConf        = Tag.Tagged BlockchainConf Word
-type SettlePeriod   = Tag.Tagged Hours Word
+data BTCConf   = BTCConf
+data SettleHrs = SettleHrs
+data Dust      = Dust
+data ChanDur   = ChanDur
 
-data BlockchainConf = BlockchainConf
-data Hours   = Hours
---
+type BtcConf      = Tag.Tagged BTCConf Word
+type SettleHours  = Tag.Tagged SettleHrs Word
+type DustLimit    = Tag.Tagged Dust BitcoinAmount
+type DurationHrs  = Tag.Tagged ChanDur Word
 
+-- type ChanConf2 = BtcConf :. BitcoinAmount :. DustLimit :. Hours :. EmptyContext
 
-data OpenConfig = OpenConfig {
-    openMinConf         :: Word            -- minConf
-   ,openBasePrice       :: BitcoinAmount   -- basePrice
-   ,openAddFee          :: Bool            -- addSettlement fee to basePrice to get openPrice?
-   ,openMinLengthHours  :: Word }          -- minDurationHours
+data ChanConf = ChanConf
+  { btcMinConf      :: BtcConf
+  , openPrice       :: BitcoinAmount
+  , dustLimit       :: DustLimit
+  , settlePeriod'   :: SettleHours
+  , minDuration     :: DurationHrs }
+
 
 data App = App
  { _dbInterface     :: Store.Interface
  , _listUnspent     :: HC.Address  -> IO (Either String [BtcType.TxInfo])
  , _settleChannel   :: ReceiverPaymentChannel -> IO HT.TxHash    -- Dummy function if debug is enabled
  , _pubKey          :: RecvPubKey
- , _openConfig      :: OpenConfig
- , _finalOpenPrice  :: BitcoinAmount
+ , _chanConf        :: ChanConf
  , _settlePeriod    :: Word
  , _basePath        :: BS.ByteString
  , _areWeDebugging  :: Bool
@@ -62,6 +73,10 @@ data BitcoinNet = Mainnet | Testnet3
 data DBConf       = DBConf       Host Word Int
 data ServerDBConf = ServerDBConf String Word
 type Host = BS.ByteString
+
+
+getWord r = if denominator r /= 1 then Nothing
+      else Just $ numerator r
 
 instance Configured BaseUrl.Scheme where
     convert (String "http") = return BaseUrl.Http
@@ -78,12 +93,33 @@ instance Configured HC.Address where
     convert _ = Nothing
 
 instance Configured BitcoinAmount where
-    convert (Number r) =
-        if denominator r /= 1 then Nothing
-        else Just . fromIntegral $ numerator r
+    convert (Number r) = fmap fromIntegral (getWord r)
     convert _ = Nothing
 
+-- Decode private key as 64 hex chars
 instance Configured HC.PrvKey where
     convert (String text) =
-        fmap HC.makePrvKey . Secp.secKey . fromHexString . cs $ text
+        either (const Nothing) (fmap HC.makePrvKey . Secp.secKey)
+            (hexDecode (cs text :: BS.ByteString))
     convert _ = Nothing
+
+instance Configured BtcConf where
+    convert (Number r) = fmap (Tag.Tagged . fromIntegral) (getWord r)
+    convert _ = Nothing
+
+instance Configured SettleHours where
+    convert (Number r) = fmap (Tag.Tagged . fromIntegral) (getWord r)
+    convert _ = Nothing
+
+instance Configured DustLimit where
+    convert (Number r) = fmap (Tag.Tagged . fromIntegral) (getWord r)
+    convert _ = Nothing
+
+instance Configured DurationHrs where
+    convert (Number r) = fmap (Tag.Tagged . fromIntegral) (getWord r)
+    convert _ = Nothing
+
+data ServerSettleConfig = ServerSettleConfig {
+    confSettleTxFee       :: BitcoinAmount,
+    confSettlePeriod      :: SettleHours
+}

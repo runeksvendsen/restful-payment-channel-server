@@ -37,6 +37,21 @@ instance Web.FromHttpApiData HT.TxHash where
 instance Web.ToHttpApiData HT.TxHash where
     toUrlPiece = cs . pathParamEncode
 
+instance Web.FromHttpApiData BitcoinLockTime where
+    parseUrlPiece = fmapL cs . pathParamDecode . cs
+instance Web.ToHttpApiData BitcoinLockTime where
+    toUrlPiece = cs . pathParamEncode
+
+instance Web.FromHttpApiData SendPubKey where
+    parseUrlPiece = fmapL cs . pathParamDecode . cs
+instance Web.ToHttpApiData SendPubKey where
+    toUrlPiece = cs . pathParamEncode
+
+instance Web.FromHttpApiData Payment where
+    parseUrlPiece = fmapL cs . pathParamDecode . cs
+instance Web.ToHttpApiData Payment where
+    toUrlPiece = cs . pathParamEncode
+
 
 instance Content.MimeUnrender Content.OctetStream [ReceiverPaymentChannel] where
     mimeUnrender _ = deserEither . BL.toStrict

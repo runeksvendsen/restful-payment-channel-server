@@ -3,18 +3,13 @@
 module  PayChanServer.DB where
 
 import           Common.Util
+import           PayChanServer.Types
 import           PayChanServer.Util
 import qualified PayChanServer.Config.Types as Conf
 
 import qualified ChanStore.Interface as DBConn
-import qualified ChanStore.Lib.ChanMap as ChanMap
-import           Data.Bitcoin.PaymentChannel.Types (ReceiverPaymentChannel, Payment,
-                                                    PaymentChannel(getNewestPayment))
+
 import qualified Network.Haskoin.Transaction as HT
-import qualified Data.ByteString as BS
-import           Snap
-import           Control.Monad.IO.Class (liftIO)
-import           Control.Lens (use)
 import           Control.Exception (try, throwIO)
 import           Control.Concurrent (threadDelay)
 import           Network.HTTP.Client (HttpException (FailedConnectionException, FailedConnectionException2))
@@ -53,11 +48,11 @@ initWaitConnect serviceName ioa = do
         (\e -> isFailedConnectOrThrow e >>= logNoConnection >> hFlush stdout >> loopGet tryAsEither)
         return
 
-tryDBRequest :: MonadSnap m => IO a -> m a
+tryDBRequest :: IO a -> AppPC a
 tryDBRequest ioa = liftIO (tryHTTPRequestOfType "Database" ioa) >>=
                        either internalError return
 
-trySigningRequest :: MonadSnap m => IO a -> m a
+trySigningRequest :: IO a -> AppPC a
 trySigningRequest ioa =
     liftIO (tryHTTPRequestOfType "Signing service" ioa) >>=
         either internalError return
@@ -66,19 +61,8 @@ tryHTTPRequestOfType :: String -> IO a -> IO (Either String a)
 tryHTTPRequestOfType descr ioa =
     fmapL (\e -> descr ++ " error: " ++ show (e :: HttpException)) <$> try ioa
 
-confirmChannelDoesntExistOrAbort :: DBConn.Interface -> HT.OutPoint -> Handler Conf.App Conf.App ()
-confirmChannelDoesntExistOrAbort chanMap chanId = do
-    maybeItem <- tryDBRequest (DBConn.chanGet chanMap chanId)
-    case fmap ChanMap.isSettled maybeItem of
-        Nothing -> return ()    -- channel doesn't already exist
-        Just False ->           -- channel exists already, and is open
-            httpLocationSetActiveChannel chanId >>
-            errorWithDescription 409 "Channel already exists"
-        Just True  ->           -- channel in question has been settled
-            errorWithDescription 409 "Channel already existed, but has been settled"
 
-
-getChannelStateOr404 :: MonadSnap m => DBConn.Interface -> HT.OutPoint -> m DBConn.ChanState
+getChannelStateOr404 :: DBConn.Interface -> HT.OutPoint -> AppPC DBConn.ChanState
 getChannelStateOr404 chanMap chanId =
     tryDBRequest (DBConn.chanGet chanMap chanId) >>=
     \res -> case res of
@@ -86,7 +70,7 @@ getChannelStateOr404 chanMap chanId =
             errorWithDescription 404 "No such channel"
         Just cs -> return cs
 
-getChannelStateForPayment :: MonadSnap m => DBConn.Interface -> HT.OutPoint -> m ReceiverPaymentChannel
+getChannelStateForPayment :: DBConn.Interface -> HT.OutPoint -> AppPC ReceiverPaymentChannel
 getChannelStateForPayment chanMap chanId =
     getChannelStateForSettlement chanMap chanId >>=
     -- When the channel has changed from ReadyForPayment to
@@ -95,7 +79,7 @@ getChannelStateForPayment chanMap chanId =
 
 -- |Return either open ChanState or settlement txid and most recent payment in case
 --      the channel is closed
-getChannelStateForSettlement :: MonadSnap m => DBConn.Interface -> HT.OutPoint -> m (Either (HT.TxHash,Payment) ReceiverPaymentChannel)
+getChannelStateForSettlement :: DBConn.Interface -> HT.OutPoint -> AppPC (Either (HT.TxHash,Payment) ReceiverPaymentChannel)
 getChannelStateForSettlement chanMap chanId =
     getChannelStateOr404 chanMap chanId >>=
     \chanState -> case chanState of

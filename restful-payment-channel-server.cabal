@@ -1,5 +1,5 @@
 Name:                restful-payment-channel-server
-Version:             0.1.0
+Version:             0.2.0
 Synopsis:            RESTful Bitcoin payment channel server
 Description:         TODO
 License:             PublicDomain
@@ -40,7 +40,7 @@ Executable PayChanServer
     snap                      == 1.0.*,
     io-streams,
 
-    bitcoin-payment-channel   == 0.3.0.1,
+    bitcoin-payment-channel   == 0.3.0.2,
     haskoin-core              == 0.4.0,
     bytestring                >= 0.9.1 && < 0.11,
     blaze-builder,
@@ -87,7 +87,6 @@ Executable PayChanServer
                  PayChanServer.Config.Types
                  PayChanServer.Config.Util
                  PayChanServer.DB
-                 PayChanServer.Handlers
                  PayChanServer.Init
                  PayChanServer.Settlement
                  PayChanServer.Types
@@ -117,7 +116,7 @@ Executable ChanStore
     snap                      == 1.0.*,
     io-streams,
     blaze-builder,
-    bitcoin-payment-channel   == 0.3.0.1,
+    bitcoin-payment-channel   == 0.3.0.2,
     haskoin-core              == 0.4.0,
     haskell-stm-diskmap,
     secp256k1,
@@ -166,7 +165,6 @@ Executable ChanStore
                      PayChanServer.Config.Types
                      PayChanServer.Config.Util
                      PayChanServer.DB
-                     PayChanServer.Handlers
                      PayChanServer.Init
                      PayChanServer.Main
                      PayChanServer.Settlement
@@ -197,7 +195,7 @@ Executable SigningService
     mtl                       >= 2     && < 3,
     io-streams,
     blaze-builder,
-    bitcoin-payment-channel   == 0.3.0.1,
+    bitcoin-payment-channel   == 0.3.0.2,
     haskoin-core              == 0.4.0,
     secp256k1,
     configurator,
@@ -223,7 +221,6 @@ Executable SigningService
                      PayChanServer.Config.Types
                      PayChanServer.Config.Util
                      PayChanServer.DB
-                     PayChanServer.Handlers
                      PayChanServer.Init
                      PayChanServer.Main
                      PayChanServer.Settlement
@@ -252,7 +249,7 @@ Executable GenTestData
       snap-core                 == 1.0.*,
       snap-server               == 1.0.*,
       directory,
-      bitcoin-payment-channel   == 0.3.0.1,
+      bitcoin-payment-channel   == 0.3.0.2,
       transformers,
       haskoin-core,
       aeson,
@@ -283,7 +280,7 @@ Executable RunTestData
       snap-core                 == 1.0.*,
       snap-server               == 1.0.*,
       directory,
-      bitcoin-payment-channel   == 0.3.0.1,
+      bitcoin-payment-channel   == 0.3.0.2,
       transformers,
       haskoin-core,
       aeson,

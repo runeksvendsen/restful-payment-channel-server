@@ -4,11 +4,9 @@
 
 module Common.URLParam where
 
-import           Data.Bitcoin.PaymentChannel.Types (BitcoinAmount, Payment,
-                                                    RecvPubKey, b64Encode,
-                                                    IsPubKey(getPubKey))
+import           Common.Types
 import           Data.Aeson   (Result(..), Value(String), FromJSON, fromJSON,  encode, decode)
-import           Data.Bitcoin.PaymentChannel.Util
+
 import qualified Network.Haskoin.Transaction as HT
 import qualified Network.Haskoin.Crypto as HC
 import qualified Network.Haskoin.Util as HU
@@ -21,6 +19,7 @@ import           Data.Time.Clock (UTCTime)
 import           Data.Time.Clock.POSIX (utcTimeToPOSIXSeconds, posixSecondsToUTCTime)
 
 
+
 -- |Types that can be encoded to fit in a URL parameter
 class URLParamEncode a where
     pathParamEncode :: a -> BS.ByteString
@@ -29,7 +28,10 @@ instance URLParamEncode HC.PubKey where
     pathParamEncode = HU.encodeHex . cs . Bin.encode
 
 instance URLParamEncode RecvPubKey where
-    pathParamEncode recvPK = pathParamEncode $ getPubKey recvPK
+    pathParamEncode = pathParamEncode . getPubKey
+
+instance URLParamEncode SendPubKey where
+    pathParamEncode = pathParamEncode . getPubKey
 
 instance URLParamEncode HT.TxHash where
     pathParamEncode = HT.txHashToHex
@@ -71,6 +73,12 @@ instance URLParamDecode HC.PubKey where
     pathParamDecode bs =
         decodeHex bs >>=
         fmapL ("failed to decode public key: " ++) . Bin.decode
+
+instance URLParamDecode    RecvPubKey where
+    pathParamDecode bs = MkRecvPubKey <$> pathParamDecode bs
+
+instance URLParamDecode    SendPubKey where
+    pathParamDecode bs = MkSendPubKey <$> pathParamDecode bs
 
 instance URLParamDecode HT.TxHash where
     pathParamDecode bs =

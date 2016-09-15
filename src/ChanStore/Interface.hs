@@ -18,6 +18,7 @@ module ChanStore.Interface
   , New.mkChanStoreInterface
   , ConnManager
   , ChanState(..)
+  , UpdateResult(..)
 )
 where
 

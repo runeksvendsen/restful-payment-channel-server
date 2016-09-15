@@ -1,7 +1,8 @@
 module Test.RunData where
 
+-- import Common.Util (pathParamEncode)
 import Test.GenData
-import qualified Data.Aeson as JSON (eitherDecodeStrict)
+import Data.Aeson (eitherDecodeStrict, ToJSON(toJSON))
 import qualified Data.ByteString as BS
 import qualified Network.Wreq.Session as Wreq
 import Data.String.Conversions (cs)
@@ -15,14 +16,14 @@ main =
                 Left e -> fail $ "failed to decode JSON test data from stdin: " ++ e
                 Right pd -> return pd
     in
-        fmap JSON.eitherDecodeStrict BS.getLine >>= printErrOnFail >>= runData
+        fmap eitherDecodeStrict BS.getLine >>= printErrOnFail >>= runData
 
 
 runData :: PaySessionData -> IO ()
-runData (PaySessionData openURL payURLList closeURL) =
+runData (PaySessionData uri closeURI payList) =
     Wreq.withAPISession $ \conn -> do
-        Wreq.post conn (cs openURL) BS.empty    -- 1. Open
-        forM_ (map cs payURLList)               -- 2. Pay loop
-                (flip (Wreq.put conn) BS.empty)
-        Wreq.delete conn (cs closeURL)          -- 3. Close
+        Wreq.post conn (cs uri) (toJSON $ head payList) -- 1. Open
+        forM_ (map toJSON (tail payList))               -- 2. Pay loop
+                (Wreq.put conn (cs uri))
+        Wreq.delete conn (cs closeURI)                  -- 3. Close
         return ()

@@ -3,7 +3,8 @@
 module  PayChanServer.Config.Util
 (
 loadConfig,configLookupOrFail,
-getChanOpenConf,getServerSettleConfig,getSigningSettleConfig,
+getChanConf,
+getServerSettleConfig,
 getBlockchainIface,getSigningServiceConn,
 BitcoinNet,
 setBitcoinNetwork,
@@ -19,7 +20,6 @@ where
 import           PayChanServer.Config.Types
 import           ConnManager.Connection (newConnManager)
 import qualified ChanStore.Interface as Store
-import           Data.Bitcoin.PaymentChannel.Types (BitcoinAmount)
 
 import qualified Network.Haskoin.Constants as HCC
 
@@ -98,29 +98,27 @@ getDBConf cfg = DBConf <$>
     configLookupOrFail cfg "chanStore.port" <*>
     configLookupOrFail cfg "chanStore.clientConnPoolSize"
 
-getChanOpenConf :: Config -> IO OpenConfig
-getChanOpenConf cfg = OpenConfig <$>
-    configLookupOrFail cfg "open.fundingTxMinConf" <*>
-    configLookupOrFail cfg "open.basePrice" <*>
-    configLookupOrFail cfg "open.priceAddSettlementFee" <*>
-    configLookupOrFail cfg "open.minDurationHours"
-
-getServerSettleConfig :: Config -> IO ServerSettleConfig
-getServerSettleConfig cfg = ServerSettleConfig <$>
-        fmap calcSettlementFeeSPB (configLookupOrFail cfg "settlement.txFeeSatoshiPerByte") <*>
-        configLookupOrFail cfg "settlement.settlementPeriodHours"
-
--- |For SigningService
-getSigningSettleConfig :: Config -> IO SigningSettleConfig
-getSigningSettleConfig cfg = SigningSettleConfig <$>
-        configLookupOrFail cfg "settlement.privKeySeed" <*>
-        configLookupOrFail cfg "settlement.fundsDestinationAddress"
+getChanConf :: Config -> IO ChanConf
+getChanConf cfg = ChanConf <$>
+    configLookupOrFail cfg "chanConf.dustLimit" <*>
+    configLookupOrFail cfg "chanConf.openPrice" <*>
+    configLookupOrFail cfg "chanConf.fundingTxMinConf" <*>
+    configLookupOrFail cfg "chanConf.settlementPeriodHours" <*>
+    configLookupOrFail cfg "chanConf.minChanDurationHours"
 
 -- | Roughly accurate (±10%-ish), because we know the two possible sizes (one/two outputs)
 --  of the settlement transaction. Could use refinement.
+-- Exampe testnet3 tx 348 bytes: 9aa6debbc30aadd839ddc403b05476b5436989881db2b35f1d1310b56cacd3ac
 calcSettlementFeeSPB :: BitcoinAmount -> BitcoinAmount
-calcSettlementFeeSPB satoshisPerByte = 331 * satoshisPerByte
+calcSettlementFeeSPB satoshisPerByte = 348 * satoshisPerByte
 
 setBitcoinNetwork :: BitcoinNet -> IO ()
 setBitcoinNetwork Mainnet = return ()
 setBitcoinNetwork Testnet3 = HCC.switchToTestnet3
+
+
+
+getServerSettleConfig :: Config -> IO ServerSettleConfig
+getServerSettleConfig cfg = ServerSettleConfig <$>
+        fmap calcSettlementFeeSPB (configLookupOrFail cfg "settlement.txFeeSatoshiPerByte") <*>
+        configLookupOrFail cfg "chanConf.settlementPeriodHours"

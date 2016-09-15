@@ -1,24 +1,10 @@
 module ChanStore.Lib.Settlement where --TODO: move
 
+import           Common.Types
+import           Data.DiskMap
 import           ChanStore.Lib.Types hiding (UpdateResult(..))
-import           Data.DiskMap (getAllItems,
-                            mapGetItem, mapGetItems, MapItemResult(..),
-                            getFilteredKV, getFilteredItems, collectSortedItemsWhile,
-                            DiskMap, Serializable(..), ToFileName(..), Hashable(..))
-
-import           PayChanServer.Types (ServerSettleConfig(..), SigningSettleConfig(..))
-
-
-
-import           Data.Bitcoin.PaymentChannel.Types (ReceiverPaymentChannel, PaymentChannel(..),
-                                                    BitcoinLockTime(..),
-                                                    ChannelParameters(..), BitcoinAmount,
-                                                    channelValueLeft, PayChanError)
-import           Data.Bitcoin.PaymentChannel.Util (setSenderChangeAddress, BitcoinLockTime)
 
 import qualified Util
-import qualified STMContainers.Map as Map
-import qualified ListT as LT
 import           Data.Ord (comparing, Down(Down))
 import           Control.Concurrent.STM (STM, atomically)
 import           Control.Exception.Base     (Exception, throw)
@@ -109,7 +95,7 @@ fewestChannelsCoveringValue  (ChannelMap m _) minValue =
 gatherFromResults :: MapItemResult HT.OutPoint ChanState -> ReceiverPaymentChannel
 gatherFromResults res = case res of
       (ItemUpdated _ cs) -> gatherPayChan cs
-      NotUpdated -> error "BUG: Should not be possible since irrelevant keys have been filtered off"
+      NotUpdated _ _ -> error "BUG: Should not be possible since irrelevant keys have been filtered off"
       NoSuchItem -> error "BUG: Tried to mark non-existing channel state item as settling"
 
 gatherPayChan :: ChanState -> ReceiverPaymentChannel

@@ -5,16 +5,16 @@ module SigningService.Main where
 import           Prelude hiding (init, userError)
 
 import           SigningService.Types
-import           SigningService.Util (produceSettlementTx)
+import           SigningService.Util (produceSettlementTx, getSigningSettleConfig)
 
 import           PayChanServer.Main (wrapArg)
-import           PayChanServer.Config.Util (loadConfig, configLookupOrFail, setBitcoinNetwork, getSigningSettleConfig)
-import qualified PayChanServer.Config.Util as Conf (Config)
-import           Common.Util (writeBinary, decodeFromBody, userError, getQueryArg)
-import           PayChanServer.Types (SigningSettleConfig(..))
+import           PayChanServer.Config.Util (configLookupOrFail, setBitcoinNetwork)
+import           PayChanServer.Init (installHandlerKillThreadOnSig)
+import qualified Data.Configurator.Types as Conf (Config)
+import           SigningService.Snap.Util (writeBinary, decodeFromBody, getQueryArg)
 import           Data.Bitcoin.PaymentChannel.Types (ReceiverPaymentChannel, BitcoinAmount, RecvPubKey(MkRecvPubKey))
 
-import           PayChanServer.Init (installHandlerKillThreadOnSig)
+
 import           Control.Concurrent (myThreadId)
 import qualified Data.ByteString as BS
 import qualified Network.Haskoin.Transaction as HT

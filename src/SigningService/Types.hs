@@ -21,3 +21,10 @@ data AppConf = AppConf
 
 -- Template Haskell magic
 makeLenses ''AppConf
+
+
+data SigningSettleConfig = SigningSettleConfig {
+    confSettlePrivKey     :: HC.PrvKey,
+    confSettleRecvAddr    :: HC.Address
+}
+

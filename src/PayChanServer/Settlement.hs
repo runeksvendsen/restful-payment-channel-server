@@ -13,7 +13,7 @@ module  PayChanServer.Settlement
 where
 
 
-import           PayChanServer.Types (ServerSettleConfig(..))
+import           PayChanServer.Config.Types as Conf (ServerSettleConfig(..), SettleHours, getVal)
 import           PayChanServer.DB (tryHTTPRequestOfType)
 
 import           ChanStore.Interface  as DBConn
@@ -95,17 +95,17 @@ settleExpiringChannels ::
     -> ServerSettleConfig
     -> Btc.Interface
     -> IO [HT.TxHash]
-settleExpiringChannels dbIface signConn (ServerSettleConfig txFee settlePeriod) btcIface = do
+settleExpiringChannels dbIface signConn (Conf.ServerSettleConfig txFee settlePeriod) btcIface = do
     settlementTimeCutoff <- getExpirationDateCutoff settlePeriod
     expiringChannels <- tryRequest "BeginSettle" (DBConn.settleByExpBegin dbIface settlementTimeCutoff)
     forM expiringChannels (finishSettleChannel dbIface signConn btcIface txFee)
 
-getExpirationDateCutoff :: Int -> IO UTCTime
+getExpirationDateCutoff :: Conf.SettleHours -> IO UTCTime
 getExpirationDateCutoff settlePeriodHours = do
     now <- getCurrentTime
     -- Head start. We want to close channels a number of hours *before* the actual expiration date,
     --  to be on the safe side.
-    let settlePeriodSecsOffset = fromInteger $ 3600 * fromIntegral settlePeriodHours
+    let settlePeriodSecsOffset = fromInteger $ 3600 * fromIntegral (Conf.getVal settlePeriodHours)
     -- So we get the current time, add to it our head start, and get all channels
     --  expiring *before* the resulting date.
     return $ settlePeriodSecsOffset `addUTCTime` now

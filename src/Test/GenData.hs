@@ -2,31 +2,26 @@
 
 module Test.GenData where
 
-import           Common.ResourceURL (channelOpenURL,mkOpenQueryParams,mkPaymentURL)
-import           Common.URLParam   (pathParamDecode)
+import           Common.Util
+import           Common.Types
+import qualified PayChanServer.URI as URI
 
 import           Data.Bitcoin.PaymentChannel (channelWithInitialPaymentOf, sendPayment)
-import           Data.Bitcoin.PaymentChannel.Util (BitcoinLockTime(..), toWord32, parseBitcoinLocktime,
-                                                   getFundingAddress)
-import           Data.Bitcoin.PaymentChannel.Types
-    (Payment, ChannelParameters(..), FundingTxInfo(..), SendPubKey(..), RecvPubKey(..), IsPubKey(getPubKey))
+import           Data.Bitcoin.PaymentChannel.Util (toWord32, parseBitcoinLocktime, getFundingAddress)
+
 import qualified Network.Haskoin.Transaction as HT
 import qualified Network.Haskoin.Crypto as HC
 import qualified Data.Serialize as Bin
 import           Data.Aeson         (object, ToJSON, toJSON, (.=), encode,
                                      Value(Object), parseJSON, FromJSON, (.:))
-import Control.Monad (mzero)
-
-import Data.String.Conversions (cs)
 import qualified Data.Text as T
 import System.Entropy (getEntropy)
 import Crypto.Secp256k1 (secKey)
 import Data.Time.Clock.POSIX (getPOSIXTime)
--- import Server.Config (pubKeyServer, fundsDestAddr, openPrice)
 import BlockchainAPI.Types (TxInfo(..))
 
+
 mockChangeAddress = "mmA2XECa7bVERzQKkyy1pNBQ3PC4HnxTC5"
-nUM_PAYMENTS = 100 :: Int
 cHAN_DURATION = 3600 * 24 * 7 :: Integer
 
 
@@ -51,7 +46,6 @@ data ChannelSession = ChannelSession {
     csEndPoint    :: T.Text,
     csParams      :: ChannelParameters,
     csFundAddr    :: HC.Address,
-    csInitPayment :: Payment,
     csPayments    :: [Payment]
 }
 
@@ -67,47 +61,43 @@ genChannelSession endPoint numPayments privClient pubServer expTime =
                 0
         fundInfo = deriveMockFundingInfo cp
         (amt,initPay,initState) = channelWithInitialPaymentOf cp fundInfo
-                (`HC.signMsg` privClient) mockChangeAddress 100000
+                (`HC.signMsg` privClient) (getFundingAddress cp) 100000
         payStateList = tail $ iterate iterateFunc (amt,initPay,initState)
         payList = map getPayment payStateList
         getPayment (_,p,_) = p
     in
-        ChannelSession endPoint cp (getFundingAddress cp) initPay (take numPayments payList)
+        ChannelSession endPoint cp (getFundingAddress cp) (initPay : take numPayments payList)
 --------
 
 data PaySessionData = PaySessionData {
-    openURL     :: T.Text,
-    payURLList  :: [T.Text],
-    closeURL    :: T.Text
+    resourceURI :: T.Text,
+    closeURI    :: T.Text,
+    payDataList :: [Payment]
 }
 
 instance ToJSON PaySessionData where
-    toJSON (PaySessionData openURL payURLs closeURL) =
+    toJSON (PaySessionData openURL closeURL payList) =
         object [
             "open_url"      .= openURL,
-            "payment_urls"  .= payURLs,
-             "close_url"    .= closeURL
+            "close_url"     .= closeURL,
+            "payment_data"  .= payList
          ]
 
 instance FromJSON PaySessionData where
     parseJSON (Object v) = PaySessionData <$>
-                v .: "open_url" <*> v .: "payment_urls" <*> v .: "close_url"
+                v .: "open_url" <*> v .: "close_url" <*> v .: "payment_data"
     parseJSON _ = mzero
 
-
+-- mkCloseURI
 getSessionData :: ChannelSession -> PaySessionData
-getSessionData (ChannelSession endPoint cp _ initPay payList) =
+getSessionData (ChannelSession endPoint cp@(CChannelParameters sendPK _ lt _) _ payList) =
     let
         (CFundingTxInfo txid vout _) = deriveMockFundingInfo cp
-        chanId = HT.OutPoint txid (fromIntegral vout)
-        openURL = channelOpenURL False (cs endPoint) "/v1" (cpSenderPubKey cp)
-                (cpLockTime cp) ++ mkOpenQueryParams mockChangeAddress initPay
-        payURLs = map (cs . mkPaymentURL False (cs endPoint) "/v1" chanId) payList
+        openURL  = cs . show $ URI.mkChanURI sendPK lt txid vout
+        closeURL = cs . show $ URI.mkCloseURI sendPK lt txid vout (Just . last $ payList)
+        fullURL resource = "http://" <> endPoint <> "/" <> resource
     in
-        PaySessionData
-            (cs openURL)
-            payURLs
-            (last payURLs)
+        PaySessionData (fullURL openURL) (fullURL closeURL) payList
 
 
 

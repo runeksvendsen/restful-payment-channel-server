@@ -1,125 +1,73 @@
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 
-module Common.Util where
+module Common.Util
+(
+    module Common.Util,
+    module Common.URLParam,
+    liftIO,
+    mzero,
+    unless, when,
+    (<>),
+    cs,
+    view,
+    HexBinEncode(..),
+    HexBinDecode(..),
+    JSON.ToJSON(toJSON),
+    RecvPubKey(..)
+)
+
+where
 
 import           Prelude hiding (userError)
 
+import           Common.Types
 import           Common.URLParam
-import           Data.Bitcoin.PaymentChannel.Types (ChannelParameters(..), BitcoinLockTime(..),
-                                                    SendPubKey(..),RecvPubKey(..))
-import           Data.Bitcoin.PaymentChannel.Util (deserEither, getFundingAddress)
-import           Snap
-import qualified System.IO.Streams as Streams
-import qualified Data.ByteString.Builder as Builder
-import           Data.Aeson (ToJSON)
+
 import           Data.String.Conversions (cs)
-import           Data.Aeson.Encode.Pretty (encodePretty)
+import           Control.Monad.IO.Class (liftIO)
+import           Control.Monad (mzero)
+import           Control.Lens.Getter (view)
+import           Control.Monad (unless, when)
+import           Data.Monoid ((<>))
+import qualified Data.Aeson as JSON
 
-import qualified Network.Haskoin.Crypto as HC
-import qualified Data.ByteString as BS
-import qualified Data.ByteString.Lazy as BL
-import qualified Data.ByteString.Base16 as B16
-import qualified Data.ByteString.Char8 as C
 
-import           Data.Word (Word64)
+-- New
+import qualified Control.Monad.Error.Class as Except
+import           Servant
 import qualified Data.Serialize as Bin
-import           Data.Typeable
+import qualified Data.ByteString as BS
+import qualified Data.ByteString.Base16 as B16
+import qualified Network.Haskoin.Script as HS
 
 
---- Get URL parameters with built-in error handling
-failOnError :: MonadSnap m => String -> Either String a -> m a
-failOnError msg = either (userError . (msg ++)) return
+class Bin.Serialize a => HexBinEncode a where
+    hexEncode :: a -> BS.ByteString
+    hexEncode = B16.encode . Bin.encode
 
-failOnNothingWith :: MonadSnap m => String -> Maybe a -> m a
-failOnNothingWith s = maybe (userError s) return
+class Bin.Serialize a => HexBinDecode a where
+    hexDecode :: BS.ByteString -> Either String a
+    hexDecode = Bin.decode . fst . B16.decode
 
-handleQueryDecodeFail :: MonadSnap m => BS.ByteString -> Either String a -> m a
-handleQueryDecodeFail bs = failOnError ("failed to decode query arg \"" ++ cs bs ++ "\": ")
-
-getPathArg :: (MonadSnap m, URLParamDecode a) => BS.ByteString -> m a
-getPathArg bs = failOnError (cs bs ++ ": failed to decode path arg: ") . pathParamDecode =<<
-    failOnNothingWith ("Missing " ++ C.unpack bs ++ " path parameter") =<<
-        getParam bs
-
-getQueryArg :: (MonadSnap m, URLParamDecode a) => BS.ByteString -> m a
-getQueryArg bs = handleQueryDecodeFail bs . pathParamDecode =<<
-    failOnNothingWith ("Missing " ++ C.unpack bs ++ " query parameter") =<<
-        getQueryParam bs
-
-getOptionalQueryArg :: (MonadSnap m, URLParamDecode a) => BS.ByteString -> m (Maybe a)
-getOptionalQueryArg bs = do
-    maybeParam <- getQueryParam bs
-    case maybeParam of
-        Nothing -> return Nothing
-        Just pBS -> fmap Just . handleQueryDecodeFail bs . pathParamDecode $ pBS
-
+instance HexBinEncode BS.ByteString where hexEncode = B16.encode
+instance HexBinEncode RecvPubKey
+instance HexBinEncode HS.Script
+instance HexBinDecode BS.ByteString where hexDecode = Right . fst . B16.decode
+instance HexBinDecode RecvPubKey
+instance HexBinDecode HS.Script
 
 --- HTTP error
-userError :: MonadSnap m => String -> m a
-userError = errorWithDescription 400
+userError' :: String -> AppM conf a
+userError' = errorWithDescription 400
 
-internalError :: MonadSnap m => String -> m a
-internalError = errorWithDescription 500
+internalError :: String -> AppM conf a
+internalError = errorWithDescription 400
 
-errorWithDescription :: MonadSnap m => Int -> String -> m a
-errorWithDescription code errStr = do
-    modifyResponse $ setResponseStatus code (C.pack errStr)
-    finishWith =<< getResponse
+onLeftThrow500 :: Either String a -> AppM conf a
+onLeftThrow500   = either internalError return
 
-
---- HTTP decode/write data
-encodeJSON :: ToJSON a => a -> BS.ByteString
-encodeJSON = BL.toStrict . encodePretty
-
-overwriteResponseBody :: MonadSnap m => BS.ByteString -> m ()
-overwriteResponseBody bs = putResponse $
-    setResponseBody
-        (\out ->
-            Streams.write (Just $ Builder.byteString bs) out >>
-            return out)
-        emptyResponse
-
-writeJSON :: (MonadSnap m, ToJSON a) => a -> m ()
-writeJSON json = do
-    modifyResponse $ setContentType "application/json"
-    overwriteResponseBody $ encodeJSON json
-    writeBS "\n"
-
-writeBinary :: (MonadSnap m, Bin.Serialize a) => a -> m ()
-writeBinary obj = do
-    modifyResponse $ setContentType "application/octet-stream"
-    overwriteResponseBody $ Bin.encode obj
-
-decodeFromBody :: (MonadSnap m, Typeable a, Bin.Serialize a) => Word64 -> m a
-decodeFromBody n =
-    fmap (deserEither . cs) (readRequestBody n) >>=
-     \eitherRes -> case eitherRes of
-         Left e -> userError $ "Failed to decode from body: " ++ e
-         Right val -> return val
-
-
--- TODO: Figure out how to bake this into all handlers.
---  Currently we apply it manually to each handler (snap-cors lib doesn't work for me)
-applyCORS' :: MonadSnap m => m ()
-applyCORS' = do
-    modifyResponse $ setHeader "Access-Control-Allow-Origin"    "*"
-    modifyResponse $ setHeader "Access-Control-Allow-Methods"   "GET,POST,PUT,DELETE"
-    modifyResponse $ setHeader "Access-Control-Allow-Headers"   "Origin,Accept,Content-Type"
-    modifyResponse $ setHeader "Access-Control-Expose-Headers"  "Location"
-
-
-----Helpers
-getFundingAddress' :: SendPubKey -> RecvPubKey -> BitcoinLockTime -> HC.Address
-getFundingAddress' sendPK recvPK blt =
-    getFundingAddress $ CChannelParameters sendPK recvPK blt 0
-
-toString :: HC.Address -> String
-toString = C.unpack . HC.addrToBase58
-
-fromHexString :: String -> BS.ByteString
-fromHexString hexStr =
-    case (B16.decode . C.pack) hexStr of
-        (bs,e) ->
-            if BS.length e /= 0 then BS.empty else bs
+errorWithDescription :: Int -> String -> AppM conf a
+errorWithDescription code e = Except.throwError $
+    err400 { errReasonPhrase = cs e, errBody = cs e, errHTTPCode = code}
 

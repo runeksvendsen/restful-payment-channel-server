@@ -30,8 +30,8 @@ data ChannelMap = ChannelMap
 
 type Key = HT.OutPoint
 
-data CloseResult  = Closed | DoesntExist
-data UpdateResult = WasUpdated | WasNotUpdated
+data CloseResult  = Closed | DoesntExist deriving (Show, Eq)
+data UpdateResult = WasUpdated | WasNotUpdated deriving (Show, Eq)
 
 -- |Holds state for payment channel
 data ChanState =

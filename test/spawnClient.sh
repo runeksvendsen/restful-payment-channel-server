@@ -8,4 +8,7 @@ if [ -z $2 ]; then
 	exit 1
 fi
 
+## Debug
+# echo "GenTestData --endpoint $1 --pubkey $2 --testnet --pay-count $3"
+
 GenTestData --endpoint "$1" --pubkey "$2" --testnet --pay-count $3 | RunTestData
