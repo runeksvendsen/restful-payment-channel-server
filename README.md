@@ -79,6 +79,9 @@ On my 2015 Macbook Pro I get ~900 payments per second running the `benchPayChanS
     real	0m10.962s
     user	0m6.211s
     sys     0m0.881s
+    
+Running on a multi-core server, I get the following performance characteristics as a function of core count:
+<img src="/doc/multi-core.png?raw=true" width="500">
 
 
 ### Live test servers
