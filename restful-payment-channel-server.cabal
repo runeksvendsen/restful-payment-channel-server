@@ -59,35 +59,44 @@ Executable PayChanServer
     filepath,
     tagged
 
-  other-modules: PayChanServer.App,
-                 Common.Types,
-                 BlockchainAPI.Impl.ChainSo.ChainSo
-                 BlockchainAPI.Types
-                 ChanStore.Interface
-                 ChanStore.Lib.ChanMap
-                 ChanStore.Lib.Settlement
-                 ChanStore.Lib.Types
-                 ChanStore.Spec
-                 Common.ResourceURL
-                 Common.URLParam
-                 Common.Util
-                 ConnManager.Connection
-                 ConnManager.RequestRunner
-                 PayChanServer.Config.Types
-                 PayChanServer.Config.Util
-                 PayChanServer.DB
-                 PayChanServer.Init
-                 PayChanServer.Settlement
-                 PayChanServer.Types
-                 PayChanServer.Util
-                 SigningService.Interface
-                 SigningService.Spec
-                 Test.GenData
-                 BlockchainAPI.Impl.Bitcoind.Interface
-                 BlockchainAPI.Impl.Bitcoind.Types
-                 ConnManager.Servant
-                 ConnManager.Types
-                 Test.Dummy
+  other-modules:   BlockchainAPI.Impl.Bitcoind.Interface
+                   BlockchainAPI.Impl.Bitcoind.Types
+                   BlockchainAPI.Types
+                   ChanStore.API
+                   ChanStore.Interface
+                   ChanStore.Lib.Settlement
+                   ChanStore.Lib.Types
+                   ChanStore.Orphans
+                   ChanStore.Spec
+                   Common.Handler.Types
+                   Common.Types
+                   Common.URLParam
+                   Common.Util
+                   ConnManager.Connection
+                   ConnManager.RequestRunner
+                   ConnManager.Servant
+                   ConnManager.Types
+                   PayChanServer.API
+                   PayChanServer.App
+                   PayChanServer.Config.Types
+                   PayChanServer.Config.Util
+                   PayChanServer.DB
+                   PayChanServer.Handler.BeginOpen
+                   PayChanServer.Handler.Close
+                   PayChanServer.Handler.FundingInfo
+                   PayChanServer.Handler.Open
+                   PayChanServer.Handler.Pay
+                   PayChanServer.Init
+                   PayChanServer.Settlement
+                   PayChanServer.Types
+                   PayChanServer.URI
+                   PayChanServer.Util
+                   SigningService.Interface
+                   SigningService.Spec
+                   Test.Dummy
+                   Test.GenData
+                   Test.Profile
+                   Util
 
 
 Executable ChanStore
@@ -130,36 +139,47 @@ Executable ChanStore
     stm,
     list-t
 
-  other-modules:     ChanStore.Init
-                     ChanStore.Interface
-                     ChanStore.Lib.ChanMap
-                     ChanStore.Lib.Settlement
-                     ChanStore.Lib.Types
-                     ChanStore.Spec
-                     Common.ResourceURL
-                     Common.Types
-                     Common.URLParam
-                     Common.Util
-                     ConnManager.Connection
-                     ConnManager.RequestRunner
-                     PayChanServer.App
-                     PayChanServer.Config.Types
-                     PayChanServer.Config.Util
-                     PayChanServer.DB
-                     PayChanServer.Init
-                     PayChanServer.Main
-                     PayChanServer.Settlement
-                     PayChanServer.Types
-                     PayChanServer.Util
-                     SigningService.Interface
-                     SigningService.Spec
-                     BlockchainAPI.Impl.Bitcoind.Interface
-                     BlockchainAPI.Impl.Bitcoind.Types
-                     BlockchainAPI.Types
-                     ConnManager.Servant
-                     ConnManager.Types
-                     Test.Dummy
-                     Test.GenData
+  other-modules:    BlockchainAPI.Impl.Bitcoind.Interface
+                    BlockchainAPI.Impl.Bitcoind.Types
+                    BlockchainAPI.Types
+                    ChanStore.API
+                    ChanStore.Init
+                    ChanStore.Interface
+                    ChanStore.Lib.ChanMap
+                    ChanStore.Lib.Settlement
+                    ChanStore.Lib.Types
+                    ChanStore.Orphans
+                    ChanStore.Spec
+                    Common.Handler.Types
+                    Common.Types
+                    Common.URLParam
+                    Common.Util
+                    ConnManager.Connection
+                    ConnManager.RequestRunner
+                    ConnManager.Servant
+                    ConnManager.Types
+                    PayChanServer.API
+                    PayChanServer.App
+                    PayChanServer.Config.Types
+                    PayChanServer.Config.Util
+                    PayChanServer.DB
+                    PayChanServer.Handler.BeginOpen
+                    PayChanServer.Handler.Close
+                    PayChanServer.Handler.FundingInfo
+                    PayChanServer.Handler.Open
+                    PayChanServer.Handler.Pay
+                    PayChanServer.Init
+                    PayChanServer.Main
+                    PayChanServer.Settlement
+                    PayChanServer.Types
+                    PayChanServer.URI
+                    PayChanServer.Util
+                    SigningService.Interface
+                    SigningService.Spec
+                    Test.Dummy
+                    Test.GenData
+                    Test.Profile
+                    Util
 
 Executable SigningService
   hs-source-dirs: src
@@ -182,42 +202,54 @@ Executable SigningService
     configurator,
     string-conversions,
     errors
-  other-modules:     BlockchainAPI.Impl.Bitcoind.Interface
-                     BlockchainAPI.Impl.Bitcoind.Types
-                     BlockchainAPI.Types
-                     ChanStore.Interface
-                     ChanStore.Lib.ChanMap
-                     ChanStore.Lib.Settlement
-                     ChanStore.Lib.Types
-                     ChanStore.Spec
-                     Common.ResourceURL
-                     Common.Types
-                     Common.URLParam
-                     Common.Util
-                     ConnManager.Connection
-                     ConnManager.RequestRunner
-                     ConnManager.Servant
-                     ConnManager.Types
-                     PayChanServer.App
-                     PayChanServer.Config.Types
-                     PayChanServer.Config.Util
-                     PayChanServer.DB
-                     PayChanServer.Init
-                     PayChanServer.Main
-                     PayChanServer.Settlement
-                     PayChanServer.Types
-                     PayChanServer.Util
-                     SigningService.Interface
-                     SigningService.Spec
-                     SigningService.Types
-                     SigningService.Util
-                     Test.Dummy
-                     Test.GenData
+  other-modules:        BlockchainAPI.Impl.Bitcoind.Interface
+                        BlockchainAPI.Impl.Bitcoind.Types
+                        BlockchainAPI.Types
+                        ChanStore.API
+                        ChanStore.Interface
+                        ChanStore.Lib.Settlement
+                        ChanStore.Lib.Types
+                        ChanStore.Orphans
+                        ChanStore.Spec
+                        Common.Handler.Types
+                        Common.Types
+                        Common.URLParam
+                        Common.Util
+                        ConnManager.Connection
+                        ConnManager.RequestRunner
+                        ConnManager.Servant
+                        ConnManager.Types
+                        PayChanServer.API
+                        PayChanServer.App
+                        PayChanServer.Config.Types
+                        PayChanServer.Config.Util
+                        PayChanServer.DB
+                        PayChanServer.Handler.BeginOpen
+                        PayChanServer.Handler.Close
+                        PayChanServer.Handler.FundingInfo
+                        PayChanServer.Handler.Open
+                        PayChanServer.Handler.Pay
+                        PayChanServer.Init
+                        PayChanServer.Main
+                        PayChanServer.Settlement
+                        PayChanServer.Types
+                        PayChanServer.URI
+                        PayChanServer.Util
+                        SigningService.Interface
+                        SigningService.Snap.Util
+                        SigningService.Spec
+                        SigningService.Types
+                        SigningService.Util
+                        Test.Dummy
+                        Test.GenData
+                        Test.Profile
+                        Util
 
 Executable GenTestData
     hs-source-dirs:       src
     main-is:              Test/GenDataExe.hs
     ghc-options:          -W -O2 -main-is Test.GenDataExe
+    default-language:     Haskell2010
 
     Build-depends:
       base                      >= 4     && < 5,
@@ -238,10 +270,31 @@ Executable GenTestData
       entropy,
       optparse-applicative
 
+    other-modules:          BlockchainAPI.Types
+                            ChanStore.API
+                            ChanStore.Interface
+                            ChanStore.Lib.Types
+                            ChanStore.Orphans
+                            ChanStore.Spec
+                            Common.Handler.Types
+                            Common.Types
+                            Common.URLParam
+                            Common.Util
+                            ConnManager.Connection
+                            ConnManager.RequestRunner
+                            ConnManager.Servant
+                            ConnManager.Types
+                            PayChanServer.API
+                            PayChanServer.Config.Types
+                            PayChanServer.Types
+                            PayChanServer.URI
+                            Test.GenData
+
 Executable RunTestData
     hs-source-dirs:       src
     main-is:              Test/RunData.hs
     ghc-options:          -W -O2 -main-is Test.RunData
+    default-language:     Haskell2010
 
     Build-depends:
       base                      >= 4     && < 5,
@@ -263,6 +316,24 @@ Executable RunTestData
       errors,
       optparse-applicative
 
-  hs-source-dirs:       src
-  default-language:     Haskell2010
+    other-modules:          BlockchainAPI.Types
+                            ChanStore.API
+                            ChanStore.Interface
+                            ChanStore.Lib.Types
+                            ChanStore.Orphans
+                            ChanStore.Spec
+                            Common.Handler.Types
+                            Common.Types
+                            Common.URLParam
+                            Common.Util
+                            ConnManager.Connection
+                            ConnManager.RequestRunner
+                            ConnManager.Servant
+                            ConnManager.Types
+                            PayChanServer.API
+                            PayChanServer.Config.Types
+                            PayChanServer.Types
+                            PayChanServer.URI
+                            Test.GenData
+
 
