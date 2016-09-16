@@ -15,9 +15,9 @@ chanOpenHandler ::
     -> BitcoinLockTime
     -> TxHash
     -> Vout
-    -> Payment
+    -> FullPayment
     -> AppPC PaymentResult
-chanOpenHandler sendPK lockTime fundTxId fundIdx payData = do
+chanOpenHandler sendPK lockTime fundTxId fundIdx payment = do
     dustLimit <- Conf.dustLimit <$> view Conf.chanConf
     pubKeyServ <- view Conf.pubKey
     let cp = CChannelParameters sendPK pubKeyServ lockTime (Conf.getVal dustLimit)
@@ -25,12 +25,11 @@ chanOpenHandler sendPK lockTime fundTxId fundIdx payData = do
     fundingTxInfo <- blockchainGetConfirmedTxInfo cp
     dbConn <- view Conf.dbInterface
 
-    let payment = payData
     (valRecvd,recvChanState) <- either (userError' . show) return $
         channelFromInitialPayment cp fundingTxInfo (getFundingAddress cp) payment
 
     openPrice <- Conf.openPrice <$> view Conf.chanConf
-    when (valRecvd < openPrice) $
+    when (valRecvd < Conf.getVal openPrice) $
         userError' $ "Initial payment short: open price is " ++
             show openPrice ++ ", received " ++ show valRecvd
 
@@ -39,9 +38,8 @@ chanOpenHandler sendPK lockTime fundTxId fundIdx payData = do
             errorWithDescription 409 "Channel already exists"
 
     return PaymentResult
-           { paymentResultChannelStatus     = ChannelOpen
-           , paymentResultChannelValueLeft  = channelValueLeft recvChanState
-           , paymentResultValueReceived     = valRecvd
-           , paymentResultSettlementTxid    = Nothing
+           { paymentResult_channel_status     = ChannelOpen
+           , paymentResult_channel_valueLeft  = channelValueLeft recvChanState
+           , paymentResult_value_received     = valRecvd
+           , paymentResult_settlement_txid    = Nothing
            }
-

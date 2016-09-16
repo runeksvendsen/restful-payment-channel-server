@@ -4,7 +4,7 @@ module ChanStore.API where
 
 import           ChanStore.Lib.Types
 import           ChanStore.Orphans ()
-import           Data.Bitcoin.PaymentChannel.Types -- (Payment, BitcoinAmount)
+import           Data.Bitcoin.PaymentChannel.Types
 import qualified Network.Haskoin.Transaction as HT
 
 import           Servant.API
@@ -24,12 +24,12 @@ type RPC = ReceiverPaymentChannel
 -- |The API exposed by this server.
 type ChanStore =
        "store"  :> "by_id"                                        :> ReqBody '[OctetStream] RPC         :> Post '[OctetStream] CreateResult
-  :<|> "store"  :> "by_id"                :> Capture "id" Key                                           :> Get  '[OctetStream] MaybeChanState
-  :<|> "store"  :> "by_id"                :> Capture "id" Key     :> ReqBody '[OctetStream] Payment     :> Put  '[OctetStream] UpdateResult
-  :<|> "settle" :> "begin"  :> "by_id"    :> Capture "id" Key                                           :> Put  '[OctetStream] RPC
+  :<|> "store"  :> "by_id"                :> Capture "id"  Key                                          :> Get  '[OctetStream] MaybeChanState
+  :<|> "store"  :> "by_id"                :> Capture "id"  Key    :> ReqBody '[OctetStream] Payment     :> Put  '[OctetStream] UpdateResult
+  :<|> "settle" :> "begin"  :> "by_id"    :> Capture "id"  Key                                          :> Put  '[OctetStream] RPC
   :<|> "settle" :> "begin"  :> "by_exp"   :> Capture "exp" UTCTime                                      :> Put  '[OctetStream] [RPC]
   :<|> "settle" :> "begin"  :> "by_value" :> Capture "val" BitcoinAmount                                :> Put  '[OctetStream] [RPC]
-  :<|> "settle" :> "finish" :> "by_id"    :> Capture "id" Key     :> Capture "out" HT.TxHash            :> Post '[OctetStream] NoContent
+  :<|> "settle" :> "finish" :> "by_id"    :> Capture "id"  Key    :> Capture "out" HT.TxHash            :> Post '[OctetStream] NoContent
 
 
 

@@ -8,12 +8,9 @@ import ConnManager.RequestRunner
 
 import           Common.URLParam (pathParamEncode)
 import           Data.Bitcoin.PaymentChannel.Types (ReceiverPaymentChannel, Payment, BitcoinAmount)
-import           Data.Bitcoin.PaymentChannel.Util (deserEither)
 
 import qualified Network.Haskoin.Transaction as HT
-import qualified Data.ByteString as BS
 import qualified Data.Serialize as Bin
-import qualified Data.ByteString.Lazy as BL
 import           Data.Time.Clock (UTCTime)
 import           Data.Monoid ((<>))
 import           Data.Typeable (Typeable)

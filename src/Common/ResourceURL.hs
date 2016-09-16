@@ -5,7 +5,7 @@
 module Common.ResourceURL where
 
 import           Common.URLParam
-import           Data.Bitcoin.PaymentChannel.Types (BitcoinAmount, Payment, ChannelParameters(..),
+import           Data.Bitcoin.PaymentChannel.Types (BitcoinAmount, FullPayment, ChannelParameters(..),
                                                     SendPubKey, RecvPubKey, b64Encode,
                                                     IsPubKey(getPubKey))
 import           Data.Bitcoin.PaymentChannel.Util
@@ -44,19 +44,19 @@ channelOpenURL :: Bool -> String -> BS.ByteString -> SendPubKey -> BitcoinLockTi
 channelOpenURL isSecure host basePath sendPK expTime =
     channelRootURL isSecure (cs host) basePath ++ channelOpenPath sendPK expTime
 
-mkOpenQueryParams :: HC.Address -> Payment -> String
+mkOpenQueryParams :: HC.Address -> FullPayment -> String
 mkOpenQueryParams chgAddr payment =
     printf "&change_address=%s&payment=%s"
         (cs $ pathParamEncode chgAddr :: String)
         (cs $ pathParamEncode payment :: String)
 
 -- https://localhost:8000/channels/f583e0b.../1?payment=AAf8s...(&change_address=2Nuz3s...)
-mkPaymentURL :: Bool -> String -> BS.ByteString -> HT.OutPoint -> Payment -> String
+mkPaymentURL :: Bool -> String -> BS.ByteString -> HT.OutPoint -> FullPayment -> String
 mkPaymentURL isSecure host basePath chanId payment  =
     activeChannelURL isSecure (cs host) basePath chanId ++ mkPaymentQueryParams payment Nothing
 
 -- ?payment=AAf8s...(&change_address=2Nuz3s...)
-mkPaymentQueryParams :: Payment -> Maybe HC.Address -> String
+mkPaymentQueryParams :: FullPayment -> Maybe HC.Address -> String
 mkPaymentQueryParams payment maybeAddr =
     printf "?payment=%s"
         (cs $ pathParamEncode payment :: String) ++

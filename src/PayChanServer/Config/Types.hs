@@ -36,22 +36,25 @@ getVal = Tag.unTagged
 
 data BTCConf   = BTCConf
 data SettleHrs = SettleHrs
+data Charge    = Charge
 data Dust      = Dust
 data ChanDur   = ChanDur
 
 type BtcConf      = Tag.Tagged BTCConf Word
 type SettleHours  = Tag.Tagged SettleHrs Word
+type OpenPrice    = Tag.Tagged Charge BitcoinAmount
 type DustLimit    = Tag.Tagged Dust BitcoinAmount
-type DurationHrs  = Tag.Tagged ChanDur Word
+type DurationHours= Tag.Tagged ChanDur Word
+
 
 -- type ChanConf2 = BtcConf :. BitcoinAmount :. DustLimit :. Hours :. EmptyContext
 
 data ChanConf = ChanConf
   { btcMinConf      :: BtcConf
-  , openPrice       :: BitcoinAmount
+  , openPrice       :: OpenPrice
   , dustLimit       :: DustLimit
   , settlePeriod'   :: SettleHours
-  , minDuration     :: DurationHrs }
+  , minDuration     :: DurationHours }
 
 
 data App = App
@@ -115,7 +118,11 @@ instance Configured DustLimit where
     convert (Number r) = fmap (Tag.Tagged . fromIntegral) (getWord r)
     convert _ = Nothing
 
-instance Configured DurationHrs where
+instance Configured OpenPrice where
+    convert (Number r) = fmap (Tag.Tagged . fromIntegral) (getWord r)
+    convert _ = Nothing
+
+instance Configured DurationHours where
     convert (Number r) = fmap (Tag.Tagged . fromIntegral) (getWord r)
     convert _ = Nothing
 

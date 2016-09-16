@@ -3,10 +3,12 @@
 module ChanStore.Orphans where
 
 
+import           Common.Util
 import           ChanStore.Lib.Types
-import           Data.Bitcoin.PaymentChannel.Types -- (Payment, BitcoinAmount)
+import           Data.Bitcoin.PaymentChannel.Types -- (FullPayment, BitcoinAmount)
 import           Data.Bitcoin.PaymentChannel.Util (deserEither)
 import qualified Network.Haskoin.Transaction as HT
+import qualified Network.Haskoin.Crypto as HC
 
 import           Servant.API
 
@@ -43,14 +45,19 @@ instance Web.ToHttpApiData BitcoinLockTime where
     toUrlPiece = cs . pathParamEncode
 
 instance Web.FromHttpApiData SendPubKey where
-    parseUrlPiece = fmapL cs . pathParamDecode . cs
+    parseUrlPiece = fmapL cs . hexDecode . cs
 instance Web.ToHttpApiData SendPubKey where
-    toUrlPiece = cs . pathParamEncode
+    toUrlPiece = cs . hexEncode
 
-instance Web.FromHttpApiData Payment where
-    parseUrlPiece = fmapL cs . pathParamDecode . cs
-instance Web.ToHttpApiData Payment where
-    toUrlPiece = cs . pathParamEncode
+instance Web.FromHttpApiData HC.Signature where
+    parseUrlPiece = fmapL cs . hexDecode . cs
+instance Web.ToHttpApiData HC.Signature where
+    toUrlPiece = cs . hexEncode
+
+-- instance Web.FromHttpApiData FullPayment where
+--     parseUrlPiece = fmapL cs . pathParamDecode . cs
+-- instance Web.ToHttpApiData FullPayment where
+--     toUrlPiece = cs . pathParamEncode
 
 
 instance Content.MimeUnrender Content.OctetStream [ReceiverPaymentChannel] where
@@ -81,4 +88,9 @@ instance Content.MimeRender Content.OctetStream UpdateResult where
 instance Content.MimeUnrender Content.OctetStream Payment where
     mimeUnrender _ = deserEither . BL.toStrict
 instance Content.MimeRender Content.OctetStream Payment where
+    mimeRender _ = BL.fromStrict . Bin.encode
+
+instance Content.MimeUnrender Content.OctetStream FullPayment where
+    mimeUnrender _ = deserEither . BL.toStrict
+instance Content.MimeRender Content.OctetStream FullPayment where
     mimeRender _ = BL.fromStrict . Bin.encode

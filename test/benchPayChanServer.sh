@@ -9,12 +9,17 @@ if [ -z $3 ]; then
 fi
 
 ENDPOINT="$3"
-PUBKEY=$(curl --silent "http://$ENDPOINT/funding/03da3afe4f58992a8cc909522c2ec859ef218fd92fda0a67c23fb40e0303030405/1500000000/info" | jq -r ".ServerPubkey")
 
+## Get server pubkey
+CLIENTPK=03da3afe4f58992a8cc909522c2ec859ef218fd92fda0a67c23fb40e0303030405
+EXP=1500000000
+PUBKEY=$(curl --silent "http://$ENDPOINT/funding/$CLIENTPK/$EXP/info" | jq -r ".server_pubkey")
 if [ -z $PUBKEY ]; then
-   echo "Failed to get PubKey from $ENDPOINT"
+   echo "Failed to get pubkey from $ENDPOINT"
    exit 1
 fi
+
+SERV_OPENURL=$(curl --silent "http://$ENDPOINT/funding/$CLIENTPK/$EXP/begin_open" | jq -r ".channel_uri")
 
 # 1000 10 localhost 023343434
 ./spawnParallel.sh $1 $2 $ENDPOINT $PUBKEY

@@ -100,9 +100,9 @@ getDBConf cfg = DBConf <$>
 
 getChanConf :: Config -> IO ChanConf
 getChanConf cfg = ChanConf <$>
-    configLookupOrFail cfg "chanConf.dustLimit" <*>
-    configLookupOrFail cfg "chanConf.openPrice" <*>
     configLookupOrFail cfg "chanConf.fundingTxMinConf" <*>
+    configLookupOrFail cfg "chanConf.openPrice" <*>
+    configLookupOrFail cfg "chanConf.dustLimit" <*>
     configLookupOrFail cfg "chanConf.settlementPeriodHours" <*>
     configLookupOrFail cfg "chanConf.minChanDurationHours"
 

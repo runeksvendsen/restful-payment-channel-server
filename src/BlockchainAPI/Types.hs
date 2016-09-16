@@ -9,7 +9,7 @@ import qualified Network.Haskoin.Crypto as HC
 import qualified Network.Haskoin.Transaction as HT
 
 
--- |Types which can be used to query the Bitcoin blockchain
+-- |Types which can be used to query the Bitcoin blockchain (not used yet)
 class BlockchainAPI a where
     listUnspentOutputs  :: a -> HC.Address  -> IO (Either String [TxInfo])
     publishTx           :: a -> HT.Tx       -> IO (Either String HT.TxHash)

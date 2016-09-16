@@ -5,6 +5,7 @@ import Test.GenData
 import Data.Aeson (eitherDecodeStrict, ToJSON(toJSON))
 import qualified Data.ByteString as BS
 import qualified Network.Wreq.Session as Wreq
+import qualified Network.Haskoin.Constants as HCC
 import Data.String.Conversions (cs)
 import Control.Monad (forM_)
 
@@ -15,7 +16,8 @@ main =
             case eitherPaySess of
                 Left e -> fail $ "failed to decode JSON test data from stdin: " ++ e
                 Right pd -> return pd
-    in
+    in do
+        HCC.switchToTestnet3
         fmap eitherDecodeStrict BS.getLine >>= printErrOnFail >>= runData
 
 

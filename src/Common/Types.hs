@@ -7,11 +7,18 @@ module Common.Types (
     , MonadIO
     , HT.TxHash
     , HT.OutPoint(..)
+    , HC.Signature
+    , HS.Script
+    , HC.Address
     , CreateResult(..)
 ) where
 
 import           Data.Bitcoin.PaymentChannel.Types
+
+import qualified Network.Haskoin.Transaction as HT
+import qualified Network.Haskoin.Crypto      as HC
+import qualified Network.Haskoin.Script      as HS
+
 import           Common.Handler.Types
 import           Control.Monad.IO.Class (MonadIO)
-import qualified Network.Haskoin.Transaction as HT
 import           Data.DiskMap (CreateResult(..))

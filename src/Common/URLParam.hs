@@ -48,7 +48,7 @@ instance URLParamEncode Word32 where
 instance URLParamEncode HC.Address where
     pathParamEncode = HC.addrToBase58
 
-instance URLParamEncode Payment where
+instance URLParamEncode FullPayment where
     pathParamEncode = b64Encode
 
 instance URLParamEncode HT.OutPoint where
@@ -98,7 +98,7 @@ instance URLParamDecode HC.Address where
     pathParamDecode bs = maybe
         (Left $ "Bitcoin address parse failure: " ++ show bs) Right (HC.base58ToAddr bs)
 
-instance URLParamDecode Payment where
+instance URLParamDecode FullPayment where
     pathParamDecode bs =
         case fromJSON . String . cs $ bs of
             Error e -> Left $ "payment parse failure: " ++ e

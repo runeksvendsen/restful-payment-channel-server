@@ -19,7 +19,7 @@ import           ChanStore.Lib.Types
 import           ConnManager.Connection
 import           Common.URLParam (pathParamEncode)
 
-import           Data.Bitcoin.PaymentChannel.Types (ReceiverPaymentChannel, Payment)
+import           Data.Bitcoin.PaymentChannel.Types (ReceiverPaymentChannel, FullPayment)
 import           Data.Bitcoin.PaymentChannel.Util (deserEither)
 
 import qualified Data.Aeson as JSON   (FromJSON, eitherDecode)

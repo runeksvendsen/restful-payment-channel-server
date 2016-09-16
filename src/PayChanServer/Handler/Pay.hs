@@ -12,7 +12,7 @@ chanPayHandler ::
     -> BitcoinLockTime
     -> TxHash
     -> Vout
-    -> Payment
+    -> FullPayment
     -> AppPC PaymentResult
 chanPayHandler sendPK lockTime fundTxId fundIdx payment = do
     dbConn <- view Conf.dbInterface
@@ -24,13 +24,13 @@ chanPayHandler sendPK lockTime fundTxId fundIdx payment = do
             return
             (recvPayment existingChanState payment)
 
-    DB.tryDBRequest (DBConn.chanUpdate dbConn chanId payment) >>=
+    DB.tryDBRequest (DBConn.chanUpdate dbConn chanId (fpPayment payment)) >>=
         \res -> when (res == WasNotUpdated) $
             errorWithDescription 410 "Channel closed or being closed"
 
     return PaymentResult
-               { paymentResultChannelStatus     = ChannelOpen
-               , paymentResultChannelValueLeft  = channelValueLeft newChanState
-               , paymentResultValueReceived     = valRecvd
-               , paymentResultSettlementTxid    = Nothing
+               { paymentResult_channel_status     = ChannelOpen
+               , paymentResult_channel_valueLeft  = channelValueLeft newChanState
+               , paymentResult_value_received     = valRecvd
+               , paymentResult_settlement_txid    = Nothing
                }

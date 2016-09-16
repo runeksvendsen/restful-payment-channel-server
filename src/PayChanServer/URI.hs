@@ -6,8 +6,8 @@ import           Servant
 
 api = Proxy :: Proxy API.RBPCP
 
-beginOpenAPI = Proxy :: Proxy API.ChanOpen
-mkChanURI = safeLink api beginOpenAPI
+openAPI = Proxy :: Proxy API.ChanOpen
+mkChanURI = safeLink api openAPI
 
 closeAPI = Proxy :: Proxy API.ChanClose
 mkCloseURI = safeLink api closeAPI

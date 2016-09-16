@@ -12,16 +12,14 @@ fundingInfoHandler clientPK lockTime = do
     (Conf.ChanConf btcMinConf openPrice dustLimitT settlePeriod minDuratn) <- view Conf.chanConf
     let dustLimit = Conf.getVal dustLimitT
     let chanParams = CChannelParameters clientPK serverPK lockTime dustLimit
-    return FundingInfo {
-        fundingInfoServerPubkey             = cs $ hexEncode serverPK
-      , fundingInfoDustLimit                = fromIntegral dustLimit
-      , fundingInfoFundingAddressCopy       = cs . pathParamEncode $ getFundingAddress chanParams
-      , fundingInfoRedeemScriptCopy         = cs . hexEncode $ getRedeemScript chanParams
-      , fundingInfoOpenPrice                = fromIntegral openPrice
-      , fundingInfoFundingTxMinConf         = fromIntegral $ Conf.getVal btcMinConf
-      , fundingInfoSettlementPeriodHours    = fromIntegral $ Conf.getVal settlePeriod
-      , fundingInfoMinDurationHours         = fromIntegral $ Conf.getVal minDuratn
-    }
+    return $ FundingInfo serverPK dustLimitT (getFundingAddress chanParams)
+             (getRedeemScript chanParams) openPrice btcMinConf settlePeriod minDuratn
 
 
 
+-- , fundingInfoFundingAddressCopy       = cs . pathParamEncode $ getFundingAddress chanParams
+--       , fundingInfoRedeemScriptCopy         = cs . hexEncode $ getRedeemScript chanParams
+--       , fundingInfoOpenPrice                = fromIntegral openPrice
+--       , fundingInfoFundingTxMinConf         = fromIntegral $ Conf.getVal btcMinConf
+--       , fundingInfoSettlementPeriodHours    = fromIntegral $ Conf.getVal settlePeriod
+--       , fundingInfoMinDurationHours         = fromIntegral $ Conf.getVal minDuratn
