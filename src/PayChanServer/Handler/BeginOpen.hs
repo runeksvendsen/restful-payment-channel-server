@@ -29,7 +29,7 @@ beginOpenHandler clientPK lockTime maybeHost = do
             cs (show $ URI.mkChanURI clientPK lockTime hash vout)
     }
         where hostPrefix = fromMaybe "" maybeHost ++ "/"
-              uriPrefix  = "://7cheese"
+              uriPrefix  = "://"
 
 
 
