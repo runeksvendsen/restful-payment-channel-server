@@ -6,7 +6,7 @@ pkill ChanStore
 set -e
 
 NUMCORES=$2
-RTSOPTS="+RTS -N$NUMCORES"
+RTSOPTS="+RTS -N$NUMCORES -p"
 if [ -z $NUMCORES ]; then
    RTSOPTS=""
 fi

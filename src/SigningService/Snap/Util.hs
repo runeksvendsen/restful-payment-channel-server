@@ -13,9 +13,8 @@ import           Data.Bitcoin.PaymentChannel.Util (deserEither, getFundingAddres
 import           Snap
 import qualified System.IO.Streams as Streams
 import qualified Data.ByteString.Builder as Builder
-import           Data.Aeson (ToJSON)
+import           Data.Aeson (ToJSON, encode)
 import           Data.String.Conversions (cs)
-import           Data.Aeson.Encode.Pretty (encodePretty)
 
 import qualified Network.Haskoin.Crypto as HC
 import qualified Data.ByteString as BS
@@ -71,7 +70,7 @@ errorWithDescription code errStr = do
 
 --- HTTP decode/write data
 encodeJSON :: ToJSON a => a -> BS.ByteString
-encodeJSON = BL.toStrict . encodePretty
+encodeJSON = BL.toStrict . encode
 
 overwriteResponseBody :: MonadSnap m => BS.ByteString -> m ()
 overwriteResponseBody bs = putResponse $

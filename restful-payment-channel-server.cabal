@@ -23,37 +23,30 @@ Executable PayChanServer
   ghc-options: -W -O2 -threaded -with-rtsopts=-N
                -main-is PayChanServer.Main
 
-  default-extensions: OverloadedStrings
-
   build-depends:
     base                      >= 4     && < 5,
+    mtl                       >= 2     && < 3,
+    bitcoin-payment-channel   == 0.3.0.2,
+    haskoin-core              == 0.4.0,
+    bytestring                >= 0.9.1 && < 0.11,
+    -- APISpec.Blockchain
+    blockchain-restful-address-index,
+    -- haskoin-core dep
+    secp256k1,
     -- Servant
     servant                   >= 0.7   && < 0.9,
     servant-server            >= 0.7   && < 0.9,
     servant-client            >= 0.7   && < 0.9,
     http-api-data,
-    -- Snap
-    monad-control             == 1.0.*,
-    mtl                       >= 2     && < 3,
-    snap-core                 == 1.0.*,
-    snap-server               == 1.0.*,
-    snap                      == 1.0.*,
-    io-streams,
-
-    bitcoin-payment-channel   == 0.3.0.2,
-    haskoin-core              == 0.4.0,
-    bytestring                >= 0.9.1 && < 0.11,
-    blaze-builder,
-    -- APISpec.Blockchain
-    blockchain-restful-address-index,
-    secp256k1,
+    warp,
+    http-client, http-client-tls, http-types,
+    -- The rest
     transformers,
     aeson, vector,
     base16-bytestring,
     scientific,
     time,
     lens,
-    aeson-pretty,
     containers,stm-containers,
     configurator,
     cereal,
@@ -61,14 +54,10 @@ Executable PayChanServer
     string-conversions,
     errors,
     hexstring,
-    http-client, http-client-tls, http-types,
-    case-insensitive,
     unix,
     exceptions,
     filepath,
-    tagged,
-    warp
-
+    tagged
 
   other-modules: PayChanServer.App,
                  Common.Types,
@@ -109,24 +98,25 @@ Executable ChanStore
   build-depends:
     base                      >= 4     && < 5,
     bytestring                >= 0.9.1 && < 0.11,
-    monad-control             == 1.0.*,
     mtl                       >= 2     && < 3,
-    snap-core                 == 1.0.*,
-    snap-server               == 1.0.*,
-    snap                      == 1.0.*,
-    io-streams,
-    blaze-builder,
     bitcoin-payment-channel   == 0.3.0.2,
     haskoin-core              == 0.4.0,
-    haskell-stm-diskmap,
     secp256k1,
+    haskell-stm-diskmap,
+    -- Servant
+    servant,
+    servant-server,
+    http-api-data,
+    http-media,
+    wai,
+    warp,
+    http-client,
     transformers,
     aeson, vector,
     base16-bytestring,
     scientific,
     time,
     lens,
-    aeson-pretty,
     stm-containers,
     configurator,
     cereal,
@@ -134,22 +124,13 @@ Executable ChanStore
     string-conversions,
     errors,
     hexstring,
-    http-client,
-    case-insensitive,
     unix,
     exceptions,
-    filepath,
     spawn,
     stm,
     list-t
-     , servant
-     , servant-server
-     , http-api-data
-     , http-media
-     , wai
-     , warp
-  other-modules:
-                     ChanStore.Init
+
+  other-modules:     ChanStore.Init
                      ChanStore.Interface
                      ChanStore.Lib.ChanMap
                      ChanStore.Lib.Settlement
@@ -233,9 +214,6 @@ Executable SigningService
                      Test.Dummy
                      Test.GenData
 
-
-
-
 Executable GenTestData
     hs-source-dirs:       src
     main-is:              Test/GenDataExe.hs
@@ -243,28 +221,21 @@ Executable GenTestData
 
     Build-depends:
       base                      >= 4     && < 5,
-      bytestring                >= 0.9.1 && < 0.11,
-      monad-control             == 1.0.*,
       mtl                       >= 2     && < 3,
-      snap-core                 == 1.0.*,
-      snap-server               == 1.0.*,
-      directory,
+      bytestring                >= 0.9.1 && < 0.11,
       bitcoin-payment-channel   == 0.3.0.2,
       transformers,
       haskoin-core,
+      secp256k1,
       aeson,
       base16-bytestring,
       scientific,
       time,
---      wreq,
-      lens,
       text,
-      aeson-pretty,
       configurator,
       string-conversions,
       errors,
       entropy,
-      secp256k1,
       optparse-applicative
 
 Executable RunTestData
@@ -275,14 +246,11 @@ Executable RunTestData
     Build-depends:
       base                      >= 4     && < 5,
       bytestring                >= 0.9.1 && < 0.11,
-      monad-control             == 1.0.*,
       mtl                       >= 2     && < 3,
-      snap-core                 == 1.0.*,
-      snap-server               == 1.0.*,
-      directory,
       bitcoin-payment-channel   == 0.3.0.2,
       transformers,
       haskoin-core,
+      secp256k1,
       aeson,
       base16-bytestring,
       scientific,
@@ -290,12 +258,9 @@ Executable RunTestData
       wreq,
       lens,
       text,
-      aeson-pretty,
       configurator,
       string-conversions,
       errors,
-      entropy,
-      secp256k1,
       optparse-applicative
 
   hs-source-dirs:       src

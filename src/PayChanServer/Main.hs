@@ -22,6 +22,8 @@ import qualified Network.Wai as Wai
 import qualified Network.Wai.Handler.Warp as Warp
 import qualified Control.Monad.Reader as Reader
 
+-- Debug
+import           Test.Profile (profile_selfDestruct)
 
 
 api :: Proxy API.RBPCP
