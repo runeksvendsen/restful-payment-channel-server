@@ -13,7 +13,8 @@ info:
     
     Changes from version 1 to 2:
       * The outpoint that the payment transaction redeems is now no longer static, but will change when the server needs to free the value it has received over the channel. This enables the server to make use of the value it has received without closing the payment channel. If a client attempts to make a payment over a channel whose source of funding has changed, it will receive a "301 Moved" response, and the payment must now use the funding outpoint specified by the new location URL.
-      * Instead of the client specifying a change address upon opening a channel, the channel funding address is instead used as the change address for the purpose of making payments, and now the client only needs to specify a change address when it wishes to close the channel. 
+      * Use channel funding address as the client change address and, if the client wishes to close the channel early, have it create a new payment, with the desired change address, for this purpose. Rationale: the client needs to contact the server in order to close the payment channel anyway. When doing this, it might as well supply a payment that uses the desired change address, thus enabling the server to redeem the value it has received over the channel while continuing to accept payments it. It also gives the client flexibility to decide which change address to use when it actually needs it, rather than when the channel is opened.
+      * A Payment now contains all the information needed to create and verify the client payment signature
     
     
 host: paychantest.runeks.me #Bitcoin testnet server
@@ -44,9 +45,8 @@ paths:
           description: Invalid parameter
   /funding/{client_pubkey}/{exp_time}/begin_open:
     get:
-      summary: After sending funds to the channel funding address, and waiting the specified number of confirmations, the client will retrieve the resource URI of not-yet-open payment channel here, and POST the first channel payment to 'channel_uri' in order to open the channel.
-      description: |
-        Before opening a ...
+      summary: Get payment channel resource URI
+      description: After sending funds to the channel funding address, and waiting the specified number of confirmations, the client will retrieve the resource URI of not-yet-open payment channel here, and POST the first channel payment to 'channel_uri' in order to open the channel.
       operationId: fundingBeginOpen
       parameters:
         - $ref: "#/parameters/clientPubKeyParam"
@@ -55,7 +55,7 @@ paths:
         200:
           description: Channel ready to open
           schema:
-            $ref: "#/definitions/ChannelInfo"
+            $ref: "#/definitions/ChannelLocation"
         400:
           description: Invalid parameter
         409:
@@ -93,7 +93,8 @@ paths:
         400:
           description: Invalid parameter
     put:
-      summary: |
+      summary: Make channel payment
+      description: |
         Make payment over an existing payment channel.
         
         The payment comprises a signature over a predefined Bitcoin transaction template
@@ -143,8 +144,6 @@ paths:
         - $ref: "#/parameters/fundingSourceVoutParam"
         # body
         - $ref: "#/parameters/paymentBodyParam"
-        # query
-        - $ref: "#/parameters/changeAddressParam"
       consumes:
         - application/json
       produces:
@@ -157,23 +156,14 @@ paths:
         400:
           description: Invalid parameter
           
-
-
 parameters:
-    
-    changeAddressParam:
-      name: change_address
-      in: query
-      description: Client/value sender change address. When the channel is closed, any value not transferred to the server over the channel is sent to this address.
-      type: string
-      required: true
     expTimeParam:
       name: exp_time
       in: path
       description: Expiration date/time for the channel (Unix timestamp)
       required: true
       type: integer
-      format: int64
+      format: uint32
     clientPubKeyParam:
       name: client_pubkey
       in: path
@@ -190,7 +180,7 @@ parameters:
       name: funding_vout
       in: path
       description: The output index part of the outpoint in the Blockchain which holds the client's channel balance.
-      type: string
+      type: integer
       required: true
     paymentBodyParam:
       name: payment_data
@@ -201,7 +191,7 @@ parameters:
         $ref: "#/definitions/PaymentData"
       
 definitions:
-  ChannelInfo:
+  ChannelLocation:
     type: object
     required:
       - channel_uri
@@ -222,6 +212,7 @@ definitions:
       - open_price
       - funding_tx_min_conf
       - settlement_period_hours
+      - min_duration_hours
     properties:
       server_pubkey:
         description: Server/value receiver public key. Hex-encoded, compressed Secp256k1 pubkey, 33 bytes.
@@ -230,7 +221,7 @@ definitions:
       dust_limit:
         description: (Satoshis) The server will not accept payments where the client change amount is less than this amount. This "dust limit" is necessary in order to avoid producing a settlement transaction that will not circulate in the Bitcoin P2P network because it contains an output of minuscule value. Consequently, the maximum amount, that can be sent over the payment channel, is the amount sent to the funding address minus this "dust limit".
         type: integer
-        format: int64
+        format: uint64
       funding_address_copy:
         description: Server derived channel funding address. The client will confirm that its own derived funding address matches this one, before paying to it.
         type: string
@@ -242,7 +233,7 @@ definitions:
       open_price:
         description: Price (in satoshis) for opening a channel with the given {exp_time}. This amount is paid in the initial channel payment when creating a new channel. May be zero, in which case a payment of zero value is transferred, ensuring that the channel can be closed at any time.
         type: integer
-        format: int64
+        format: uint64
         minimum: 0
         example: 25000
       funding_tx_min_conf:
@@ -256,6 +247,11 @@ definitions:
         type: integer
         minimum: 0
         example: 12
+      min_duration_hours:
+        description: The minimum duration of newly opened payment channels. 
+        type: integer
+        minimum: 0
+        example: 48
   
   PaymentData:
     description: Contains information about a payment. A payment contains a signature over a hash of a Bitcoin transaction which redeems the outpoint pointed to by the resource's 'funding_txid' and 'funding_vout' parameters.
@@ -267,9 +263,10 @@ definitions:
       - change_value
       - change_address
       - redeem_script
+      - sighash_flag
     properties:
       redeem_script:
-        description: The contract of the payment channel. Needed to generate the signature over the payment transaction.
+        description: The funds sent to the funding address are bound by this contract (Bitcoin script). The data is needed to construct the payment signature. Hex-encoded data.
         type: string
         example: "TODO"
       funding_txid:
@@ -279,6 +276,7 @@ definitions:
       funding_vout:
         description: The output index/"vout" of the output (in the transaction) payingto the channel funding address.
         type: integer
+        format: uint32
         example: 1
       signature_data:
         description: |
@@ -288,12 +286,17 @@ definitions:
       change_value:
         description: The value sent back to the client in the payment transaction. The total amount transferred to the server is this amount subtracted from the value sent to the channel funding address.
         type: integer
-        format: int64
+        format: uint64
         example: 1000000
       change_address:
         description: The client change address as used in the only output of the payment transaction.
         type: string
         example: "19xUUsSomTCbS9Ar3m1e6j3zqGBANz6d6t"
+      sighash_flag:
+        description: Used to construct the payment signature. Defines which parts of a Bitcoin transaction are signed. Single byte; in both v1 and v2 always equal to 0x83 (131) (SIGHASH_SINGLE|ANYONECANPAY).
+        type: integer
+        format: uint8
+        example: 131
   PaymentResult:
     type: object
     required:
