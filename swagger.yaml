@@ -2,19 +2,22 @@ swagger: '2.0'
 
 info:
   version: "2.0.0"
-  title: RESTful Bitcoin payment channel protocol
+  title: RESTful Bitcoin payment channel protocol (v2)
   description: |
-    A Bitcoin payment channel enables instant, secure & fee-less transfer of bitcoins from one party to another. The intended use is consumer-to-merchant payments, allowing a consumer to make many small payments to a merchant - with whom the consumer has an open payment channel - while only paying the Bitcoin transaction fee once, when the channel is closed.
+    A Bitcoin payment channel sending bitcoins instantly, securely & with fees from one party to another. The intended use is consumer-to-merchant payments, allowing a consumer to make many small payments to a merchant - with whom the consumer has an open payment channel - while only paying the Bitcoin transaction fee once, when the channel is closed.
     
-    The payment server speaking this protocol is the recipient of value, operating on behalf of a content delivery server who receives value from a customer/client. The content delivery server passes requests supplied by the client (payer) to the payment server, and delivers content to the client dependent on the response from the payment server. 
+    The payment server speaking this protocol is the recipient of value, operating on behalf of a content delivery server who receives value from a customer/client. The content delivery server passes requests supplied by the client (payer) to the payment server, and delivers content to the client based on the response from the payment server. 
     
     * Server implementation: https://github.com/runeksvendsen/restful-payment-channel-server
+    
     * Client library: https://github.com/runeksvendsen/paychanjs-client
     
-    Changes from version 1 to 2:
-      * The outpoint that the payment transaction redeems is now no longer static, but will change when the server needs to free the value it has received over the channel. This enables the server to make use of the value it has received without closing the payment channel. If a client attempts to make a payment over a channel whose source of funding has changed, it will receive a "301 Moved" response, and the payment must now use the funding outpoint specified by the new location URL.
-      * Use channel funding address as the client change address and, if the client wishes to close the channel early, have it create a new payment, with the desired change address, for this purpose. Rationale: the client needs to contact the server in order to close the payment channel anyway. When doing this, it might as well supply a payment that uses the desired change address, thus enabling the server to redeem the value it has received over the channel while continuing to accept payments it. It also gives the client flexibility to decide which change address to use when it actually needs it, rather than when the channel is opened.
-      * A Payment now contains all the information needed to create and verify the client payment signature
+    **Changes from version 1 to 2**:
+      1. The client change address (in the payment transaction) is now set to be the channel funding address. If the client wishes to close the channel early it will, at this point, provide a new payment (of zero value) with the desired change address. Reason: the client needs to contact the server in order to close the payment channel anyway. When doing this, it might as well supply a payment that uses the desired change address, hereby enabling the server to redeem the value it has received over the payment channel, without closing it (see **2**). It also gives the client the flexibility to decide which change address to use when it actually needs it, rather than when the channel is opened.
+      
+      2. The source of funding for the payment transaction is now no longer static. When the server needs to free the value it has received over the channel, it will publish the settlement transaction, and for a temporary period the client will need to make payment on two endpoints, in order to pay the server. In this interim period, the client will receive a 317 response code with the location of the second resource in the *Location* header, and will make a payment on that resource as well. When the Blockchain move is done, the client will then receive a 318 response code, pointing to the same *Location*, indicating that all future payments should be made on that resource. 317 and 318 are the same as the 307 and 308 response codes, respectively, except that the request body needs to be updated to fit the new resource.  
+      
+      3. A Payment now contains all the information that goes into a client payment signature, thus referencing all the parameters over which the client signature is made (previous outpoint, redeem script, sighash flag, etc.).
     
     
 host: paychantest.runeks.me #Bitcoin testnet server
@@ -93,7 +96,7 @@ paths:
         400:
           description: Invalid parameter
     put:
-      summary: Make channel payment
+      summary: Pay
       description: |
         Make payment over an existing payment channel.
         
@@ -114,14 +117,14 @@ paths:
           description: Value received
           schema:
             $ref: "#/definitions/PaymentResult"
-        310:
+        317:
           description: Payment 1/2 accepted. However, it is required that the client also perform a request on the payment resource pointed to (same as 307 but request data needs to be updated).
           headers:
             Location:
               description: "Location of payment resource also requiring payment data"
               type: string
               format: uri
-        311:
+        318:
           description: The payment resource has moved permanently. Perform the payment request on the specified resource instead (same as 308 but request data needs to be updated).
           headers:
             Location:
