@@ -15,6 +15,9 @@ info:
     * JavaScript client library (**v2** not implemented at all): https://github.com/runeksvendsen/paychanjs-client
     
     **Changes from v1 to v2**:
+    
+    The main change is that the server is now able to free value it has received over a payment channel without closing it. **1** and **2** cover the changes required for this to work.
+    
       1. The client change address (in the payment transaction) is now set to be the channel funding address. If the client wishes to close the channel early it will, at this point, provide a new payment (of zero value) with the desired change address. Reason: the client needs to contact the server in order to close the payment channel anyway. When doing this, it might as well supply a payment that uses the desired change address, hereby enabling the server to redeem the value it has received over the payment channel, without closing it (see **2**). It also gives the client the flexibility to decide which change address to use when it actually needs it, rather than when the channel is opened.
       
       2. The source of funding for the payment transaction is now no longer static. When the server needs to free the value it has received over the channel, it will publish the settlement transaction, and for a temporary period the client will need to make payment on two endpoints, in order to pay the server. In this interim period, the client will receive a 317 response code with the location of the second resource in the *Location* header, and will make a payment on that resource as well. When the Blockchain move is done, the client will then receive a 318 response code, pointing to the same *Location*, indicating that all future payments should be made on that resource. 317 and 318 are the same as the 307 and 308 response codes, respectively, except that the request body needs to be updated to fit the new resource.  
