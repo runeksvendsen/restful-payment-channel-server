@@ -73,6 +73,8 @@ paths:
       description: |
         After publishing the funding Bitcoin transaction, and waiting for the specified number of confirmations, the client will POST a payment, paying the server's specified channel open price, to this URL. Subsequent channel payments will be PUT on this same URL.
         
+        For information on how to create a payment, see documentation on the PUT request (on this resource) and the **PaymentData** object.
+        
       operationId: createPaymentChannel
       parameters:
         - $ref: "#/parameters/clientPubKeyParam"
@@ -100,11 +102,11 @@ paths:
         400:
           description: Invalid parameter
     put:
-      summary: Pay
+      summary: Send value
       description: |
         Make payment over an existing payment channel.
         
-        The payment comprises a signature over a predefined Bitcoin transaction template
+        To pay the server, the client will create a new **PaymentData** object with the source of funding set to the outpoint specified by the *'funding_txid'* and *'funding_vout'* parameters. The client change amount is decremented by the desired payment amount, and the change address is set to the channel funding address (in order to allow the server to free the received funds without involvement from the client). Only 'change_value' and 'signature_data' change for new payments. Except in case of the payment needed to prematurely close the channel, in which the client updates 'change_address' to its desired value.
       operationId: payPaymentChannel
       consumes:
         - application/json
@@ -141,7 +143,7 @@ paths:
           description: The channel is in the process of being closed. Performing a DELETE request on the resource in a few seconds should return information about the closed channel.
     delete:
       summary: Delete an existing payment channel
-      description: In order to enable the server to return change to the client, the client must create a new payment with the desired change address, and supply this pay as well as the change address in the appropriate query parameters.
+      description: In order to enable the server to return change to the client, the client must first pay the server with a payment of zero value with the desired change address. After doing this, the client will issue a DELETE request here to close the channel. 
       operationId: deletePaymentChannel
       parameters:
         # path
@@ -199,7 +201,8 @@ parameters:
     channelCloseToken:
       name: sig
       in: query
-      description: The client signature of the most recent channel payment. Used as a token to prevent strangers from closing channels. This is the signature in the 'signature_data' field in the *PaymentData* object (DER-encoded ECDSA signature, hex-encoded). 
+      description: |
+        The client signature of the channel payment that uses the client's desired change address. Used as a token to prevent strangers from closing channels. (DER-encoded ECDSA signature, hex-encoded). This is the signature in the 'signature_data' field in the *PaymentData* object of the payment with the updated change address. 
       required: true
       type: string
       
@@ -267,7 +270,8 @@ definitions:
         example: 48
   
   PaymentData:
-    description: Contains information about a payment. A payment contains a signature over a hash of a Bitcoin transaction which redeems the outpoint pointed to by the resource's 'funding_txid' and 'funding_vout' parameters.
+    description: |
+      A payment comprises a signature over a Bitcoin transaction with a decremented client change value. The Bitcoin transaction redeems the outpoint specified by 'funding_txid' and 'funding_vout' (a P2SH output governed by 'redeem_script'), and pays 'change_value' to 'change_address'.
     type: object
     required:
       - funding_txid
@@ -306,10 +310,10 @@ definitions:
         type: string
         example: "19xUUsSomTCbS9Ar3m1e6j3zqGBANz6d6t"
       sighash_flag:
-        description: Used to construct the payment signature. Defines which parts of a Bitcoin transaction are signed. Single byte; in both v1 and v2 always equal to 0x83 (131) (SIGHASH_SINGLE|ANYONECANPAY).
-        type: integer
-        format: uint8
-        example: 131
+        description: Specifies which parts of the payment Bitcoin transaction are signed. Hex-encoded, single byte; in both v1 and v2 always equal to "83" (0x83), which is **SIGHASH_SINGLE|ANYONECANPAY**, meaning the client only signs its own output, and also allowing more to be added.
+        type: string
+        example: 83
+        
   PaymentResult:
     type: object
     required:
