@@ -39,7 +39,7 @@ paths:
       
         The client will first calculate the funding address, confirm that it matches the server's, then pay to the funding address, and wait until the funding transaction has the server-specified number of confirmations ("funding_tx_min_conf").
         
-        After this, the client will create a new payment of value equal to the server-specified channel open price ("open_price"), and POST this to the channel-open URL in order to open the channel.
+        After this, the client will create a new payment of value equal to the server-specified (**'open_price'**), and POST this to the channel URI (see **/begin_open**) in order to open the channel.
       operationId: getFundingInfo
       parameters:
         - $ref: "#/parameters/clientPubKeyParam"
@@ -54,7 +54,7 @@ paths:
   /funding/{client_pubkey}/{exp_time}/begin_open:
     get:
       summary: Get payment channel resource URI
-      description: After sending funds to the channel funding address, and waiting the specified number of confirmations, the client will retrieve the resource URI of not-yet-open payment channel here, and POST the first channel payment to 'channel_uri' in order to open the channel.
+      description: After sending funds to the channel funding address, and waiting the specified number of confirmations, the client will retrieve the resource URI of not-yet-open payment channel here, and POST the first channel payment to **'channel_uri'** in order to open the channel.
       operationId: fundingBeginOpen
       parameters:
         - $ref: "#/parameters/clientPubKeyParam"
