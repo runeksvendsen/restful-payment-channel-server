@@ -206,7 +206,6 @@ parameters:
         The client signature of the channel payment that uses the client's desired change address. Used as a token to prevent strangers from closing channels. (DER-encoded ECDSA signature, hex-encoded). This is the signature in the 'signature_data' field in the *PaymentData* object of the payment with the updated change address. 
       required: true
       type: string
-      
 definitions:
   ChannelLocation:
     type: object
@@ -216,8 +215,7 @@ definitions:
       channel_uri:
         description: The URL of the resource which must the POSTed to in order to open a new payment channel, after which further payments can be PUT on this resource. Close the payment channel by issuing a DELETE request on the resource.
         type: string
-        example: |
-          https://paychan.runeks.me/v2/channels/03da3afe4f58992a8cc909522c2ec859ef218fd92fda0a67c23fb40e0303030405/1502183072/a615e0fa211f5644b0262489790151b5104c085ce84c80a265af4475b5c6c8da/2
+        example: "https://paychan.runeks.me/v2/channels/03da3afe4f58992a8cc909522c2ec859ef218fd92fda0a67c23fb40e0303030405/1502183072/a615e0fa211f5644b0262489790151b5104c085ce84c80a265af4475b5c6c8da/2"
 
   FundingInfo:
     type: object
@@ -234,15 +232,16 @@ definitions:
       server_pubkey:
         description: Server/value receiver public key. Hex-encoded, compressed Secp256k1 pubkey, 33 bytes.
         type: string
-        example: 029b5549e8cac42d27051956925d8176408b2183ba357850f58320ad5876b9c13f
+        example: "029b5549e8cac42d27051956925d8176408b2183ba357850f58320ad5876b9c13f"
       dust_limit:
         description: (Satoshis) The server will not accept payments where the client change amount is less than this amount. This "dust limit" is necessary in order to avoid producing a settlement transaction that will not circulate in the Bitcoin P2P network because it contains an output of minuscule value. Consequently, the maximum amount, that can be sent over the payment channel, is the amount sent to the funding address minus this "dust limit".
         type: integer
         format: uint64
+        example: 500
       funding_address_copy:
         description: Server derived channel funding address. The client will confirm that its own derived funding address matches this one, before paying to it.
         type: string
-        example: 2NCTirSGjFM8T7hUow3AcfyFaw1N1APnYuP
+        example: "2NCTirSGjFM8T7hUow3AcfyFaw1N1APnYuP"
       redeem_script_copy:
         description: Server derived channel redeem script. Defines sender, receiver and channel expiration date. Used to construct the input in the payment transaction. The client will also verify that this matches what it expects. Hex-encoded.
         type: string
@@ -286,7 +285,7 @@ definitions:
       redeem_script:
         description: The funds sent to the funding address are bound by this contract (Bitcoin script). The data is needed to construct the payment signature. Hex-encoded data.
         type: string
-        example: "TODO"
+        example: "63210225b3aaf58992a8cc909522c2ec859ef218fd29fda0a6723cfb4e0529f80cc8f3ad6704002f6859b175682103da3afe4f58992a8cc909522c2ec859ef218fd92fda0a67c23fb40e0303030405ac"
       funding_txid:
         description: The transaction ID of the Bitcoin transaction paying to the channel funding address.
         type: string
@@ -300,7 +299,7 @@ definitions:
         description: |
           DER-encoded ECDSA signature (in hex). This is a SIGHASH_SINGLE|ANYONECANPAY signature over the the "payment transaction", which is a Bitcoin transaction that: redeems the outpoint specified by 'funding_txid' and 'funding_vout' using the redeem script defined in 'redeem_script', with an output which sends 'change_value' to 'change_address'.
         type: string
-        example: "304402202... (71-72 bytes ending in 0x83)"
+        example: "304402202... (~72 bytes)"
       change_value:
         description: The value sent back to the client in the payment transaction. The total amount transferred to the server is this amount subtracted from the value sent to the channel funding address.
         type: integer
