@@ -79,12 +79,12 @@ main = wrapArg $ \cfg _ -> do
 
 create :: ReceiverPaymentChannel -> ChannelMap -> AppCS CreateResult
 create newChanState map = do
-    let key = getChannelID newChanState
+    let key = getSenderPubKey newChanState
     liftIO $ addChanState map key newChanState
 
 get :: Key -> ChannelMap -> AppCS MaybeChanState
-get outPoint map = do
-    maybeItem <- liftIO $ getChanState map outPoint
+get key map = do
+    maybeItem <- liftIO $ getChanState map key
     return $ MaybeChanState maybeItem
 
 update :: Key -> Payment -> ChannelMap -> AppCS UpdateResult

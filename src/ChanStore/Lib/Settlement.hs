@@ -70,7 +70,7 @@ beginSettlingChannelsByValue chanMap minValue =
     fmap getKeyFromItem <$>
         fewestChannelsCoveringValue chanMap minValue
     where
-        getKeyFromItem = getChannelID
+        getKeyFromItem = getSenderPubKey
 
 -- |Return a list of 'ReceiverPaymentChannel's which, together in total, have received at least
 --  'minValue'. If 'minValue' is greater than all available value, all channels are returned.
@@ -92,7 +92,7 @@ fewestChannelsCoveringValue  (ChannelMap m _) minValue =
             error "BUG: Non-open channels should have been filtered off"
 -- Value-based settlement }
 
-gatherFromResults :: MapItemResult HT.OutPoint ChanState -> ReceiverPaymentChannel
+gatherFromResults :: MapItemResult Key ChanState -> ReceiverPaymentChannel
 gatherFromResults res = case res of
       (ItemUpdated _ cs) -> gatherPayChan cs
       NotUpdated _ _ -> error "BUG: Should not be possible since irrelevant keys have been filtered off"

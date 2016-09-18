@@ -29,19 +29,23 @@ import           Text.Printf (printf)
 import qualified Network.Haskoin.Constants as HCC
 import qualified Network.Haskoin.Crypto as HC
 import qualified Network.Haskoin.Transaction as HT
+import           Crypto.Secp256k1 (secKey)
 import           Data.Time.Clock (UTCTime, addUTCTime, getCurrentTime)
 
 import           Test.GenData (deriveMockFundingInfo)
+import           Data.Maybe (fromJust)
 
 
 
-
-dummyKey :: HT.OutPoint
-dummyKey = HT.OutPoint dummyTxId 0
+dummyKey :: SendPubKey
+dummyKey = fromJust $
+    MkSendPubKey . HC.derivePubKey . HC.makePrvKey <$> secKey dummy32ByteBS
 
 dummyTxId :: HT.TxHash
-dummyTxId = HT.TxHash "0000000000000000000000000000000000000000000000000000000000000000"
+dummyTxId = HT.TxHash . HC.hash256 $ dummy32ByteBS
 
+dummy32ByteBS :: ByteString
+dummy32ByteBS = "12345678901234567890123456789012"
 
 getServerPubKey :: AppPC RecvPubKey
 getServerPubKey = view Conf.pubKey

@@ -15,7 +15,8 @@ import           Data.DiskMap (DiskMap, SyncAction,
                             CreateResult(..),
                             Serializable(..), ToFileName(..), Hashable(..), MapItemResult(..))
 
-import           Data.Bitcoin.PaymentChannel.Types (ReceiverPaymentChannel, PaymentChannelState, Payment)
+import           Data.Bitcoin.PaymentChannel.Types (ReceiverPaymentChannel, PaymentChannelState,
+                                                    Payment, SendPubKey)
 import           Data.Bitcoin.PaymentChannel.Util (deserEither)
 import qualified Network.Haskoin.Transaction as HT
 import qualified Data.Serialize as Bin
@@ -28,7 +29,7 @@ data ChannelMap = ChannelMap
     (DiskMap Key ChanState)
     (Maybe (SyncAction,ThreadId))   -- Used when deferred sync is enabled
 
-type Key = HT.OutPoint
+type Key = SendPubKey
 
 data CloseResult  = Closed | DoesntExist deriving (Show, Eq)
 data UpdateResult = WasUpdated | WasNotUpdated deriving (Show, Eq)
@@ -75,17 +76,13 @@ instance Bin.Serialize CloseResult where
 
 
 
-instance ToFileName HT.OutPoint
+instance ToFileName SendPubKey
 
-instance Hashable HT.OutPoint where
-    hashWithSalt salt op =
-        salt `hashWithSalt` serialize op
+instance Hashable SendPubKey where
+    hashWithSalt salt sendPK =
+        salt `hashWithSalt` serialize sendPK
 
-instance Serializable HT.OutPoint where
-    serialize   = Bin.encode
-    deserialize = deserEither . cs
-
-instance Serializable PaymentChannelState where
+instance Serializable SendPubKey where
     serialize   = Bin.encode
     deserialize = deserEither . cs
 

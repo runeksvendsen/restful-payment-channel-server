@@ -28,8 +28,8 @@ chanOpenHandler sendPK lockTime fundTxId fundIdx payment = do
     (valRecvd,recvChanState) <- either (userError' . show) return $
         channelFromInitialPayment cp fundingTxInfo (getFundingAddress cp) payment
 
-    openPrice <- Conf.openPrice <$> view Conf.chanConf
-    when (valRecvd < Conf.getVal openPrice) $
+    openPrice <- Conf.getVal . Conf.openPrice <$> view Conf.chanConf
+    when (valRecvd < openPrice) $
         userError' $ "Initial payment short: open price is " ++
             show openPrice ++ ", received " ++ show valRecvd
 
@@ -39,7 +39,7 @@ chanOpenHandler sendPK lockTime fundTxId fundIdx payment = do
 
     return PaymentResult
            { paymentResult_channel_status     = ChannelOpen
-           , paymentResult_channel_valueLeft  = channelValueLeft recvChanState
+           , paymentResult_channel_valueLeft  = channelValueLeft recvChanState  -- minus dust limit
            , paymentResult_value_received     = valRecvd
            , paymentResult_settlement_txid    = Nothing
            }

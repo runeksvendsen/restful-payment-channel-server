@@ -19,7 +19,7 @@ import           PayChanServer.DB (tryHTTPRequestOfType)
 import           ChanStore.Interface  as DBConn
 
 import           Data.Bitcoin.PaymentChannel.Types (ReceiverPaymentChannel, BitcoinAmount,
-                                                    PaymentChannel(getChannelID))
+                                                    PaymentChannel(getSenderPubKey))
 import           SigningService.Interface (signSettlementTx)
 
 import qualified Network.Haskoin.Transaction as HT
@@ -43,7 +43,7 @@ settleChannel ::
     -> ReceiverPaymentChannel
     -> IO HT.TxHash
 settleChannel dbIface signConn rpcInfo txFee rpc =
-    tryRequest "BeginSettle" (DBConn.settleByIdBegin dbIface (getChannelID rpc))
+    tryRequest "BeginSettle" (DBConn.settleByIdBegin dbIface (getSenderPubKey rpc))
         >>= finishSettleChannel dbIface signConn rpcInfo txFee
 
 -- | Thread that queries the ChanStore for channels close to expiriry,
@@ -83,7 +83,7 @@ finishSettleChannel ::
 finishSettleChannel dbIface signConn btcIface txFee rpc = do
     settlementTx   <- tryRequest "Signing" (signSettlementTx signConn txFee rpc)
     settlementTxId <- tryBitcoind =<< Btc.publishTx btcIface settlementTx -- HEY
-    tryRequest "FinishSettle" (DBConn.settleFin dbIface (getChannelID rpc) settlementTxId)
+    tryRequest "FinishSettle" (DBConn.settleFin dbIface (getSenderPubKey rpc) settlementTxId)
     return settlementTxId
         where tryBitcoind = either logImportantErrorThenFail return
 

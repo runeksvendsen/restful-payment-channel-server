@@ -17,12 +17,12 @@ import           Data.Typeable (Typeable)
 
 
 data Create             = Create                ReceiverPaymentChannel      deriving Typeable
-data Get                = Get                   HT.OutPoint                 deriving Typeable
-data Update             = Update                HT.OutPoint Payment         deriving Typeable
+data Get                = Get                   Key                         deriving Typeable
+data Update             = Update                Key Payment                 deriving Typeable
 data ByExpSettleBegin   = ByExpSettleBegin      UTCTime                     deriving Typeable
 data ByIdSettleBegin    = ByIdSettleBegin       Key                         deriving Typeable
 data ByValueSettleBegin = ByValueSettleBegin    BitcoinAmount               deriving Typeable
-data SettleFin          = SettleFin HT.OutPoint HT.TxHash                   deriving Typeable
+data SettleFin          = SettleFin Key         HT.TxHash                   deriving Typeable
 
 
 instance HasReqParams Create where

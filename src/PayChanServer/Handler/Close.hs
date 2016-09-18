@@ -20,8 +20,7 @@ chanSettleHandler _ _ _ _ Nothing =
     userError' "Missing payment. \"payment\" query arg should contain most recent channel payment."
 chanSettleHandler sendPK lockTime fundTxId fundIdx (Just clientSig) = do
     dbConn <- view Conf.dbInterface
-    let chanId = OutPoint fundTxId fundIdx
-    chanState <- DB.getChannelStateOr404 dbConn chanId
+    chanState <- DB.getChannelStateOr404 dbConn sendPK
     -- Authenticate. Most recent channel payment is supplied by client as a token.
     let confirmClientSig storedPayment =
             unless (clientSig == pGetSig storedPayment) $

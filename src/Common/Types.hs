@@ -11,6 +11,7 @@ module Common.Types (
     , HS.Script
     , HC.Address
     , CreateResult(..)
+    , BS.ByteString
 ) where
 
 import           Data.Bitcoin.PaymentChannel.Types
@@ -18,6 +19,8 @@ import           Data.Bitcoin.PaymentChannel.Types
 import qualified Network.Haskoin.Transaction as HT
 import qualified Network.Haskoin.Crypto      as HC
 import qualified Network.Haskoin.Script      as HS
+
+import qualified Data.ByteString             as BS
 
 import           Common.Handler.Types
 import           Control.Monad.IO.Class (MonadIO)
