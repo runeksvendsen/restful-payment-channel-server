@@ -20,7 +20,7 @@ source-repository head
 Executable PayChanServer
   hs-source-dirs: src
   main-is: PayChanServer/Main.hs
-  ghc-options: -W -threaded -with-rtsopts=-N
+  ghc-options: -W -O2 -threaded -with-rtsopts=-N
                -main-is PayChanServer.Main
 
   build-depends:
@@ -103,7 +103,7 @@ Executable PayChanServer
 Executable ChanStore
   hs-source-dirs: src
   main-is: ChanStore/Main.hs
-  ghc-options: -W -threaded -with-rtsopts=-N -main-is ChanStore.Main
+  ghc-options: -W -O2 -threaded -with-rtsopts=-N -main-is ChanStore.Main
   default-extensions: OverloadedStrings
   build-depends:
     base                      >= 4     && < 5,

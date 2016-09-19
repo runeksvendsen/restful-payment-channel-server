@@ -6,9 +6,10 @@ pkill ChanStore
 set -e
 
 NUMCORES=$2
-RTSOPTS="+RTS -N$NUMCORES -p"
+PROFILE=""    # "-p"
+RTSOPTS="+RTS -N$NUMCORES $PROFILE"
 if [ -z $NUMCORES ]; then
-   RTSOPTS="+RTS -p"
+   RTSOPTS="+RTS $PROFILE"
 fi
 
 echo "===== Using $NUMCORES core(s) ====="
