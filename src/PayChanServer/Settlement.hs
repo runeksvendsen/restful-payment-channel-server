@@ -6,7 +6,7 @@ because the client requested it or
 
 module  PayChanServer.Settlement
 (
-    settleChannel,
+    finishSettleChannel,
     settlementThread
 )
 
@@ -35,16 +35,16 @@ logImportantError = putStrLn
 logImportantErrorThenFail e = logImportantError e >> error e
 
 -- | Fully settle a given payment channel; return settlement txid
-settleChannel ::
-    DBConn.Interface
-    -> ConnManager
-    -> Btc.Interface
-    -> BitcoinAmount
-    -> ReceiverPaymentChannel
-    -> IO HT.TxHash
-settleChannel dbIface signConn rpcInfo txFee rpc =
-    tryRequest "BeginSettle" (DBConn.settleByIdBegin dbIface (getSenderPubKey rpc))
-        >>= finishSettleChannel dbIface signConn rpcInfo txFee
+-- settleChannel ::
+--     DBConn.Interface
+--     -> ConnManager
+--     -> Btc.Interface
+--     -> BitcoinAmount
+--     -> ReceiverPaymentChannel
+--     -> IO HT.TxHash
+-- settleChannel dbIface signConn rpcInfo txFee rpc =
+--     tryRequest "BeginSettle" (DBConn.settleByIdBegin dbIface (getSenderPubKey rpc))
+--         >>= finishSettleChannel dbIface signConn rpcInfo txFee
 
 -- | Thread that queries the ChanStore for channels close to expiriry,
 --   and settles them

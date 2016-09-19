@@ -5,6 +5,7 @@ import           PayChanServer.Util
 import qualified PayChanServer.Config.Types as Conf
 import qualified PayChanServer.DB as DB
 import           ChanStore.Interface  as DBConn
+import           ChanStore.Lib.Types (PayRequest(..), PayResult(..), UpdateResult(..))
 
 
 chanPayHandler ::
@@ -15,21 +16,19 @@ chanPayHandler ::
     -> FullPayment
     -> AppPC PaymentResult
 chanPayHandler sendPK lockTime fundTxId fundIdx payment = do
+    -- TODO: verify resource/payment match
     dbConn <- view Conf.dbInterface
-    existingChanState <- DB.getChannelStateForPayment dbConn sendPK
-
-    (valRecvd,newChanState) <- either
-            (userError' . show)
-            return
-            (recvPayment existingChanState payment)
-
-    DB.tryDBRequest (DBConn.chanUpdate dbConn sendPK (fpPayment payment)) >>=
-        \res -> when (res == WasNotUpdated) $
-            errorWithDescription 410 "Channel closed or being closed"
+    (valRecvd,valLeft) <- DB.tryDBRequest (DBConn.chanPay dbConn sendPK payment) >>=
+        \res -> case res of
+            PaymentReceived vRecv vLeft -> return (vRecv, vLeft)
+            PaymentError err    -> userError' $ show err
+            PayUpdateError NoSuchChannel       -> errorWithDescription 404 "No such channel"
+            PayUpdateError (ChanClosed _ _)    -> errorWithDescription 410 "Channel closed or being closed"
+            PayUpdateError ChanBeingClosed     -> errorWithDescription 410 "Channel closed or being closed"
 
     return PaymentResult
                { paymentResult_channel_status     = ChannelOpen
-               , paymentResult_channel_valueLeft  = channelValueLeft newChanState -- minus dust limit
+               , paymentResult_channel_valueLeft  = valLeft
                , paymentResult_value_received     = valRecvd
                , paymentResult_settlement_txid    = Nothing
                }

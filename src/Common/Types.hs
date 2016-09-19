@@ -4,6 +4,7 @@
 module Common.Types (
       module Data.Bitcoin.PaymentChannel.Types
     , module Common.Handler.Types
+    , ChannelResource(..)
     , MonadIO
     , HT.TxHash
     , HT.OutPoint(..)
@@ -21,7 +22,14 @@ import qualified Network.Haskoin.Crypto      as HC
 import qualified Network.Haskoin.Script      as HS
 
 import qualified Data.ByteString             as BS
+import qualified Data.Serialize as Bin
 
 import           Common.Handler.Types
 import           Control.Monad.IO.Class (MonadIO)
 import           Data.DiskMap (CreateResult(..))
+import           GHC.Generics
+
+data ChannelResource = ChannelResource SendPubKey BitcoinLockTime HT.OutPoint
+        deriving Generic
+
+instance Bin.Serialize ChannelResource

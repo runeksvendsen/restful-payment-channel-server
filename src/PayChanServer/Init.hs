@@ -43,9 +43,9 @@ appConfInit cfg = do
     btcIface <- getBlockchainIface cfg
 
     dbIface <- getChanStoreIface =<< getDBConf cfg
-    putStr "Testing database connection... "
-    maybeRes <- initWaitConnect "database" $ DBConn.chanGet dbIface dummyKey
-    putStrLn $ if isNothing maybeRes then "success." else "success... but dummy key is present in database."
+--     putStr "Testing database connection... "
+--     maybeRes <- initWaitConnect "database" $ DBConn.chanGet dbIface dummyKey
+--     putStrLn $ if isNothing maybeRes then "success." else "success... but dummy key is present in database."
 
     putStr "Contacting SigningService for public key... "
     pubKey <- initWaitConnect "SigningService" $ getPubKey signingServiceConn
@@ -59,8 +59,7 @@ appConfInit cfg = do
     let basePathVersion = "/v1"
     settlePeriod <- configLookupOrFail cfg "settlement.settlementPeriodHours"
 
-    -- We could also move this into 'getBlockchainIface'...
-    let settleFunc = Settle.settleChannel dbIface signingServiceConn btcIface settleFee
+    let settleFunc = Settle.finishSettleChannel dbIface signingServiceConn btcIface settleFee
 
     return $ App dbIface
                  (BtcAPI.listUnspentOutputs btcIface) settleFunc

@@ -70,21 +70,6 @@ instance Content.MimeUnrender Content.OctetStream ReceiverPaymentChannel where
 instance Content.MimeRender Content.OctetStream ReceiverPaymentChannel where
     mimeRender _ = BL.fromStrict . Bin.encode
 
-instance Content.MimeUnrender Content.OctetStream CreateResult where
-    mimeUnrender _ = deserEither . BL.toStrict
-instance Content.MimeRender Content.OctetStream CreateResult where
-    mimeRender _ = BL.fromStrict . Bin.encode
-
-instance Content.MimeUnrender Content.OctetStream MaybeChanState where
-    mimeUnrender _ = deserEither . BL.toStrict
-instance Content.MimeRender Content.OctetStream MaybeChanState where
-    mimeRender _ = BL.fromStrict . Bin.encode
-
-instance Content.MimeUnrender Content.OctetStream UpdateResult where
-    mimeUnrender _ = deserEither . BL.toStrict
-instance Content.MimeRender Content.OctetStream UpdateResult where
-    mimeRender _ = BL.fromStrict . Bin.encode
-
 instance Content.MimeUnrender Content.OctetStream Payment where
     mimeUnrender _ = deserEither . BL.toStrict
 instance Content.MimeRender Content.OctetStream Payment where

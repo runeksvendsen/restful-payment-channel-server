@@ -1,11 +1,13 @@
 module PayChanServer.Handler.Close where
 
+import           Common.Types
 import           PayChanServer.Types
 import           PayChanServer.Util
 import qualified PayChanServer.Config.Types as Conf
 
 import qualified PayChanServer.DB as DB
 import           ChanStore.Interface  as DBConn
+import           ChanStore.Lib.Types
 
 
 
@@ -20,23 +22,25 @@ chanSettleHandler _ _ _ _ Nothing =
     userError' "Missing payment. \"payment\" query arg should contain most recent channel payment."
 chanSettleHandler sendPK lockTime fundTxId fundIdx (Just clientSig) = do
     dbConn <- view Conf.dbInterface
-    chanState <- DB.getChannelStateOr404 dbConn sendPK
-    -- Authenticate. Most recent channel payment is supplied by client as a token.
-    let confirmClientSig storedPayment =
-            unless (clientSig == pGetSig storedPayment) $
-                userError' "Invalid payment. Provide most recent channel payment."
+    settleChannel <- view Conf.settleChannel
+    -- Ask ChanStore to begin closing channel, if everything matches up
+    let closeReq = CloseBeginRequest
+            (ChannelResource sendPK lockTime (OutPoint fundTxId fundIdx))
+            clientSig
+    closeRes <- liftIO $ DBConn.settleByInfoBegin dbConn closeReq
     -- Decide what to do based on channel state: open/half-open/closed
-    (settlementTxId,chanValLeft) <- case chanState of
-            (DBConn.ReadyForPayment rpc) -> do
-                confirmClientSig $ getNewestPayment rpc
-                settleChannel <- view Conf.settleChannel
+    (settlementTxId,chanValLeft) <- case closeRes of
+            CloseInitiated (rpc,origVal)        -> do
                 settleTxId <- liftIO (settleChannel rpc)
                 return (settleTxId, channelValueLeft rpc)
-            (DBConn.SettlementInProgress _) ->
+            IncorrectSig                        ->
+                userError' "Invalid payment. Provide most recent channel payment."
+            CloseUpdateError (ChanClosed settleTxId chanValLeft) ->
+                return (settleTxId, chanValLeft)
+            CloseUpdateError ChanBeingClosed    ->
                 errorWithDescription 410 "Channel is being closed"
-            (DBConn.ChannelSettled settleTxId _ rpc) -> do
-                confirmClientSig $ getNewestPayment rpc
-                return (settleTxId, channelValueLeft rpc)
+            CloseUpdateError NoSuchChannel      ->
+                errorWithDescription 404 "No such channel"
     -- Write response
     return PaymentResult
            { paymentResult_channel_status     = ChannelClosed

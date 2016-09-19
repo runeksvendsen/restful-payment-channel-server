@@ -7,9 +7,15 @@ extra-package-dbs: []
 
 packages:
 - '.'
+#- '/Users/rune/IdeaProjects/bitcoin-payment-channel'
 - location:
     git: https://github.com/runeksvendsen/bitcoin-payment-channel.git
-    commit: 3cc5483060c413e50adf7c898b521549914b7c94
+    commit: ccdccee54c24fd875de232f4e3965b600913069b
+
+  extra-dep: true
+- location:
+    git: https://github.com/well-typed/binary-serialise-cbor.git
+    commit: 2df417c4faf32204dc702633188f835a74819924
   extra-dep: true
 - location:
     git: https://github.com/runeksvendsen/haskell-bitcoin-api.git
@@ -22,20 +28,9 @@ packages:
   extra-dep: true
 - location:
     git: https://github.com/runeksvendsen/haskell-stm-diskmap.git
-    commit: 7847d77d2574337969e61acd6d8cf1091ba77fb2
+    commit: 5900c915faa2efa40511f1f0bce7c1826857baa0
   extra-dep: true
-#- location:
-#    git: https://github.com/haskell-servant/servant.git
-#    commit: 040db21152ebe0da106e08550e7c11983453918a
-#  extra-dep: true
-#  subdirs:
-#    - servant
-#    - servant-client
-#    - servant-server
 
-#flags:
-#    snap-server:
-#        openssl: true
 
 extra-deps:
 # Haskoin

@@ -61,33 +61,3 @@ trySigningRequest ioa =
 tryHTTPRequestOfType :: String -> IO a -> IO (Either String a)
 tryHTTPRequestOfType descr ioa =
     fmapL (\e -> descr ++ " error: " ++ show (e :: HttpException)) <$> try ioa
-
-
-getChannelStateOr404 :: DBConn.Interface -> DB.Key -> AppPC DBConn.ChanState
-getChannelStateOr404 chanMap key =
-    tryDBRequest (DBConn.chanGet chanMap key) >>=
-    \res -> case res of
-        Nothing ->
-            errorWithDescription 404 "No such channel"
-        Just cs -> return cs
-
-getChannelStateForPayment :: DBConn.Interface -> DB.Key -> AppPC ReceiverPaymentChannel
-getChannelStateForPayment chanMap key =
-    getChannelStateForSettlement chanMap key >>=
-    -- When the channel has changed from ReadyForPayment to
-    --  SettlementInProgress, the "/pay" resource is gone
-    either (const $ errorWithDescription 404 "No such payment resource") return
-
--- |Return either open ChanState or settlement txid and most recent payment in case
---      the channel is closed
-getChannelStateForSettlement :: DBConn.Interface -> DB.Key -> AppPC (Either (HT.TxHash,Payment) ReceiverPaymentChannel)
-getChannelStateForSettlement chanMap key =
-    getChannelStateOr404 chanMap key >>=
-    \chanState -> case chanState of
-        (DBConn.ReadyForPayment rpc) ->
-            return $ Right rpc
-        (DBConn.SettlementInProgress _) ->
-            errorWithDescription 410 "Channel is being closed"
-        (DBConn.ChannelSettled txid paym _) ->
-            return $ Left (txid,paym)
-

@@ -12,71 +12,51 @@ Potato
 
 module ChanStore.Interface
 (
-    New.Interface(chanAdd , chanGet , chanUpdate
+    Interface(chanOpen , chanPay
             , settleByExpBegin
-            , settleByIdBegin , settleFin)
-  , New.mkChanStoreInterface
+            , settleByInfoBegin , settleFin)
+  , mkChanStoreInterface
   , ConnManager
   , ChanState(..)
-  , UpdateResult(..)
 )
 where
 
--- Don't use the stuff below
-import qualified ChanStore.API as New
-
-import           ConnManager.RequestRunner (ConnManager, runRequest)
-
 import           ChanStore.Lib.Types
-import           ChanStore.Spec
+import qualified ChanStore.API as API
+import           ConnManager.Types
 
-import           Data.Bitcoin.PaymentChannel.Types (ReceiverPaymentChannel, Payment)
+import           Data.Bitcoin.PaymentChannel.Types
 import           Data.Time.Clock (UTCTime)
 import qualified Network.Haskoin.Transaction as HT
+import           Servant
+import           Servant.Client
+import qualified ConnManager.Servant as Servant
+import           Control.Monad (void)
 
-mkChanStoreInterface :: ConnManager -> Interface
-mkChanStoreInterface connMan =
+mkChanStoreInterface :: ConnManager2 -> Interface
+mkChanStoreInterface (Conn2 baseUrl man) =
     Interface
-        (chanAdd'           connMan)
-        (chanGet'           connMan)
-        (chanUpdate'        connMan)
-        (settleByExpBegin'  connMan)
-        (settleByIdBegin'   connMan)
-        (settleFin'         connMan)
+        (\or  -> failOnLeft =<< Servant.runReq (chanOpen'           or  man baseUrl) )
+        (\k fp-> failOnLeft =<< Servant.runReq (chanPay'           k fp man baseUrl) )
+        (\exp -> failOnLeft =<< Servant.runReq (settleByExpBegin'   exp man baseUrl) )
+        (\inf -> failOnLeft =<< Servant.runReq (settleByInfoBegin'  inf man baseUrl) )
+        (\val -> failOnLeft =<< Servant.runReq (settleByValBegin'   val man baseUrl) )
+        (\k h -> failOnLeft =<< Servant.runReq (void $ settleFin'   k h man baseUrl) )
+    where failOnLeft = either error return
 
 data Interface = Interface {
-    chanAdd             :: ReceiverPaymentChannel -> IO CreateResult
-  , chanGet             :: Key -> IO (Maybe ChanState)
-  , chanUpdate          :: Key -> Payment -> IO UpdateResult
-  , settleByExpBegin    :: UTCTime -> IO [ReceiverPaymentChannel]
-  , settleByIdBegin     :: Key -> IO ReceiverPaymentChannel
-  , settleFin           :: Key -> HT.TxHash -> IO ()
+    chanOpen            :: OpenRequest          -> IO OpenResult
+  , chanPay             :: Key -> FullPayment   -> IO PayResult
+  , settleByExpBegin    :: UTCTime              -> IO [ReceiverPaymentChannel]
+  , settleByInfoBegin   :: CloseBeginRequest    -> IO CloseBeginResult
+  , settleByValBegin    :: BitcoinAmount        -> IO [ReceiverPaymentChannel]
+  , settleFin           :: Key -> HT.TxHash     -> IO ()
 }
 
+api :: Proxy API.ChanStore
+api = Proxy
 
--- |Add item
-chanAdd' :: ConnManager -> ReceiverPaymentChannel -> IO CreateResult
-chanAdd' conn rpc = runRequest conn $ Create rpc
+chanOpen' :<|> chanPay' :<|> settleByInfoBegin' :<|>
+    settleByExpBegin' :<|> settleByValBegin' :<|> settleFin' =
+        client api
 
--- |Get item
-chanGet' :: ConnManager -> Key -> IO (Maybe ChanState)
-chanGet' conn key = runRequest conn (Get key) >>=
-    \(MaybeChanState maybeCS) -> return maybeCS
-
--- |Update item
-chanUpdate' :: ConnManager -> Key -> Payment -> IO UpdateResult
-chanUpdate' conn key payment = runRequest conn $ Update key payment
-
--- |Get zero or more channel objects based on expiration date and simultaneously begin settlement
-settleByExpBegin' :: ConnManager -> UTCTime -> IO [ReceiverPaymentChannel]
-settleByExpBegin' conn expiringBefore =
-    runRequest conn $ ByExpSettleBegin expiringBefore
-
--- |Get single channel object based on channel ID and simultaneously begin settlement
-settleByIdBegin' :: ConnManager -> Key -> IO ReceiverPaymentChannel
-settleByIdBegin' conn key =
-    runRequest conn $ ByIdSettleBegin key
-
--- |Finish settlement for single channel object based on channel ID
-settleFin' :: ConnManager -> Key -> HT.TxHash -> IO ()
-settleFin' conn key settleTxId = runRequest conn $ SettleFin key settleTxId

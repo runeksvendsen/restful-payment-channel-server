@@ -3,6 +3,7 @@ module ChanStore.Lib.Settlement where --TODO: move
 import           Common.Types
 import           Data.DiskMap
 import           ChanStore.Lib.Types hiding (UpdateResult(..))
+import           Data.Bitcoin.PaymentChannel.Movable
 
 import qualified Util
 import           Data.Ord (comparing, Down(Down))
@@ -14,25 +15,26 @@ import qualified Data.List as List
 import qualified Network.Haskoin.Transaction as HT
 
 -- |Mark the channel in question as settled by providing its key and the TxId of the settlement transaction
-finishSettlingChannel :: ChannelMap -> (Key,HT.TxHash) -> IO (MapItemResult Key ChanState)
+finishSettlingChannel :: ChannelMap -> (Key,HT.TxHash) -> IO (MapItemResult Key ChanState ())
 finishSettlingChannel (ChannelMap m _) (k,settleTxId) =
     head <$> mapGetItems m finishSettling (return [k])
     where
         finishSettling (SettlementInProgress rpc) = Just $
-            ChannelSettled settleTxId (getNewestPayment rpc) rpc
+            ChannelSettled settleTxId (getNewestPayment $ fst rpc) rpc
         finishSettling _ = Nothing
 
-beginSettlingChannel :: ChannelMap -> Key -> IO ReceiverPaymentChannel
+beginSettlingChannel :: ChannelMap -> Key -> IO (ReceiverPaymentChannel,BitcoinAmount)
 beginSettlingChannel chanMap k = head <$> beginSettlingChannels chanMap (return [k])
 
 -- |Given a list of Keys in STM, retrieve the channel states in question from the map while
 -- simultaneously marking them as in the process of being settled.
-beginSettlingChannels :: ChannelMap -> STM [Key] -> IO [ReceiverPaymentChannel]
+beginSettlingChannels :: ChannelMap -> STM [Key] -> IO [(ReceiverPaymentChannel,BitcoinAmount)]
 beginSettlingChannels (ChannelMap m _) keyGetterAction = do
     res <- mapGetItems m markAsSettlingIfOpen keyGetterAction
     return $ map gatherFromResults res
     where
-          markAsSettlingIfOpen (ReadyForPayment rpc)  = Just $ SettlementInProgress rpc
+          markAsSettlingIfOpen (ReadyForPayment mc)  = Just $
+              SettlementInProgress (getStateForClosing mc)
           -- Should never be reached, as we're fetching the relevant keys and their corresponding items atomically
           markAsSettlingIfOpen SettlementInProgress{} = Nothing
           markAsSettlingIfOpen ChannelSettled{}       = Nothing
@@ -41,7 +43,7 @@ beginSettlingChannels (ChannelMap m _) keyGetterAction = do
 
 -- |Return a list of 'ReceiverPaymentChannel's expiring before specified point in time,
 --      and simultanesouly mark them as in the process of being settled ('SettlementInProgress')
-beginSettlingExpiringChannels :: ChannelMap -> UTCTime -> IO [ReceiverPaymentChannel]
+beginSettlingExpiringChannels :: ChannelMap -> UTCTime -> IO [(ReceiverPaymentChannel,BitcoinAmount)]
 beginSettlingExpiringChannels chanMap currentTimeIsh =
     beginSettlingChannels chanMap $
     fmap fst <$>    --get Key
@@ -64,7 +66,7 @@ expiresEarlierThan circaNow (LockTimeDate expDate) = circaNow > expDate
 -- Time-based settlement }
 
 -- Value-based settlement {
-beginSettlingChannelsByValue :: ChannelMap -> BitcoinAmount -> IO [ReceiverPaymentChannel]
+beginSettlingChannelsByValue :: ChannelMap -> BitcoinAmount -> IO [(ReceiverPaymentChannel,BitcoinAmount)]
 beginSettlingChannelsByValue chanMap minValue =
     beginSettlingChannels chanMap $
     fmap getKeyFromItem <$>
@@ -76,29 +78,29 @@ beginSettlingChannelsByValue chanMap minValue =
 --  'minValue'. If 'minValue' is greater than all available value, all channels are returned.
 --  Ie. you have to make sure you don't request too much value.
 fewestChannelsCoveringValue :: ChannelMap -> BitcoinAmount -> STM [ReceiverPaymentChannel]
-fewestChannelsCoveringValue  (ChannelMap m _) minValue =
-    Util.accumulateWhile collectUntilEnoughValue .
-        List.sortBy descendingValueReceived .
-        fmap getOpenChanState <$> getFilteredItems m isOpen
-    where
-        isOpen (ReadyForPayment _) = True
-        isOpen _                   = False
-        collectUntilEnoughValue accumulatedItems _ =
-            sum (map valueToMe accumulatedItems) < minValue
-        -- 'Down' reverses standard (ascending) sort order
-        descendingValueReceived = comparing $ Down . fromIntegral . valueToMe
-        getOpenChanState (ReadyForPayment cs) = cs
-        getOpenChanState _                    =
-            error "BUG: Non-open channels should have been filtered off"
+fewestChannelsCoveringValue  (ChannelMap m _) minValue = undefined
+--     Util.accumulateWhile collectUntilEnoughValue .
+--         List.sortBy descendingValueReceived .
+--         fmap getOpenChanState <$> getFilteredItems m isOpen
+--     where
+--         isOpen (ReadyForPayment _) = True
+--         isOpen _                   = False
+--         collectUntilEnoughValue accumulatedItems _ =
+--             sum (map valueToMe accumulatedItems) < minValue
+--         -- 'Down' reverses standard (ascending) sort order
+--         descendingValueReceived = comparing $ Down . fromIntegral . valueToMe
+--         getOpenChanState (ReadyForPayment cs) = cs
+--         getOpenChanState _                    =
+--             error "BUG: Non-open channels should have been filtered off"
 -- Value-based settlement }
 
-gatherFromResults :: MapItemResult Key ChanState -> ReceiverPaymentChannel
+gatherFromResults :: MapItemResult Key ChanState () -> (ReceiverPaymentChannel,BitcoinAmount)
 gatherFromResults res = case res of
-      (ItemUpdated _ cs) -> gatherPayChan cs
-      NotUpdated _ _ -> error "BUG: Should not be possible since irrelevant keys have been filtered off"
-      NoSuchItem -> error "BUG: Tried to mark non-existing channel state item as settling"
+      ItemUpdated _ cs _ -> gatherPayChan cs
+      NotUpdated{}       -> error "BUG: Should not be possible since irrelevant keys have been filtered off"
+      NoSuchItem         -> error "BUG: Tried to mark non-existing channel state item as settling"
 
-gatherPayChan :: ChanState -> ReceiverPaymentChannel
+gatherPayChan :: ChanState -> (ReceiverPaymentChannel,BitcoinAmount)
 gatherPayChan cs = case cs of
     (SettlementInProgress rpc) -> rpc
     _ -> error "BUG: 'markAsSettlingIfOpen' should only update an item to 'SettlementInProgress'"

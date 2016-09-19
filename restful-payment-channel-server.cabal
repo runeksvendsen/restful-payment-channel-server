@@ -20,7 +20,7 @@ source-repository head
 Executable PayChanServer
   hs-source-dirs: src
   main-is: PayChanServer/Main.hs
-  ghc-options: -W -O2 -threaded -with-rtsopts=-N
+  ghc-options: -W -threaded -with-rtsopts=-N
                -main-is PayChanServer.Main
 
   build-depends:
@@ -58,6 +58,7 @@ Executable PayChanServer
     exceptions,
     filepath,
     tagged
+--    binary-serialise-cbor
 
   other-modules:   BlockchainAPI.Impl.Bitcoind.Interface
                    BlockchainAPI.Impl.Bitcoind.Types
@@ -67,7 +68,7 @@ Executable PayChanServer
                    ChanStore.Lib.Settlement
                    ChanStore.Lib.Types
                    ChanStore.Orphans
-                   ChanStore.Spec
+                   
                    Common.Handler.Types
                    Common.Types
                    Common.URLParam
@@ -102,7 +103,7 @@ Executable PayChanServer
 Executable ChanStore
   hs-source-dirs: src
   main-is: ChanStore/Main.hs
-  ghc-options: -W -O2 -threaded -with-rtsopts=-N -main-is ChanStore.Main
+  ghc-options: -W -threaded -with-rtsopts=-N -main-is ChanStore.Main
   default-extensions: OverloadedStrings
   build-depends:
     base                      >= 4     && < 5,
@@ -138,6 +139,7 @@ Executable ChanStore
     spawn,
     stm,
     list-t
+--    binary-serialise-cbor
 
   other-modules:    BlockchainAPI.Impl.Bitcoind.Interface
                     BlockchainAPI.Impl.Bitcoind.Types
@@ -149,7 +151,7 @@ Executable ChanStore
                     ChanStore.Lib.Settlement
                     ChanStore.Lib.Types
                     ChanStore.Orphans
-                    ChanStore.Spec
+                    
                     Common.Handler.Types
                     Common.Types
                     Common.URLParam
@@ -184,7 +186,7 @@ Executable ChanStore
 Executable SigningService
   hs-source-dirs: src
   main-is: SigningService/Main.hs
-  ghc-options: -W -O2 -main-is SigningService.Main
+  ghc-options: -W -main-is SigningService.Main
   default-extensions: OverloadedStrings
   build-depends:
     base                      >= 4     && < 5,
@@ -210,7 +212,7 @@ Executable SigningService
                         ChanStore.Lib.Settlement
                         ChanStore.Lib.Types
                         ChanStore.Orphans
-                        ChanStore.Spec
+                        
                         Common.Handler.Types
                         Common.Types
                         Common.URLParam
@@ -275,7 +277,7 @@ Executable GenTestData
                             ChanStore.Interface
                             ChanStore.Lib.Types
                             ChanStore.Orphans
-                            ChanStore.Spec
+                            
                             Common.Handler.Types
                             Common.Types
                             Common.URLParam
@@ -321,7 +323,7 @@ Executable RunTestData
                             ChanStore.Interface
                             ChanStore.Lib.Types
                             ChanStore.Orphans
-                            ChanStore.Spec
+                            
                             Common.Handler.Types
                             Common.Types
                             Common.URLParam

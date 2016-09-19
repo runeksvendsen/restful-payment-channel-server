@@ -5,25 +5,30 @@ module ChanStore.Lib.ChanMap where
 
 import           Data.DiskMap (newDiskMap, SyncAction,
                             addItem, getItem,
-                            CreateResult,
-                            mapGetItem,
+                            CreateResult(..),
+                            MapItemResult(..),getResult,
+                            mapGetItem, updateIfRight,
                             getItemCount,
                             getFilteredKeys,
                             makeReadOnly)
 
-import           ChanStore.Lib.Types hiding (CreateResult(..), UpdateResult(..), CloseResult(..))
+import           Common.Types
+import           ChanStore.Lib.Types
 import           PayChanServer.Config.Types (ServerDBConf(..))
+
 import           Data.Bitcoin.PaymentChannel.Types
-import           Data.Bitcoin.PaymentChannel.Util (unsafeUpdateRecvState)
+import           Data.Bitcoin.PaymentChannel.Movable
+
 import           Control.Concurrent.STM (STM, atomically)
 import           Control.Monad.Catch (finally, handleAll, Exception)
 import           Control.Concurrent (forkIO, killThread, threadDelay)
-import           Control.Exception.Base (AsyncException(ThreadKilled), asyncExceptionFromException)
+
+import           Data.Maybe (fromMaybe)
 
 
 logImportantError = putStrLn
 
-
+-- Create/destroy
 createChanMap :: ServerDBConf -> IO ChannelMap
 createChanMap (ServerDBConf syncDir syncInterval) =
     if syncInterval == 0 then do
@@ -43,24 +48,54 @@ destroyChanMap (ChannelMap chanMap (Just (syncAction,syncThreadId))) = do
     syncNow syncAction
 destroyChanMap (ChannelMap _ Nothing) = return ()
 
-getChanState :: ChannelMap -> Key -> IO (Maybe ChanState)
-getChanState (ChannelMap chanMap _) = getItem chanMap
+-- Storage interface
+addChanState :: ChannelMap -> OpenRequest -> IO OpenResult
+addChanState (ChannelMap diskMap _) (OpenRequest cp fti fp) =
+    either
+        (return . OpenError)
+        (\(amt, mc, valLeft) ->
+            addItem diskMap key (ReadyForPayment mc) >>=
+            (\res -> case res of
+                    Created         -> return $ ChannelOpened amt valLeft
+                    AlreadyExists   -> return   ChannelExists))
+        (newMovableChan cp fti fp)
+    where key = cpSenderPubKey cp
 
-addChanState :: ChannelMap -> Key -> ReceiverPaymentChannel -> IO CreateResult
-addChanState (ChannelMap chanMap _) key chanState =
-    addItem chanMap key (ReadyForPayment chanState)
-
-updateChanState :: ChannelMap -> Key -> Payment -> IO (MapItemResult Key ChanState)
-updateChanState (ChannelMap chanMap _) key payment =
+registerPayment :: ChannelMap -> PayRequest -> IO PayResult
+registerPayment (ChannelMap diskMap _) (PayRequest key fp) =
     let
-        updateIfOpen (ReadyForPayment rpc) =
-            Just $ ReadyForPayment (unsafeUpdateRecvState rpc payment)
-        updateIfOpen _ =
-            Nothing
+        updFunc :: ChanState -> Either PayResult (ChanState, PayResult)
+        updFunc (ReadyForPayment mc)   =
+            case recvSinglePayment mc fp of
+                Right (amt, newMC, valLeft) ->    Right (ReadyForPayment newMC, PaymentReceived amt valLeft)
+                Left payChanErr    ->    Left $ PaymentError payChanErr
+        updFunc (ChannelSettled txid _ (rpc,_)) =
+            Left $ PayUpdateError $ ChanClosed txid (channelValueLeft rpc)
+        updFunc SettlementInProgress{} = Left $ PayUpdateError ChanBeingClosed
+        checkMapUpdRes res             =
+            fromMaybe (PayUpdateError NoSuchChannel) (getResult res)
     in
-        mapGetItem chanMap updateIfOpen key
+        checkMapUpdRes <$> updateIfRight diskMap key updFunc
 
-mapLen (ChannelMap chanMap _) = getItemCount chanMap
+closeBegin :: ChannelMap -> CloseBeginRequest -> IO CloseBeginResult
+closeBegin (ChannelMap diskMap _) (CloseBeginRequest (ChannelResource clientPK lt op) sig) =
+    let
+        updFunc :: ChanState -> Either CloseBeginResult (ChanState, CloseBeginResult)
+        updFunc (ReadyForPayment mc)   = case getStateByInfo mc lt op of
+                Nothing      -> Left $ CloseUpdateError NoSuchChannel
+                Just (rpc,v) -> checkRpcSig rpc >>
+                    Right (SettlementInProgress (rpc,v),
+                           CloseInitiated       (rpc,v))
+                where checkRpcSig rpc =
+                        if getNewestSig rpc == sig then Right () else Left IncorrectSig
+        updFunc (ChannelSettled txid _ (rpc,_)) =
+            Left $ CloseUpdateError $ ChanClosed txid (channelValueLeft rpc)
+        updFunc SettlementInProgress{} = Left $ CloseUpdateError ChanBeingClosed
+        checkMapUpdRes res             = fromMaybe (CloseUpdateError NoSuchChannel) (getResult res)
+    in
+        checkMapUpdRes <$> updateIfRight diskMap clientPK updFunc
+
+mapLen (ChannelMap diskMap _) = getItemCount diskMap
 
 openChannelCount :: ChannelMap -> IO Int
 openChannelCount (ChannelMap chanMap _) = atomically $

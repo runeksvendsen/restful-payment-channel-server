@@ -22,7 +22,7 @@ import qualified Network.Wai as Wai
 import qualified Network.Wai.Handler.Warp as Warp
 import qualified Control.Monad.Reader as Reader
 
--- Debug
+-- Profile
 import           Test.Profile (profile_selfDestruct)
 
 
@@ -44,6 +44,7 @@ main = wrapArg $ \cfg _ -> do
     _ <- forkIO $ startSettlementThread cfg (60 * 5)  -- run every 5 minutes
     -- Shut down on TERM signal
     myThreadId >>= installHandlerKillThreadOnSig Sig.sigTERM
+--     myThreadId >>= profile_selfDestruct
     -- Start server
     runApp cfg
 
