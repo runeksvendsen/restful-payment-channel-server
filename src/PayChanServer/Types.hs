@@ -18,7 +18,7 @@ import           Data.Word                          (Word32)
 import Data.List (stripPrefix)
 import Data.Maybe (fromMaybe)
 import Data.Aeson (Value(..), genericToJSON, genericParseJSON)
-import Data.Aeson.Types (Options(..), defaultOptions)
+import Data.Aeson.Types (Options(..), defaultOptions, camelTo2)
 import Data.Text (Text)
 import qualified Data.Text as T
 import           GHC.Generics (Generic)
@@ -54,14 +54,14 @@ data PaymentResult = PaymentResult
 
 -- |
 data FundingInfo = FundingInfo
-    { fundingInfo_server_pubkey             :: RecvPubKey -- ^ Server/value receiver public key. Hex-encoded, compressed Secp256k1 pubkey, 33 bytes.
-    , fundingInfo_dust_limit                :: DustLimit  -- ^ (Satoshis) The server will not accept payments where the client change amount is less than this amount. This \"dust limit\" is necessary in order to avoid producing a settlement transaction that will not circulate in the Bitcoin P2P network because it contains an output of minuscule value. Consequently, the maximum amount, that can be sent over the payment channel, is the amount sent to the funding address minus this \"dust limit\".
-    , fundingInfo_funding_address_copy      :: Address    -- ^ Server derived channel funding address. The client will confirm that its own derived funding address matches this one, before paying to it.
-    , fundingInfo_redeem_script_copy        :: Script     -- ^ Server derived channel redeem script. Defines sender, receiver and channel expiration date. Used to construct the input in the payment transaction. The client will also verify that this matches what it expects. Hex-encoded.
-    , fundingInfo_open_price                :: OpenPrice -- ^ Price (in satoshis) for opening a channel with the given {exp_time}. This amount is paid in the initial channel payment when creating a new channel. May be zero, in which case a payment of zero value is transferred, ensuring that the channel can be closed at any time.
-    , fundingInfo_funding_tx_min_conf       :: BtcConf -- ^ Minimum confirmation count that the funding transaction must have before proceeding with opening a new channel.
-    , fundingInfo_settlement_period_hours   :: SettleHours -- ^ The server reserves the right to close the payment channel this many hours before the specified expiration date. The server hasn't received any actual value until it publishes a payment transaction to the Bitcoin network, so it needs a window of time in which the client can no longer send payments over the channel, and yet the channel refund transaction hasn't become valid.
-    , fundingInfo_min_duration_hours        :: DurationHours
+    { fundingInfoServerPubkey             :: RecvPubKey -- ^ Server/value receiver public key. Hex-encoded, compressed Secp256k1 pubkey, 33 bytes.
+    , fundingInfoDustLimit                :: DustLimit  -- ^ (Satoshis) The server will not accept payments where the client change amount is less than this amount. This \"dust limit\" is necessary in order to avoid producing a settlement transaction that will not circulate in the Bitcoin P2P network because it contains an output of minuscule value. Consequently, the maximum amount, that can be sent over the payment channel, is the amount sent to the funding address minus this \"dust limit\".
+    , fundingInfoFundingAddressCopy      :: Address    -- ^ Server derived channel funding address. The client will confirm that its own derived funding address matches this one, before paying to it.
+    , fundingInfoRedeem_scriptCopy        :: Script     -- ^ Server derived channel redeem script. Defines sender, receiver and channel expiration date. Used to construct the input in the payment transaction. The client will also verify that this matches what it expects. Hex-encoded.
+    , fundingInfoOpenPrice                :: OpenPrice -- ^ Price (in satoshis) for opening a channel with the given {exp_time}. This amount is paid in the initial channel payment when creating a new channel. May be zero, in which case a payment of zero value is transferred, ensuring that the channel can be closed at any time.
+    , fundingInfoFunding_tx_min_conf       :: BtcConf -- ^ Minimum confirmation count that the funding transaction must have before proceeding with opening a new channel.
+    , fundingInfoSettlement_period_hours   :: SettleHours -- ^ The server reserves the right to close the payment channel this many hours before the specified expiration date. The server hasn't received any actual value until it publishes a payment transaction to the Bitcoin network, so it needs a window of time in which the client can no longer send payments over the channel, and yet the channel refund transaction hasn't become valid.
+    , fundingInfoMin_duration_hours        :: DurationHours
     } deriving (Show, Eq, Generic)
 
 
@@ -72,9 +72,9 @@ data ChannelLocation = ChannelLocation
     } deriving (Show, Eq, Generic)
 
 instance FromJSON FundingInfo where
-  parseJSON  = genericParseJSON  (removeFieldLabelPrefix True "fundingInfo_")
+  parseJSON  = genericParseJSON  (removeFieldLabelPrefix True "fundingInfo")
 instance ToJSON FundingInfo where
-  toJSON     = genericToJSON     (removeFieldLabelPrefix False "fundingInfo_")
+  toJSON     = genericToJSON     (removeFieldLabelPrefix False "fundingInfo")
 
 instance FromJSON PaymentResult where
   parseJSON  = genericParseJSON  (removeFieldLabelPrefix True "paymentResult_")
@@ -84,7 +84,7 @@ instance ToJSON PaymentResult where
 removeFieldLabelPrefix :: Bool -> String -> Options
 removeFieldLabelPrefix forParsing prefix =
   defaultOptions
-    { fieldLabelModifier = fromMaybe (error ("did not find prefix " ++ prefix)) . stripPrefix prefix . replaceSpecialChars
+    { fieldLabelModifier = camelTo2 '_' . fromMaybe (error ("did not find prefix " ++ prefix)) . stripPrefix prefix . replaceSpecialChars
     }
   where
     replaceSpecialChars field = foldl (&) field (map mkCharReplacement specialChars)
