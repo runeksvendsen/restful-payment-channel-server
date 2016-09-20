@@ -1,7 +1,6 @@
 module PayChanServer.URI where
 
 import qualified PayChanServer.API as API
--- import           PayChanServer.Types
 import           Servant
 
 api = Proxy :: Proxy API.RBPCP
