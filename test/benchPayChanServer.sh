@@ -13,7 +13,7 @@ ENDPOINT="$3"
 ## Get server pubkey
 CLIENTPK=03da3afe4f58992a8cc909522c2ec859ef218fd92fda0a67c23fb40e0303030405
 EXP=1500000000
-PUBKEY=$(curl --silent "http://$ENDPOINT/funding/$CLIENTPK/$EXP/info" | jq -r ".server_pubkey")
+PUBKEY=$(curl --silent "http://$ENDPOINT/v2/funding/$CLIENTPK/$EXP/info" | jq -r ".server_pubkey")
 if [ -z $PUBKEY ]; then
    echo "Failed to get pubkey from $ENDPOINT"
    exit 1

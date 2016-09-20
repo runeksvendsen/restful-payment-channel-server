@@ -9,6 +9,6 @@ fi
 
 for CORES in $(seq 1 $4); do
    echo "$CORES cores"
-   ./runTestServer.sh $1 $2 $3 $CORES > /dev/null
+   ./runTestServer.sh $1 $2 $3 $CORES  # > /dev/null
 done
 

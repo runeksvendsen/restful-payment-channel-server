@@ -9,14 +9,15 @@ import qualified Network.Haskoin.Crypto      as HC
 import           Data.Word (Word32)
 
 
+type VER = "v2"
 type BLT = BitcoinLockTime
 type Sig = HC.Signature
 
-type FundInfo  = "funding"  :> Capture "client_pubkey" SendPubKey :> Capture "exp_time" BLT :> "info" :> Verb 'GET 200 '[JSON] FundingInfo
-type BeginOpen = "funding"  :> Capture "client_pubkey" SendPubKey :> Capture "exp_time" BLT :> "begin_open" :> Header "Host" String :> Verb 'GET 200 '[JSON] ChannelLocation
-type ChanOpen  = "channels" :> Capture "client_pubkey" SendPubKey :> Capture "exp_time" BLT :> Capture "funding_txid" HT.TxHash :> Capture "funding_vout" Word32 :> ReqBody '[JSON] FullPayment :> Verb 'POST 201 '[JSON] PaymentResult
-type ChanPay   = "channels" :> Capture "client_pubkey" SendPubKey :> Capture "exp_time" BLT :> Capture "funding_txid" HT.TxHash :> Capture "funding_vout" Word32 :> ReqBody '[JSON] FullPayment :> Verb 'PUT 200 '[JSON] PaymentResult
-type ChanClose = "channels" :> Capture "client_pubkey" SendPubKey :> Capture "exp_time" BLT :> Capture "funding_txid" HT.TxHash :> Capture "funding_vout" Word32 :> QueryParam "sig" Sig        :> Verb 'DELETE 200 '[JSON] PaymentResult
+type FundInfo  = VER :> "funding"  :> Capture "client_pubkey" SendPubKey :> Capture "exp_time" BLT :> "info" :> Get '[JSON] FundingInfo
+type BeginOpen = VER :> "funding"  :> Capture "client_pubkey" SendPubKey :> Capture "exp_time" BLT :> "begin_open" :> Header "Host" String :> Get '[JSON] ChannelLocation
+type ChanOpen  = VER :> "channels" :> Capture "client_pubkey" SendPubKey :> Capture "exp_time" BLT :> Capture "funding_txid" HT.TxHash :> Capture "funding_vout" Word32 :> ReqBody '[JSON] FullPayment :> Verb 'POST 201 '[JSON] PaymentResult
+type ChanPay   = VER :> "channels" :> Capture "client_pubkey" SendPubKey :> Capture "exp_time" BLT :> Capture "funding_txid" HT.TxHash :> Capture "funding_vout" Word32 :> ReqBody '[JSON] FullPayment :> Put '[JSON] PaymentResult
+type ChanClose = VER :> "channels" :> Capture "client_pubkey" SendPubKey :> Capture "exp_time" BLT :> Capture "funding_txid" HT.TxHash :> Capture "funding_vout" Word32 :> QueryParam "sig" Sig        :> Delete '[JSON] PaymentResult
 
 type RBPCP =
        FundInfo
