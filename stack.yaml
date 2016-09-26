@@ -1,4 +1,4 @@
-resolver: lts-6.4
+resolver: lts-7.1
 
 flags: {}
 
@@ -47,6 +47,7 @@ extra-deps:
 - io-streams-haproxy-1.0.0.0
 # _Other
 - spawn-0.3
+- map-syntax-0.2.0.1
 
 
 

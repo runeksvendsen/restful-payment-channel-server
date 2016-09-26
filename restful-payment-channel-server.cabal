@@ -339,3 +339,18 @@ Executable RunTestData
                             Test.GenData
 
 
+Executable GenClientJS
+    hs-source-dirs:       src
+    main-is:              Client/GenJS.hs
+    ghc-options:          -W -O2 -main-is Client.GenJS
+    default-language:     Haskell2010
+
+    Build-depends:
+      base                      >= 4     && < 5,
+      mtl                       >= 2     && < 3,
+      bytestring                >= 0.9.1 && < 0.11,
+      bitcoin-payment-channel   == 0.4.0.0,
+      servant,
+      servant-js
+
+    other-modules:
