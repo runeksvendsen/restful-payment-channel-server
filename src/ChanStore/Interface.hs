@@ -13,6 +13,7 @@ Potato
 module ChanStore.Interface
 (
     Interface(chanOpen , chanPay
+            , manPayData
             , settleByExpBegin
             , settleByInfoBegin , settleFin)
   , mkChanStoreInterface
@@ -38,6 +39,7 @@ mkChanStoreInterface (Conn2 baseUrl man) =
     Interface
         (\or  -> failOnLeft =<< Servant.runReq (chanOpen'           or  man baseUrl) )
         (\k fp-> failOnLeft =<< Servant.runReq (chanPay'           k fp man baseUrl) )
+        (\k a s-> failOnLeft =<< Servant.runReq (manPayData'        k a s man baseUrl) )
         (\exp -> failOnLeft =<< Servant.runReq (settleByExpBegin'   exp man baseUrl) )
         (\inf -> failOnLeft =<< Servant.runReq (settleByInfoBegin'  inf man baseUrl) )
         (\val -> failOnLeft =<< Servant.runReq (settleByValBegin'   val man baseUrl) )
@@ -45,18 +47,19 @@ mkChanStoreInterface (Conn2 baseUrl man) =
     where failOnLeft = either error return
 
 data Interface = Interface {
-    chanOpen            :: OpenRequest          -> IO OpenResult
-  , chanPay             :: Key -> FullPayment   -> IO PayResult
-  , settleByExpBegin    :: UTCTime              -> IO [ReceiverPaymentChannel]
-  , settleByInfoBegin   :: CloseBeginRequest    -> IO CloseBeginResult
-  , settleByValBegin    :: BitcoinAmount        -> IO [ReceiverPaymentChannel]
-  , settleFin           :: Key -> HT.TxHash     -> IO ()
+    chanOpen            :: OpenRequest                  -> IO OpenResult
+  , chanPay             :: Key -> FullPayment           -> IO PayResult
+  , manPayData          :: Key -> BitcoinAmount -> JSONString -> IO DataPayloadResult
+  , settleByExpBegin    :: UTCTime                      -> IO [ReceiverPaymentChannel]
+  , settleByInfoBegin   :: CloseBeginRequest            -> IO CloseBeginResult
+  , settleByValBegin    :: BitcoinAmount                -> IO [ReceiverPaymentChannel]
+  , settleFin           :: Key -> HT.TxHash             -> IO ()
 }
 
 api :: Proxy API.ChanStore
 api = Proxy
 
-chanOpen' :<|> chanPay' :<|> settleByInfoBegin' :<|>
+chanOpen' :<|> chanPay' :<|> manPayData' :<|> settleByInfoBegin' :<|>
     settleByExpBegin' :<|> settleByValBegin' :<|> settleFin' =
         client api
 

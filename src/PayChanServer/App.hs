@@ -9,15 +9,21 @@ import           PayChanServer.Handler.Pay (chanPayHandler)
 import           PayChanServer.Handler.Close (chanSettleHandler)
 import           PayChanServer.Handler.BeginOpen (beginOpenHandler)
 
+-- Management
+import           PayChanServer.Handler.Management.PayData (setupDataPayload)
+
 import           Servant
 import qualified PayChanServer.API as API
 
 
-server :: ServerT API.RBPCP AppPC
-server = fundingInfo :<|> beginOpen :<|> chanOpen :<|> chanPay :<|> chanClose
+payChanServer :: ServerT API.RBPCP AppPC
+payChanServer = fundingInfo :<|> beginOpen :<|> chanOpen :<|> chanPay :<|> chanClose
     where
         fundingInfo = fundingInfoHandler
         beginOpen   = beginOpenHandler
         chanOpen    = chanOpenHandler
         chanPay     = chanPayHandler
         chanClose   = chanSettleHandler
+
+managementServer :: ServerT API.Man AppPC
+managementServer = setupDataPayload

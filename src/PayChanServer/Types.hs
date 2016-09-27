@@ -26,8 +26,8 @@ import           Data.Function ((&))
 
 
 type Vout = Word32
-
 type AppPC = AppM App
+
 
 
 data ChannelStatus = ChannelOpen | ChannelClosed deriving (Show, Eq)
@@ -50,6 +50,7 @@ data PaymentResult = PaymentResult
     , paymentResult_channel_valueLeft :: BitcoinAmount    -- ^ Remaining channel value. This is the amount that the client/sender would receive if the channel was closed now.
     , paymentResult_value_received    :: BitcoinAmount    -- ^ Value of the payment that was just received. This is the additional value assigned to the receiver/server with this payment.
     , paymentResult_settlement_txid   :: Maybe TxHash     -- ^ If channel_status equals \"closed\": the transaction ID of the Bitcoin transaction which settles the channel; otherwise null.
+    , paymentResult_application_data  :: Maybe T.Text     -- ^ Optional application data
     } deriving (Show, Eq, Generic)
 
 -- |

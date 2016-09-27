@@ -54,7 +54,7 @@ addChanState (ChannelMap diskMap _) (OpenRequest cp fti fp) =
     either
         (return . OpenError)
         (\(amt, mc, valLeft) ->
-            addItem diskMap key (ReadyForPayment mc) >>=
+            addItem diskMap key (ReadyForPayment mc NoPayload) >>=
             (\res -> case res of
                     Created         -> return $ ChannelOpened amt valLeft
                     AlreadyExists   -> return   ChannelExists))
@@ -65,10 +65,16 @@ registerPayment :: ChannelMap -> PayRequest -> IO PayResult
 registerPayment (ChannelMap diskMap _) (PayRequest key fp) =
     let
         updFunc :: ChanState -> Either PayResult (ChanState, PayResult)
-        updFunc (ReadyForPayment mc)   =
+        -- Success
+        updFunc (ReadyForPayment mc pl)   =
             case recvSinglePayment mc fp of
-                Right (amt, newMC, valLeft) ->    Right (ReadyForPayment newMC, PaymentReceived amt valLeft)
-                Left payChanErr    ->    Left $ PaymentError payChanErr
+                Right (valRecvd, newMC, valLeft) ->
+                        Right   ( ReadyForPayment newMC NoPayload
+                                , PaymentReceived valRecvd valLeft (getDataPayload pl valRecvd)
+                                )
+                Left payChanErr    ->
+                        Left $ PaymentError payChanErr
+        -- Error
         updFunc (ChannelSettled txid _ (rpc,_)) =
             Left $ PayUpdateError $ ChanClosed txid (channelValueLeft rpc)
         updFunc SettlementInProgress{} = Left $ PayUpdateError ChanBeingClosed
@@ -81,7 +87,7 @@ closeBegin :: ChannelMap -> CloseBeginRequest -> IO CloseBeginResult
 closeBegin (ChannelMap diskMap _) (CloseBeginRequest (ChannelResource clientPK lt op) sig) =
     let
         updFunc :: ChanState -> Either CloseBeginResult (ChanState, CloseBeginResult)
-        updFunc (ReadyForPayment mc)   = case getStateByInfo mc lt op of
+        updFunc (ReadyForPayment mc _)   = case getStateByInfo mc lt op of
                 Nothing      -> Left $ CloseUpdateError NoSuchChannel
                 Just (rpc,v) -> checkRpcSig rpc >>
                     Right (SettlementInProgress (rpc,v),
@@ -94,6 +100,22 @@ closeBegin (ChannelMap diskMap _) (CloseBeginRequest (ChannelResource clientPK l
         checkMapUpdRes res             = fromMaybe (CloseUpdateError NoSuchChannel) (getResult res)
     in
         checkMapUpdRes <$> updateIfRight diskMap clientPK updFunc
+
+
+-- |Management
+registerDataPayload :: ChannelMap -> DataPayloadRequest -> IO DataPayloadResult
+registerDataPayload (ChannelMap diskMap _) (DataPayloadRequest key pl amt) =
+    let
+        updFunc :: ChanState -> Either DataPayloadResult (ChanState, DataPayloadResult)
+        updFunc (ReadyForPayment mc _)   =
+            Right (ReadyForPayment mc (PayloadAtPrice pl amt), OK)
+        updFunc (ChannelSettled txid _ (rpc,_)) =
+            Left $ RegisterPayloadError $ ChanClosed txid (channelValueLeft rpc)
+        updFunc SettlementInProgress{} = Left $ RegisterPayloadError ChanBeingClosed
+        checkMapUpdRes res             =
+            fromMaybe (RegisterPayloadError NoSuchChannel) (getResult res)
+    in
+        checkMapUpdRes <$> updateIfRight diskMap key updFunc
 
 mapLen (ChannelMap diskMap _) = getItemCount diskMap
 
@@ -135,5 +157,5 @@ isSettled (ChannelSettled _ _ _) = True
 isSettled _                      = False
 
 isOpen :: ChanState -> Bool
-isOpen (ReadyForPayment _) = True
+isOpen (ReadyForPayment _ _) = True
 isOpen _                   = False

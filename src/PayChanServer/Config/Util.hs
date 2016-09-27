@@ -3,6 +3,7 @@
 module  PayChanServer.Config.Util
 (
 loadConfig,configLookupOrFail,
+getManagementIfacePort,
 getChanConf,
 getServerSettleConfig,
 getBlockchainIface,getSigningServiceConn,
@@ -50,6 +51,9 @@ configLookupOrFail conf name =
         (fail $ "ERROR: Failed to read key \"" ++ cs name ++
             "\" in config (key not present or invalid)")
         return
+
+getManagementIfacePort :: Config -> IO Word
+getManagementIfacePort cfg = configLookupOrFail cfg "managementInterface.port"
 
 getBlockchainHost :: Config -> IO BaseUrl.BaseUrl
 getBlockchainHost cfg = BaseUrl.BaseUrl <$>

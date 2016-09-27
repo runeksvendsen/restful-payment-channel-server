@@ -32,7 +32,7 @@ chanOpenHandler sendPK lockTime fundTxId fundIdx payment = do
             ChannelOpened amtRecvd valLeft -> return (amtRecvd,valLeft)
             OpenError     err      -> userError' $ show err
             ChannelExists          ->
-                errorWithDescription 409 "Channel already exists"
+                errorWithDescription 409 "Channel already exists for pubkey"
 
     openPrice <- Conf.getVal . Conf.openPrice <$> view Conf.chanConf
     when (valRecvd < openPrice) $
@@ -44,4 +44,5 @@ chanOpenHandler sendPK lockTime fundTxId fundIdx payment = do
            , paymentResult_channel_valueLeft  = chanValLeft
            , paymentResult_value_received     = valRecvd
            , paymentResult_settlement_txid    = Nothing
+           , paymentResult_application_data   = Nothing
            }

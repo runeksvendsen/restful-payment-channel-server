@@ -4,6 +4,7 @@
 module ChanStore.Lib.Types
 (
     module ChanStore.Lib.Types
+  , module Common.Types
   , MapItemResult(..)
 )
 
@@ -23,6 +24,7 @@ import           Data.String.Conversions (cs)
 import           Control.Concurrent (ThreadId)
 import qualified Servant.API.ContentTypes as Content
 import           GHC.Generics
+import           Data.Serialize.Text ()
 
 type Key = SendPubKey
 
@@ -32,9 +34,15 @@ data ChannelMap = ChannelMap
 
 -- |Holds state for each payment channel
 data ChanState =
-    ReadyForPayment         MovableChan
-  | ChannelSettled          HT.TxHash Payment (ReceiverPaymentChannel,BitcoinAmount)
+    ReadyForPayment         MovableChan PayDataPayload
+  | ChannelSettled          HT.TxHash   Payment (ReceiverPaymentChannel,BitcoinAmount)
   | SettlementInProgress    (ReceiverPaymentChannel,BitcoinAmount)
+
+-- |For each open payment channel, the server operator can choose to register a data payload,
+-- which will be sent in response to a successful payment of the specified value.
+data PayDataPayload =
+    NoPayload
+  | PayloadAtPrice JSONString BitcoinAmount
 
 data UpdateResult =
     ChanClosed      TxHash BitcoinAmount
@@ -54,6 +62,7 @@ data PayResult =
     PaymentReceived {
         paymentVal      ::  BitcoinAmount
       , chanValLeft     ::  BitcoinAmount
+      , maybeAppData    ::  Maybe JSONString    -- From 'PayDataPayload', if present
     }
   | PaymentError    PayChanError
   | PayUpdateError  UpdateResult
@@ -66,6 +75,21 @@ data CloseBeginResult  =
   | CloseUpdateError    UpdateResult
         deriving Generic
 
+-- |Management
+data DataPayloadRequest = DataPayloadRequest Key JSONString BitcoinAmount deriving Generic
+data DataPayloadResult =
+    OK
+  | RegisterPayloadError  UpdateResult
+        deriving Generic
+
+getDataPayload :: PayDataPayload -> BitcoinAmount -> Maybe JSONString
+getDataPayload  NoPayload _ = Nothing
+getDataPayload (PayloadAtPrice appData chargeAmt) recvdAmt =
+    if recvdAmt >= chargeAmt then
+            Just appData
+        else
+            Nothing
+
 instance Bin.Serialize UpdateResult
 instance Bin.Serialize OpenRequest
 instance Bin.Serialize OpenResult
@@ -73,7 +97,8 @@ instance Bin.Serialize PayRequest
 instance Bin.Serialize PayResult
 instance Bin.Serialize CloseBeginRequest
 instance Bin.Serialize CloseBeginResult
-
+instance Bin.Serialize DataPayloadRequest
+instance Bin.Serialize DataPayloadResult
 
 
 -- Instances
@@ -112,6 +137,10 @@ instance Content.MimeUnrender Content.OctetStream PayResult where
 instance Content.MimeRender Content.OctetStream PayResult where
     mimeRender _ = BL.fromStrict . Bin.encode
 
+instance Content.MimeUnrender Content.OctetStream DataPayloadResult where
+    mimeUnrender _ = deserEither . BL.toStrict
+instance Content.MimeRender Content.OctetStream DataPayloadResult where
+    mimeRender _ = BL.fromStrict . Bin.encode
 
 
 
@@ -131,23 +160,27 @@ instance Serializable ChanState where
     deserialize = deserEither . cs
 
 instance Bin.Serialize ChanState where
-    put (ReadyForPayment mc) =
+    put (ReadyForPayment mc pl) =
         Bin.putWord8 0x02 >>
-        Bin.put mc
+        Bin.put mc >> Bin.put pl
     put (ChannelSettled txid payment s) =
         Bin.putWord8 0x03 >>
         Bin.put txid >> Bin.put payment >> Bin.put s
     put (SettlementInProgress s) =
         Bin.putWord8 0x04 >>
         Bin.put s
-
     get = Bin.getWord8 >>=
         (\byte -> case byte of
-            0x02    -> ReadyForPayment   <$> Bin.get
+            0x02    -> ReadyForPayment   <$> Bin.get <*> Bin.get
             0x03    -> ChannelSettled   <$> Bin.get <*> Bin.get <*> Bin.get
             0x04    -> SettlementInProgress <$> Bin.get
             n       -> fail $ "unknown start byte: " ++ show n)
 
-
-
-
+instance Bin.Serialize PayDataPayload where
+    put NoPayload = Bin.putWord8 0x01
+    put (PayloadAtPrice str amt) = Bin.putWord8 0x02 >> Bin.put str >> Bin.put amt
+    get = Bin.getWord8 >>=
+            (\byte -> case byte of
+                0x01    -> return NoPayload
+                0x02    -> PayloadAtPrice  <$> Bin.get <*> Bin.get
+                n       -> fail $ "unknown start byte: " ++ show n)

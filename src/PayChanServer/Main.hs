@@ -25,18 +25,23 @@ import qualified Control.Monad.Reader as Reader
 -- Profile
 import           Test.Profile (profile_selfDestruct)
 
-
-api :: Proxy API.RBPCP
-api = Proxy
-
-serverEmbed :: Conf.App -> Server API.RBPCP
-serverEmbed cfg = enter (readerToEither cfg) App.server
-
 readerToEither :: Conf.App -> AppPC :~> Handler
 readerToEither cfg = Nat $ \x -> Reader.runReaderT x cfg
 
-app :: Conf.App -> Wai.Application
-app cfg = serve api $ serverEmbed cfg
+
+apiRBPCP :: Proxy API.RBPCP
+apiRBPCP = Proxy
+
+apiMan :: Proxy API.Man
+apiMan = Proxy
+
+payChanApp :: Conf.App -> Wai.Application
+payChanApp cfg = serve apiRBPCP $ serverEmbedConf App.payChanServer cfg
+    where serverEmbedConf server cfg = enter (readerToEither cfg) server
+
+managementApp :: Conf.App -> Wai.Application
+managementApp cfg = serve apiMan $ serverEmbedConf App.managementServer cfg
+    where serverEmbedConf server cfg = enter (readerToEither cfg) server
 
 main :: IO ()
 main = wrapArg $ \cfg _ -> do
@@ -53,8 +58,16 @@ runApp cfg = do
     --  Get port from PORT environment variable, if it contains a valid port number
     maybePort <- maybe Nothing readMaybe <$> lookupEnv "PORT"
     appConf <- appConfInit cfg
-    --  Start app
-    Warp.run (fromIntegral . fromMaybe 8080 $ maybePort) (app appConf)
+    --  Start management interface
+    port <- getManagementIfacePort cfg
+    forkIO $ runManIface port appConf
+    --  Start paychan app
+    Warp.run (fromIntegral . fromMaybe 8080 $ maybePort) (payChanApp appConf)
+
+runManIface :: Word -> Conf.App -> IO ()
+runManIface port appConf = do
+    putStrLn $ "Starting management interface on port " ++ show port
+    Warp.run (fromIntegral port) (managementApp appConf)
 
 -- |Close payment channels before we reach the expiration date,
 --  because if we don't, the client can reclaim all the funds sent to us,

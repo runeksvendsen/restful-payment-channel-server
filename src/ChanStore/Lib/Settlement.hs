@@ -33,7 +33,7 @@ beginSettlingChannels (ChannelMap m _) keyGetterAction = do
     res <- mapGetItems m markAsSettlingIfOpen keyGetterAction
     return $ map gatherFromResults res
     where
-          markAsSettlingIfOpen (ReadyForPayment mc)  = Just $
+          markAsSettlingIfOpen (ReadyForPayment mc _)  = Just $
               SettlementInProgress (getStateForClosing mc)
           -- Should never be reached, as we're fetching the relevant keys and their corresponding items atomically
           markAsSettlingIfOpen SettlementInProgress{} = Nothing
@@ -56,7 +56,7 @@ openChannelsExpiringBefore :: UTCTime -> ChannelMap -> STM [(Key,ChanState)]
 openChannelsExpiringBefore currentTimeIsh (ChannelMap m _) =
     getFilteredKV m isOpenAndExpiresBefore
     where
-        isOpenAndExpiresBefore (ReadyForPayment cs) = chanExpiresBefore cs
+        isOpenAndExpiresBefore (ReadyForPayment cs _) = chanExpiresBefore cs
         isOpenAndExpiresBefore _ = False
         chanExpiresBefore = expiresEarlierThan currentTimeIsh . getExpirationDate
 

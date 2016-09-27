@@ -13,6 +13,7 @@ module Common.Types (
     , HC.Address
     , CreateResult(..)
     , BS.ByteString
+    , JSONString
 ) where
 
 import           Data.Bitcoin.PaymentChannel.Types
@@ -22,7 +23,8 @@ import qualified Network.Haskoin.Crypto      as HC
 import qualified Network.Haskoin.Script      as HS
 
 import qualified Data.ByteString             as BS
-import qualified Data.Serialize as Bin
+import qualified Data.Serialize              as Bin
+import qualified Data.Text                   as T
 
 import           Common.Handler.Types
 import           Control.Monad.IO.Class (MonadIO)
@@ -33,3 +35,4 @@ data ChannelResource = ChannelResource SendPubKey BitcoinLockTime HT.OutPoint
         deriving Generic
 
 instance Bin.Serialize ChannelResource
+type JSONString = T.Text

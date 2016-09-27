@@ -47,4 +47,5 @@ chanSettleHandler sendPK lockTime fundTxId fundIdx (Just clientSig) = do
            , paymentResult_channel_valueLeft  = chanValLeft
            , paymentResult_value_received     = 0
            , paymentResult_settlement_txid    = Just settlementTxId
+           , paymentResult_application_data   = Nothing
            }
