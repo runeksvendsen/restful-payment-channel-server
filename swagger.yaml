@@ -346,7 +346,8 @@ definitions:
         description: |
           Optional application data (may be 'null'). The application, that is using this payment channel protocol to transmit value, may wish to include some application-specific data in response to a payment. This field is for that. The format is left entirely up to the application.
         type: string
-        example: null
+        example: |
+          "{ 'secret_code' :'2cd3b27536165ee6f110857c483509cb' }"
           
           
         
