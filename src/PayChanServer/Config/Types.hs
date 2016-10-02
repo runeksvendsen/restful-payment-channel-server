@@ -10,8 +10,10 @@ module  PayChanServer.Config.Types
 
 where
 
+import           Types.Orphans ()
 import           Common.Util
 import qualified ChanStore.Interface as Store
+import qualified PayChanServer.Callback.Interface as Callback
 import           Data.Bitcoin.PaymentChannel.Types (ReceiverPaymentChannel, BitcoinAmount)
 
 import qualified Network.Haskoin.Transaction as HT
@@ -19,15 +21,14 @@ import qualified Network.Haskoin.Crypto as HC
 import qualified Crypto.Secp256k1 as Secp
 import           Control.Lens.TH (makeLenses)
 import qualified Data.ByteString as BS
-import           Data.Configurator.Types
+import           Data.Configurator.Types (Config, Configured, convert, Value(..))
 
 import           Data.Ratio
-import qualified Servant.Common.BaseUrl as BaseUrl
 
 import qualified BlockchainAPI.Types as BtcType
 import qualified Data.Tagged as Tag
 
-import Debug.Trace
+
 
 -- import           Servant.Server.Internal.Context (Context(EmptyContext, (:.)))
 
@@ -39,15 +40,13 @@ data SettleHrs = SettleHrs
 data Charge    = Charge
 data Dust      = Dust
 data ChanDur   = ChanDur
+data Callback  = Callback
 
 type BtcConf      = Tag.Tagged BTCConf Word
 type SettleHours  = Tag.Tagged SettleHrs Word
 type OpenPrice    = Tag.Tagged Charge BitcoinAmount
 type DustLimit    = Tag.Tagged Dust BitcoinAmount
 type DurationHours= Tag.Tagged ChanDur Word
-
-
--- type ChanConf2 = BtcConf :. BitcoinAmount :. DustLimit :. Hours :. EmptyContext
 
 data ChanConf = ChanConf
   { btcMinConf      :: BtcConf
@@ -59,6 +58,7 @@ data ChanConf = ChanConf
 
 data App = App
  { _dbInterface     :: Store.Interface
+ , _callbackIface   :: Callback.Interface
  , _listUnspent     :: HC.Address  -> IO (Either String [BtcType.TxInfo])
  , _settleChannel   :: ReceiverPaymentChannel -> IO HT.TxHash    -- Dummy function if debug is enabled
  , _pubKey          :: RecvPubKey
@@ -77,14 +77,8 @@ data DBConf       = DBConf       Host Word Int
 data ServerDBConf = ServerDBConf String Word
 type Host = BS.ByteString
 
-
 getWord r = if denominator r /= 1 then Nothing
       else Just $ numerator r
-
-instance Configured BaseUrl.Scheme where
-    convert (String "http") = return BaseUrl.Http
-    convert (String "https") = return BaseUrl.Https
-    convert _ = Nothing
 
 instance Configured BitcoinNet where
     convert (String "live") = return Mainnet

@@ -10,7 +10,7 @@ import           PayChanServer.Handler.Close (chanSettleHandler)
 import           PayChanServer.Handler.BeginOpen (beginOpenHandler)
 
 -- Management
-import           PayChanServer.Handler.Management.PayData (setupDataPayload)
+import           PayChanServer.Handler.Management.ChannelInfo (getChannelInfo)
 
 import           Servant
 import qualified PayChanServer.API as API
@@ -26,4 +26,4 @@ payChanServer = fundingInfo :<|> beginOpen :<|> chanOpen :<|> chanPay :<|> chanC
         chanClose   = chanSettleHandler
 
 managementServer :: ServerT API.Man AppPC
-managementServer = setupDataPayload
+managementServer = getChannelInfo

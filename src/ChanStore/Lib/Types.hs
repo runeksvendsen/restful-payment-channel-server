@@ -34,8 +34,8 @@ data ChannelMap = ChannelMap
 
 -- |Holds state for each payment channel
 data ChanState =
-    ReadyForPayment         MovableChan PayDataPayload
-  | ChannelSettled          HT.TxHash   Payment (ReceiverPaymentChannel,BitcoinAmount)
+    ReadyForPayment         MovableChan
+  | ChannelSettled          HT.TxHash   Payment   (ReceiverPaymentChannel,BitcoinAmount)
   | SettlementInProgress    (ReceiverPaymentChannel,BitcoinAmount)
 
 -- |For each open payment channel, the server operator can choose to register a data payload,
@@ -60,26 +60,26 @@ data OpenResult =
 data PayRequest = PayRequest Key FullPayment deriving Generic
 data PayResult =
     PaymentReceived {
-        paymentVal      ::  BitcoinAmount
-      , chanValLeft     ::  BitcoinAmount
-      , maybeAppData    ::  Maybe JSONString    -- From 'PayDataPayload', if present
+        paymentVal      :: BitcoinAmount
+      , chanValLeft     :: BitcoinAmount
+      , chanTotalValue  :: BitcoinAmount
     }
   | PaymentError    PayChanError
   | PayUpdateError  UpdateResult
         deriving Generic
 
-data CloseBeginRequest = CloseBeginRequest ChannelResource Signature deriving Generic
+data CloseBeginRequest = CloseBeginRequest ChannelResource FullPayment deriving Generic
 data CloseBeginResult  =
     CloseInitiated      (ReceiverPaymentChannel,BitcoinAmount)
-  | IncorrectSig
+  | ClosingPaymentError    PayChanError
   | CloseUpdateError    UpdateResult
         deriving Generic
 
 -- |Management
-data DataPayloadRequest = DataPayloadRequest Key JSONString BitcoinAmount deriving Generic
-data DataPayloadResult =
-    OK
-  | RegisterPayloadError  UpdateResult
+-- data ChanInfoRequest = DataPayloadRequest Key JSONString BitcoinAmount deriving Generic
+data ChanInfoResult =
+    OK ReceiverPaymentChannel ChannelStatus (Maybe TxHash)
+  | ChanNotFound
         deriving Generic
 
 getDataPayload :: PayDataPayload -> BitcoinAmount -> Maybe JSONString
@@ -90,6 +90,15 @@ getDataPayload (PayloadAtPrice appData chargeAmt) recvdAmt =
         else
             Nothing
 
+isSettled :: ChanState -> Bool
+isSettled (ChannelSettled _ _ _) = True
+isSettled _                      = False
+
+isOpen :: ChanState -> Bool
+isOpen (ReadyForPayment _) = True
+isOpen _                   = False
+
+
 instance Bin.Serialize UpdateResult
 instance Bin.Serialize OpenRequest
 instance Bin.Serialize OpenResult
@@ -97,8 +106,7 @@ instance Bin.Serialize PayRequest
 instance Bin.Serialize PayResult
 instance Bin.Serialize CloseBeginRequest
 instance Bin.Serialize CloseBeginResult
-instance Bin.Serialize DataPayloadRequest
-instance Bin.Serialize DataPayloadResult
+instance Bin.Serialize ChanInfoResult
 
 
 -- Instances
@@ -137,9 +145,9 @@ instance Content.MimeUnrender Content.OctetStream PayResult where
 instance Content.MimeRender Content.OctetStream PayResult where
     mimeRender _ = BL.fromStrict . Bin.encode
 
-instance Content.MimeUnrender Content.OctetStream DataPayloadResult where
+instance Content.MimeUnrender Content.OctetStream ChanInfoResult where
     mimeUnrender _ = deserEither . BL.toStrict
-instance Content.MimeRender Content.OctetStream DataPayloadResult where
+instance Content.MimeRender Content.OctetStream ChanInfoResult where
     mimeRender _ = BL.fromStrict . Bin.encode
 
 
@@ -160,9 +168,9 @@ instance Serializable ChanState where
     deserialize = deserEither . cs
 
 instance Bin.Serialize ChanState where
-    put (ReadyForPayment mc pl) =
+    put (ReadyForPayment mc) =
         Bin.putWord8 0x02 >>
-        Bin.put mc >> Bin.put pl
+        Bin.put mc
     put (ChannelSettled txid payment s) =
         Bin.putWord8 0x03 >>
         Bin.put txid >> Bin.put payment >> Bin.put s
@@ -171,7 +179,7 @@ instance Bin.Serialize ChanState where
         Bin.put s
     get = Bin.getWord8 >>=
         (\byte -> case byte of
-            0x02    -> ReadyForPayment   <$> Bin.get <*> Bin.get
+            0x02    -> ReadyForPayment   <$> Bin.get
             0x03    -> ChannelSettled   <$> Bin.get <*> Bin.get <*> Bin.get
             0x04    -> SettlementInProgress <$> Bin.get
             n       -> fail $ "unknown start byte: " ++ show n)

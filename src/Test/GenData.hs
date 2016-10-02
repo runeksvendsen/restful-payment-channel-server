@@ -93,7 +93,7 @@ getSessionData (ChannelSession endPoint cp@(CChannelParameters sendPK _ lt _) _ 
     let
         (CFundingTxInfo txid vout _) = deriveMockFundingInfo cp
         openURL  = cs . show $ URI.mkChanURI sendPK lt txid vout
-        closeURL = cs . show $ URI.mkCloseURI sendPK lt txid vout (Just . fpGetSig . last $ payList)
+        closeURL = cs . show $ URI.mkCloseURI sendPK lt txid vout -- (last payList)
         fullURL resource = "http://" <> endPoint <> "/" <> resource
     in
         PaySessionData (fullURL openURL) (fullURL closeURL) payList

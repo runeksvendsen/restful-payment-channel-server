@@ -27,5 +27,5 @@ runData (PaySessionData uri closeURI payList) =
         Wreq.post conn (cs uri) (toJSON $ head payList) -- 1. Open
         forM_ (map toJSON (tail payList))               -- 2. Pay loop
                 (Wreq.put conn (cs uri))
-        Wreq.delete conn (cs closeURI)                  -- 3. Close
+        Wreq.put conn (cs closeURI) (toJSON $ last payList)      -- 3. Close
         return ()

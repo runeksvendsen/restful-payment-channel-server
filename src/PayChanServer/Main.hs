@@ -2,6 +2,7 @@
 
 module  PayChanServer.Main where
 
+import           Util (runLocalhost)
 import qualified PayChanServer.API as API
 import qualified PayChanServer.App as App
 import           PayChanServer.Init (appConfInit, installHandlerKillThreadOnSig)
@@ -49,7 +50,6 @@ main = wrapArg $ \cfg _ -> do
     _ <- forkIO $ startSettlementThread cfg (60 * 5)  -- run every 5 minutes
     -- Shut down on TERM signal
     myThreadId >>= installHandlerKillThreadOnSig Sig.sigTERM
---     myThreadId >>= profile_selfDestruct
     -- Start server
     runApp cfg
 
@@ -67,7 +67,7 @@ runApp cfg = do
 runManIface :: Word -> Conf.App -> IO ()
 runManIface port appConf = do
     putStrLn $ "Starting management interface on port " ++ show port
-    Warp.run (fromIntegral port) (managementApp appConf)
+    runLocalhost port (managementApp appConf)
 
 -- |Close payment channels before we reach the expiration date,
 --  because if we don't, the client can reclaim all the funds sent to us,

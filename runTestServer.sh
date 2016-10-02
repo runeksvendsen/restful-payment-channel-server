@@ -22,6 +22,11 @@ cd test/
 CMD="./benchPayChanServer.sh $2 $3 localhost:8080 $4"
 RES=$(TIMEFORMAT='%lU';time ( ./benchPayChanServer.sh $2 $3 localhost:8080 $4 ) 2>&1 1>/dev/null)
 
-echo "BENCHRES   $4    $RES" 1>&2
-echo "Success!"
+if [ $? -eq 0 ]; then
+   echo "BENCHRES   $4    $RES" 1>&2
+   echo "Success!"
+else
+   echo "ERROR"
+fi
+
 kill_all

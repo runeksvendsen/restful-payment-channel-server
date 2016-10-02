@@ -13,7 +13,8 @@ import           Common.Util
 import qualified ChanStore.API as API
 import           ChanStore.Lib.Types
 import           ChanStore.Init             (init_chanMap, destroy_chanMap)
-import           ChanStore.Lib.ChanMap
+-- import           ChanStore.Lib.ChanMap
+import           ChanStore.Lib.Store
 import           ChanStore.Lib.Settlement   (beginSettlingExpiringChannels, beginSettlingChannelsByValue,
                                             beginSettlingChannel, finishSettlingChannel)
 
@@ -53,12 +54,12 @@ readerToEither :: ChannelMap -> AppCS :~> Handler
 readerToEither cfg = Nat $ \x -> Reader.runReaderT x cfg
 
 server :: ServerT API.ChanStore AppCS
-server = chanOpen :<|> chanPay :<|> manPayData :<|> settleByInfoBegin :<|>
+server = chanOpen :<|> chanPay :<|> manGetChan :<|> settleByInfoBegin :<|>
              settleByExpBegin :<|> settleByValBegin :<|> settleFin'
     where
         chanOpen or           = Reader.ask >>= open or
         chanPay k paym        = Reader.ask >>= pay k paym
-        manPayData k amt dat  = Reader.ask >>= payData k amt dat
+        manGetChan k          = Reader.ask >>= get k
         settleByInfoBegin req = Reader.ask >>= settleByInfo req
         settleByExpBegin t    = Reader.ask >>= settleByExp t
         settleByValBegin v    = Reader.ask >>= settleByVal v
@@ -88,8 +89,8 @@ open openReq map = liftIO $ addChanState map openReq
 pay :: Key -> FullPayment -> ChannelMap -> AppCS PayResult
 pay key payment map = liftIO $ registerPayment map (PayRequest key payment)
 
-payData :: Key -> BitcoinAmount -> JSONString -> ChannelMap -> AppCS DataPayloadResult
-payData key amt dat map = liftIO $ registerDataPayload map (DataPayloadRequest key dat amt)
+get :: Key -> ChannelMap -> AppCS ChanInfoResult
+get key map = liftIO $ getChannelInfo map key
 
 
 settleByInfo :: CloseBeginRequest -> ChannelMap -> AppCS CloseBeginResult

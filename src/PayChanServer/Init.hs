@@ -2,15 +2,14 @@
 
 module  PayChanServer.Init where
 
+import qualified Types.Config as Conf
 import           Common.Util
-import           PayChanServer.Util (dummyKey)
 import           PayChanServer.Config.Types
 import           PayChanServer.Config.Util
 import qualified PayChanServer.Settlement as Settle
 import qualified Test.Dummy as Dummy
 
 import           PayChanServer.DB (initWaitConnect)
-import           ChanStore.Interface  as DBConn
 import           SigningService.Interface (getPubKey)
 import qualified BlockchainAPI.Impl.Bitcoind.Interface as Btc
 import qualified BlockchainAPI.Types as BtcAPI
@@ -19,7 +18,6 @@ import           Control.Monad                  (void)
 import qualified System.Posix.Signals as Sig
 import           Control.Concurrent             (ThreadId, throwTo)
 import qualified Control.Exception as E
-import           Data.Maybe                     (isNothing)
 import           System.IO                      (hFlush, stdout)
 
 
@@ -35,17 +33,13 @@ appConfInit cfg = do
     bitcoinNetwork <- configLookupOrFail cfg "bitcoin.network"
     setBitcoinNetwork bitcoinNetwork
 
-    (ServerSettleConfig settleFee _) <- getServerSettleConfig cfg
-
     chanConfig <- getChanConf cfg
 
     signingServiceConn <- getSigningServiceConn cfg
     btcIface <- getBlockchainIface cfg
 
     dbIface <- getChanStoreIface =<< getDBConf cfg
---     putStr "Testing database connection... "
---     maybeRes <- initWaitConnect "database" $ DBConn.chanGet dbIface dummyKey
---     putStrLn $ if isNothing maybeRes then "success." else "success... but dummy key is present in database."
+    callbackIface <- Conf.fromConf cfg
 
     putStr "Contacting SigningService for public key... "
     pubKey <- initWaitConnect "SigningService" $ getPubKey signingServiceConn
@@ -59,9 +53,11 @@ appConfInit cfg = do
     let basePathVersion = "/v1"
     settlePeriod <- configLookupOrFail cfg "settlement.settlementPeriodHours"
 
+    (ServerSettleConfig settleFee _) <- getServerSettleConfig cfg
     let settleFunc = Settle.finishSettleChannel dbIface signingServiceConn btcIface settleFee
 
     return $ App dbIface
+                 callbackIface
                  (BtcAPI.listUnspentOutputs btcIface) settleFunc
                  pubKey
                  chanConfig settlePeriod

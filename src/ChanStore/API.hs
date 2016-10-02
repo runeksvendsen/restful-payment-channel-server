@@ -24,8 +24,7 @@ type ChanStore =
             :> ReqBody '[OctetStream] FullPayment           :> Put  '[OctetStream] PayResult
 
   -- Management
-  :<|> "manage" :> "data_payload"  :> Capture "client_pk" SendPubKey :> Capture "amount" BitcoinAmount
-            :> ReqBody '[JSON] JSONString                   :> Post  '[OctetStream] DataPayloadResult
+  :<|> "manage" :> "get"  :> Capture "client_pk" SendPubKey :> Get  '[OctetStream] ChanInfoResult
 
   -- Settlement
   :<|> "settle" :> "begin"  :> "by_info"

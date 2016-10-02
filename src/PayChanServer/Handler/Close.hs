@@ -10,31 +10,27 @@ import           ChanStore.Interface  as DBConn
 import           ChanStore.Lib.Types
 
 
-
 chanSettleHandler ::
     SendPubKey
     -> BitcoinLockTime
     -> TxHash
     -> Vout
-    -> Maybe Signature
+    -> FullPayment
     -> AppPC PaymentResult
-chanSettleHandler _ _ _ _ Nothing =
-    userError' "Missing payment. \"payment\" query arg should contain most recent channel payment."
-chanSettleHandler sendPK lockTime fundTxId fundIdx (Just clientSig) = do
+chanSettleHandler sendPK lockTime fundTxId fundIdx payment = do
     dbConn <- view Conf.dbInterface
     settleChannel <- view Conf.settleChannel
     -- Ask ChanStore to begin closing channel, if everything matches up
     let closeReq = CloseBeginRequest
-            (ChannelResource sendPK lockTime (OutPoint fundTxId fundIdx))
-            clientSig
+            (ChannelResource sendPK lockTime (OutPoint fundTxId fundIdx)) payment
     closeRes <- liftIO $ DBConn.settleByInfoBegin dbConn closeReq
     -- Decide what to do based on channel state: open/half-open/closed
     (settlementTxId,chanValLeft) <- case closeRes of
             CloseInitiated (rpc,origVal)        -> do
                 settleTxId <- liftIO (settleChannel rpc)
                 return (settleTxId, channelValueLeft rpc)
-            IncorrectSig                        ->
-                userError' "Invalid payment. Provide most recent channel payment."
+            ClosingPaymentError e                   ->
+                userError' $ show e
             CloseUpdateError (ChanClosed settleTxId chanValLeft) ->
                 return (settleTxId, chanValLeft)
             CloseUpdateError ChanBeingClosed    ->
@@ -47,5 +43,6 @@ chanSettleHandler sendPK lockTime fundTxId fundIdx (Just clientSig) = do
            , paymentResult_channel_valueLeft  = chanValLeft
            , paymentResult_value_received     = 0
            , paymentResult_settlement_txid    = Just settlementTxId
-           , paymentResult_application_data   = Nothing
+           , paymentResult_application_data   = ""
            }
+

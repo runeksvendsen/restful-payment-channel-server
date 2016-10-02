@@ -10,12 +10,11 @@ packages:
 #- '/Users/rune/IdeaProjects/bitcoin-payment-channel'
 - location:
     git: https://github.com/runeksvendsen/bitcoin-payment-channel.git
-    commit: ccdccee54c24fd875de232f4e3965b600913069b
-
+    commit: b6141d7d369b14aca6fcc3705aed34a68afa0001
   extra-dep: true
 - location:
-    git: https://github.com/well-typed/binary-serialise-cbor.git
-    commit: 2df417c4faf32204dc702633188f835a74819924
+    git: https://github.com/runeksvendsen/haskell-rbpcp-api.git
+    commit: caa0a5db6ea7d45df1e2e858193ec6d904f22adc
   extra-dep: true
 - location:
     git: https://github.com/runeksvendsen/haskell-bitcoin-api.git

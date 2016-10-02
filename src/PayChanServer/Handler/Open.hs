@@ -44,5 +44,5 @@ chanOpenHandler sendPK lockTime fundTxId fundIdx payment = do
            , paymentResult_channel_valueLeft  = chanValLeft
            , paymentResult_value_received     = valRecvd
            , paymentResult_settlement_txid    = Nothing
-           , paymentResult_application_data   = Nothing
+           , paymentResult_application_data   = ""
            }

@@ -4,6 +4,7 @@
 module Common.Types (
       module Data.Bitcoin.PaymentChannel.Types
     , module Common.Handler.Types
+    , module RBPCP.Types
     , ChannelResource(..)
     , MonadIO
     , HT.TxHash
@@ -14,9 +15,11 @@ module Common.Types (
     , CreateResult(..)
     , BS.ByteString
     , JSONString
+    , T.Text
 ) where
 
 import           Data.Bitcoin.PaymentChannel.Types
+import           RBPCP.Types
 
 import qualified Network.Haskoin.Transaction as HT
 import qualified Network.Haskoin.Crypto      as HC

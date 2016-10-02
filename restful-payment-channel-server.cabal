@@ -22,11 +22,11 @@ Executable PayChanServer
   main-is: PayChanServer/Main.hs
   ghc-options: -W -O2 -threaded -with-rtsopts=-N
                -main-is PayChanServer.Main
-
+  default-extensions:   OverloadedStrings
   build-depends:
     base                      >= 4     && < 5,
-    mtl                       >= 2     && < 3,
-    bitcoin-payment-channel   == 0.4.0.0,
+    haskell-rbpcp-api,
+    bitcoin-payment-channel   == 0.5.0.0,
     haskoin-core              == 0.4.0,
     bytestring                >= 0.9.1 && < 0.11,
     -- APISpec.Blockchain
@@ -41,6 +41,7 @@ Executable PayChanServer
     warp,
     http-client, http-client-tls, http-types,
     -- The rest
+    mtl                       >= 2     && < 3,
     transformers,
     aeson, vector,
     base16-bytestring,
@@ -109,7 +110,7 @@ Executable ChanStore
     base                      >= 4     && < 5,
     bytestring                >= 0.9.1 && < 0.11,
     mtl                       >= 2     && < 3,
-    bitcoin-payment-channel   == 0.4.0.0,
+    bitcoin-payment-channel   == 0.5.0.0,
     haskoin-core              == 0.4.0,
     secp256k1,
     haskell-stm-diskmap,
@@ -198,7 +199,7 @@ Executable SigningService
     mtl                       >= 2     && < 3,
     io-streams,
     blaze-builder,
-    bitcoin-payment-channel   == 0.4.0.0,
+    bitcoin-payment-channel   == 0.5.0.0,
     haskoin-core              == 0.4.0,
     secp256k1,
     configurator,
@@ -251,13 +252,14 @@ Executable GenTestData
     hs-source-dirs:       src
     main-is:              Test/GenDataExe.hs
     ghc-options:          -W -O2 -main-is Test.GenDataExe
+    default-extensions:   OverloadedStrings
     default-language:     Haskell2010
 
     Build-depends:
       base                      >= 4     && < 5,
       mtl                       >= 2     && < 3,
       bytestring                >= 0.9.1 && < 0.11,
-      bitcoin-payment-channel   == 0.4.0.0,
+      bitcoin-payment-channel   == 0.5.0.0,
       transformers,
       haskoin-core,
       secp256k1,
@@ -297,12 +299,12 @@ Executable RunTestData
     main-is:              Test/RunData.hs
     ghc-options:          -W -O2 -main-is Test.RunData
     default-language:     Haskell2010
-
+    default-extensions:   OverloadedStrings
     Build-depends:
       base                      >= 4     && < 5,
       bytestring                >= 0.9.1 && < 0.11,
       mtl                       >= 2     && < 3,
-      bitcoin-payment-channel   == 0.4.0.0,
+      bitcoin-payment-channel   == 0.5.0.0,
       transformers,
       haskoin-core,
       secp256k1,
@@ -338,19 +340,3 @@ Executable RunTestData
                             PayChanServer.URI
                             Test.GenData
 
-
-Executable GenClientJS
-    hs-source-dirs:       src
-    main-is:              Client/GenJS.hs
-    ghc-options:          -W -O2 -main-is Client.GenJS
-    default-language:     Haskell2010
-
-    Build-depends:
-      base                      >= 4     && < 5,
-      mtl                       >= 2     && < 3,
-      bytestring                >= 0.9.1 && < 0.11,
-      bitcoin-payment-channel   == 0.4.0.0,
-      servant,
-      servant-js
-
-    other-modules:
