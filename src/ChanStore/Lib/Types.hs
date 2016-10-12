@@ -11,7 +11,7 @@ module ChanStore.Lib.Types
 where
 
 import           Common.Types
-import           Data.DiskMap (DiskMap, SyncAction,
+import           Data.DiskMap (DiskMap,
                             CreateResult(..),
                             Serializable(..), ToFileName(..), Hashable(..), MapItemResult(..))
 
@@ -21,16 +21,13 @@ import qualified Network.Haskoin.Transaction as HT
 import qualified Data.ByteString.Lazy as BL
 import qualified Data.Serialize as Bin
 import           Data.String.Conversions (cs)
-import           Control.Concurrent (ThreadId)
 import qualified Servant.API.ContentTypes as Content
 import           GHC.Generics
 import           Data.Serialize.Text ()
 
 type Key = SendPubKey
 
-data ChannelMap = ChannelMap
-    (DiskMap Key ChanState)
-    (Maybe (SyncAction,ThreadId))   -- Used when deferred sync is enabled
+data ChannelMap = ChannelMap (DiskMap Key ChanState)
 
 -- |Holds state for each payment channel
 data ChanState =

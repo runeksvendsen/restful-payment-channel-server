@@ -113,7 +113,7 @@ Executable ChanStore
     bitcoin-payment-channel   == 0.5.0.0,
     haskoin-core              == 0.4.0,
     secp256k1,
-    haskell-stm-diskmap,
+    key-value-store,
     -- Servant
     servant,
     servant-server,
@@ -184,69 +184,69 @@ Executable ChanStore
                     Test.Profile
                     Util
 
-Executable SigningService
-  hs-source-dirs: src
-  main-is: SigningService/Main.hs
-  ghc-options: -W -main-is SigningService.Main
-  default-extensions: OverloadedStrings
-  build-depends:
-    base                      >= 4     && < 5,
-    bytestring                >= 0.9.1 && < 0.11,
-    monad-control             == 1.0.*,
-    snap-core                 == 1.0.*,
-    snap-server               == 1.0.*,
-    snap                      == 1.0.*,
-    mtl                       >= 2     && < 3,
-    io-streams,
-    blaze-builder,
-    bitcoin-payment-channel   == 0.5.0.0,
-    haskoin-core              == 0.4.0,
-    secp256k1,
-    configurator,
-    string-conversions,
-    errors
-  other-modules:        BlockchainAPI.Impl.Bitcoind.Interface
-                        BlockchainAPI.Impl.Bitcoind.Types
-                        BlockchainAPI.Types
-                        ChanStore.API
-                        ChanStore.Interface
-                        ChanStore.Lib.Settlement
-                        ChanStore.Lib.Types
-                        ChanStore.Orphans
-                        
-                        Common.Handler.Types
-                        Common.Types
-                        Common.URLParam
-                        Common.Util
-                        ConnManager.Connection
-                        ConnManager.RequestRunner
-                        ConnManager.Servant
-                        ConnManager.Types
-                        PayChanServer.API
-                        PayChanServer.App
-                        PayChanServer.Config.Types
-                        PayChanServer.Config.Util
-                        PayChanServer.DB
-                        PayChanServer.Handler.BeginOpen
-                        PayChanServer.Handler.Close
-                        PayChanServer.Handler.FundingInfo
-                        PayChanServer.Handler.Open
-                        PayChanServer.Handler.Pay
-                        PayChanServer.Init
-                        PayChanServer.Main
-                        PayChanServer.Settlement
-                        PayChanServer.Types
-                        PayChanServer.URI
-                        PayChanServer.Util
-                        SigningService.Interface
-                        SigningService.Snap.Util
-                        SigningService.Spec
-                        SigningService.Types
-                        SigningService.Util
-                        Test.Dummy
-                        Test.GenData
-                        Test.Profile
-                        Util
+--Executable SigningService
+--  hs-source-dirs: src
+--  main-is: SigningService/Main.hs
+--  ghc-options: -W -main-is SigningService.Main
+--  default-extensions: OverloadedStrings
+--  build-depends:
+--    base                      >= 4     && < 5,
+--    bytestring                >= 0.9.1 && < 0.11,
+--    monad-control             == 1.0.*,
+--    snap-core                 == 1.0.*,
+--    snap-server               == 1.0.*,
+--    snap                      == 1.0.*,
+--    mtl                       >= 2     && < 3,
+--    io-streams,
+--    blaze-builder,
+--    bitcoin-payment-channel   == 0.5.0.0,
+--    haskoin-core              == 0.4.0,
+--    secp256k1,
+--    configurator,
+--    string-conversions,
+--    errors
+--  other-modules:        BlockchainAPI.Impl.Bitcoind.Interface
+--                        BlockchainAPI.Impl.Bitcoind.Types
+--                        BlockchainAPI.Types
+--                        ChanStore.API
+--                        ChanStore.Interface
+--                        ChanStore.Lib.Settlement
+--                        ChanStore.Lib.Types
+--                        ChanStore.Orphans
+--
+--                        Common.Handler.Types
+--                        Common.Types
+--                        Common.URLParam
+--                        Common.Util
+--                        ConnManager.Connection
+--                        ConnManager.RequestRunner
+--                        ConnManager.Servant
+--                        ConnManager.Types
+--                        PayChanServer.API
+--                        PayChanServer.App
+--                        PayChanServer.Config.Types
+--                        PayChanServer.Config.Util
+--                        PayChanServer.DB
+--                        PayChanServer.Handler.BeginOpen
+--                        PayChanServer.Handler.Close
+--                        PayChanServer.Handler.FundingInfo
+--                        PayChanServer.Handler.Open
+--                        PayChanServer.Handler.Pay
+--                        PayChanServer.Init
+--                        PayChanServer.Main
+--                        PayChanServer.Settlement
+--                        PayChanServer.Types
+--                        PayChanServer.URI
+--                        PayChanServer.Util
+--                        SigningService.Interface
+--                        SigningService.Snap.Util
+--                        SigningService.Spec
+--                        SigningService.Types
+--                        SigningService.Util
+--                        Test.Dummy
+--                        Test.GenData
+--                        Test.Profile
+--                        Util
 
 Executable GenTestData
     hs-source-dirs:       src

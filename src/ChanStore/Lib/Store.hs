@@ -2,7 +2,7 @@
 module ChanStore.Lib.Store where
 
 
-import           Data.DiskMap (newDiskMap, SyncAction,
+import           Data.DiskMap (newDiskMap,
                             addItem, getItem,
                             CreateResult(..),
                             MapItemResult(..),getResult,
@@ -27,7 +27,7 @@ import           Data.Maybe (fromMaybe)
 
 -- Storage interface
 addChanState :: ChannelMap -> OpenRequest -> IO OpenResult
-addChanState (ChannelMap diskMap _) (OpenRequest cp fti fp) =
+addChanState (ChannelMap diskMap) (OpenRequest cp fti fp) =
     either
         (return . OpenError)
         (\(amt, mc, valLeft) ->
@@ -39,7 +39,7 @@ addChanState (ChannelMap diskMap _) (OpenRequest cp fti fp) =
     where key = cpSenderPubKey cp
 
 registerPayment :: ChannelMap -> PayRequest -> IO PayResult
-registerPayment (ChannelMap diskMap _) (PayRequest key fp) =
+registerPayment (ChannelMap diskMap) (PayRequest key fp) =
     let
         updFunc :: ChanState -> Either PayResult (ChanState, PayResult)
         -- Success
@@ -61,7 +61,7 @@ registerPayment (ChannelMap diskMap _) (PayRequest key fp) =
         checkMapUpdRes <$> updateIfRight diskMap key updFunc
 
 closeBegin :: ChannelMap -> CloseBeginRequest -> IO CloseBeginResult
-closeBegin (ChannelMap diskMap _) (CloseBeginRequest (ChannelResource clientPK lt op) fp) =
+closeBegin (ChannelMap diskMap) (CloseBeginRequest (ChannelResource clientPK lt op) fp) =
     let
         updFunc :: ChanState -> Either CloseBeginResult (ChanState, CloseBeginResult)
         updFunc (ReadyForPayment mc)   =
@@ -78,7 +78,7 @@ closeBegin (ChannelMap diskMap _) (CloseBeginRequest (ChannelResource clientPK l
 
 -- |Management
 getChannelInfo :: ChannelMap -> SendPubKey -> IO ChanInfoResult
-getChannelInfo (ChannelMap diskMap _) clientPK = do
+getChannelInfo (ChannelMap diskMap) clientPK = do
     maybeItem <- getItem diskMap clientPK
     case maybeItem of
         Nothing -> return ChanNotFound

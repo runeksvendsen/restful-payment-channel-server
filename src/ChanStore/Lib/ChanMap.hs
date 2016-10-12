@@ -3,7 +3,7 @@
 module ChanStore.Lib.ChanMap where
 
 
-import           Data.DiskMap (newDiskMap, SyncAction,
+import           Data.DiskMap (newDiskMap,
                             addItem, getItem,
                             CreateResult(..),
                             MapItemResult(..),getResult,
@@ -30,25 +30,11 @@ logImportantError = putStrLn
 
 -- Create/destroy
 createChanMap :: ServerDBConf -> IO ChannelMap
-createChanMap (ServerDBConf syncDir syncInterval) = do
---     if syncInterval == 0 then do
-    (map,Nothing) <- newDiskMap syncDir False
-    return $ ChannelMap map Nothing
---     else do
---         (map,Just syncAction) <- newDiskMap syncDir True
---         putStrLn $ "INFO: Deferred sync enabled. Syncing every " ++
---             show syncInterval ++ " seconds."
---         threadId <- forkIO $ syncThread syncAction syncInterval
---         return $ ChannelMap map $ Just (syncAction,threadId)
-
-destroyChanMap :: ChannelMap -> IO ()
-destroyChanMap (ChannelMap chanMap (Just (syncAction,syncThreadId))) = error "BUG"
---     makeReadOnly chanMap
---     killThread syncThreadId
---     syncNow syncAction
-destroyChanMap (ChannelMap _ Nothing) = return ()
+createChanMap (ServerDBConf syncDir _) = do
+    map <- newDiskMap syncDir
+    return $ ChannelMap map
 
 
 openChannelCount :: ChannelMap -> IO Int
-openChannelCount (ChannelMap chanMap _) = atomically $
+openChannelCount (ChannelMap chanMap) = atomically $
     length <$> getFilteredKeys chanMap isOpen

@@ -1,7 +1,7 @@
 module ChanStore.Init
 (
     init_chanMap
-,   destroy_chanMap
+-- ,   destroy_chanMap
 )
 where
 
@@ -16,5 +16,3 @@ init_chanMap conf@(ServerDBConf storageDirectory _) = do
     openCount <- openChannelCount map
     putStrLn $ "Restored " ++ show openCount ++ " open channel states from " ++ show storageDirectory
     return map
-
-destroy_chanMap = destroyChanMap

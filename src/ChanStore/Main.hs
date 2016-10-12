@@ -12,8 +12,7 @@ import           Common.Util
 
 import qualified ChanStore.API as API
 import           ChanStore.Lib.Types
-import           ChanStore.Init             (init_chanMap, destroy_chanMap)
--- import           ChanStore.Lib.ChanMap
+import           ChanStore.Init             (init_chanMap)
 import           ChanStore.Lib.Store
 import           ChanStore.Lib.Settlement   (beginSettlingExpiringChannels, beginSettlingChannelsByValue,
                                             beginSettlingChannel, finishSettlingChannel)
@@ -80,6 +79,7 @@ main = wrapArg $ \cfg _ -> do
         (getServerDBConf cfg >>= init_chanMap)  -- 1. first do this
         destroy_chanMap                         -- 3. at the end always do this
         (Warp.run (fromIntegral port) . app)    -- 2. in the meantime do this
+    where destroy_chanMap = return
 
 
 
@@ -110,8 +110,8 @@ settleFin key settleTxId m = do
     res <- liftIO $ finishSettlingChannel m (key,settleTxId)
     case res of
         ItemUpdated{} -> (liftIO . putStrLn)
-            ("Settled channel " ++ cs (pathParamEncode key) ++
-            " with settlement txid: " ++ cs (pathParamEncode settleTxId) ) >>
+            ("Settled channel with client pubkey " ++ cs (pathParamEncode key) ++
+            ", settlement txid: " ++ cs (pathParamEncode settleTxId) ) >>
                 return NoContent
         NotUpdated{} -> userError' $ "Channel isn't in the process of being settled." ++
                                   " Did you begin settlement first?" ++

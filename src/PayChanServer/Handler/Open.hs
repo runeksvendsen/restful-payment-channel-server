@@ -3,22 +3,22 @@ module PayChanServer.Handler.Open where
 import           PayChanServer.Types
 import           PayChanServer.Util
 import qualified PayChanServer.Config.Types as Conf
+import qualified RBPCP.Types as RBPCP
 import           Data.Bitcoin.PaymentChannel        (channelFromInitialPayment)
 
 import qualified PayChanServer.DB as DB
 import qualified ChanStore.Interface as DBConn
 import           ChanStore.Lib.Types
 
-import           Control.Monad.IO.Class (liftIO)
 
 chanOpenHandler ::
     SendPubKey
     -> BitcoinLockTime
     -> TxHash
     -> Vout
-    -> FullPayment
+    -> RBPCP.Payment
     -> AppPC PaymentResult
-chanOpenHandler sendPK lockTime fundTxId fundIdx payment = do
+chanOpenHandler sendPK lockTime fundTxId fundIdx (RBPCP.Payment payment appData) = do
     dustLimit <- Conf.dustLimit <$> view Conf.chanConf
     pubKeyServ <- view Conf.pubKey
     let cp = CChannelParameters sendPK pubKeyServ lockTime (Conf.getVal dustLimit)

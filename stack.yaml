@@ -1,9 +1,8 @@
 resolver: lts-7.1
 
-flags: {}
-
-extra-package-dbs: []
-
+nix:
+  enable: true
+  packages: [zlib]
 
 packages:
 - '.'
@@ -14,7 +13,7 @@ packages:
   extra-dep: true
 - location:
     git: https://github.com/runeksvendsen/haskell-rbpcp-api.git
-    commit: caa0a5db6ea7d45df1e2e858193ec6d904f22adc
+    commit: e35d828a7aa91e09648c843ae195294e7d729064
   extra-dep: true
 - location:
     git: https://github.com/runeksvendsen/haskell-bitcoin-api.git
@@ -26,8 +25,8 @@ packages:
     commit: 1aca098c0a26fe4c39d9901199696c648b2987c0
   extra-dep: true
 - location:
-    git: https://github.com/runeksvendsen/haskell-stm-diskmap.git
-    commit: 5900c915faa2efa40511f1f0bce7c1826857baa0
+    git: https://github.com/runeksvendsen/key-value-store.git
+    commit: 82ca4d2d1d4b242f264c04462ab61b632ad6d55c
   extra-dep: true
 
 

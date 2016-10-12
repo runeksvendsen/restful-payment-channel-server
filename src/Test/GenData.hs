@@ -4,10 +4,11 @@ module Test.GenData where
 
 import           Common.Util
 import           Common.Types
+import qualified RBPCP.Types as RBPCP
 import qualified PayChanServer.URI as URI
 
 import           Data.Bitcoin.PaymentChannel (channelWithInitialPaymentOf, sendPayment)
-import           Data.Bitcoin.PaymentChannel.Util (fpGetSig, toWord32, parseBitcoinLocktime, getFundingAddress)
+import           Data.Bitcoin.PaymentChannel.Util (toWord32, parseBitcoinLocktime, getFundingAddress)
 
 import qualified Network.Haskoin.Transaction as HT
 import qualified Network.Haskoin.Crypto as HC
@@ -71,7 +72,7 @@ genChannelSession endPoint numPayments privClient pubServer expTime =
 data PaySessionData = PaySessionData {
     resourceURI :: T.Text,
     closeURI    :: T.Text,
-    payDataList :: [FullPayment]
+    payDataList :: [RBPCP.Payment]
 }
 
 instance ToJSON PaySessionData where
@@ -96,12 +97,8 @@ getSessionData (ChannelSession endPoint cp@(CChannelParameters sendPK _ lt _) _ 
         closeURL = cs . show $ URI.mkCloseURI sendPK lt txid vout -- (last payList)
         fullURL resource = "http://" <> endPoint <> "/" <> resource
     in
-        PaySessionData (fullURL openURL) (fullURL closeURL) payList
+        PaySessionData (fullURL openURL) (fullURL closeURL) (map (`RBPCP.Payment` "") payList)
 
-
--- | Deprecated
-convertMockFundingInfo :: FundingTxInfo -> TxInfo
-convertMockFundingInfo = TxInfo 27
 
 deriveMockFundingInfo :: ChannelParameters -> FundingTxInfo
 deriveMockFundingInfo (CChannelParameters sendPK _ expTime _) =

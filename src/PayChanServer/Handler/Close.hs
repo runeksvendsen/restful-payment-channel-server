@@ -4,6 +4,7 @@ import           Common.Types
 import           PayChanServer.Types
 import           PayChanServer.Util
 import qualified PayChanServer.Config.Types as Conf
+import qualified RBPCP.Types as RBPCP
 
 import qualified PayChanServer.DB as DB
 import           ChanStore.Interface  as DBConn
@@ -15,9 +16,9 @@ chanSettleHandler ::
     -> BitcoinLockTime
     -> TxHash
     -> Vout
-    -> FullPayment
+    -> RBPCP.Payment
     -> AppPC PaymentResult
-chanSettleHandler sendPK lockTime fundTxId fundIdx payment = do
+chanSettleHandler sendPK lockTime fundTxId fundIdx (RBPCP.Payment payment appData) = do
     dbConn <- view Conf.dbInterface
     settleChannel <- view Conf.settleChannel
     -- Ask ChanStore to begin closing channel, if everything matches up

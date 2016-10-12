@@ -5,18 +5,16 @@ import           Data.DiskMap
 import           ChanStore.Lib.Types hiding (UpdateResult(..))
 import           Data.Bitcoin.PaymentChannel.Movable
 
-import qualified Util
 import           Data.Ord (comparing, Down(Down))
 import           Control.Concurrent.STM (STM, atomically)
 import           Control.Exception.Base     (Exception, throw)
 import           Data.Time.Clock (UTCTime)
-import qualified Data.List as List
 
 import qualified Network.Haskoin.Transaction as HT
 
 -- |Mark the channel in question as settled by providing its key and the TxId of the settlement transaction
 finishSettlingChannel :: ChannelMap -> (Key,HT.TxHash) -> IO (MapItemResult Key ChanState ())
-finishSettlingChannel (ChannelMap m _) (k,settleTxId) =
+finishSettlingChannel (ChannelMap m) (k,settleTxId) =
     head <$> mapGetItems m finishSettling (return [k])
     where
         finishSettling (SettlementInProgress rpc) = Just $
@@ -29,7 +27,7 @@ beginSettlingChannel chanMap k = head <$> beginSettlingChannels chanMap (return 
 -- |Given a list of Keys in STM, retrieve the channel states in question from the map while
 -- simultaneously marking them as in the process of being settled.
 beginSettlingChannels :: ChannelMap -> STM [Key] -> IO [(ReceiverPaymentChannel,BitcoinAmount)]
-beginSettlingChannels (ChannelMap m _) keyGetterAction = do
+beginSettlingChannels (ChannelMap m) keyGetterAction = do
     res <- mapGetItems m markAsSettlingIfOpen keyGetterAction
     return $ map gatherFromResults res
     where
@@ -53,7 +51,7 @@ beginSettlingExpiringChannels chanMap currentTimeIsh =
 --      'LockTimeBlockHeight', but the protocol does not.
 -- Get keys for all channel states with an expiration date later than the specified 'UTCTime'
 openChannelsExpiringBefore :: UTCTime -> ChannelMap -> STM [(Key,ChanState)]
-openChannelsExpiringBefore currentTimeIsh (ChannelMap m _) =
+openChannelsExpiringBefore currentTimeIsh (ChannelMap m) =
     getFilteredKV m isOpenAndExpiresBefore
     where
         isOpenAndExpiresBefore (ReadyForPayment cs) = chanExpiresBefore cs
@@ -78,7 +76,7 @@ beginSettlingChannelsByValue chanMap minValue =
 --  'minValue'. If 'minValue' is greater than all available value, all channels are returned.
 --  Ie. you have to make sure you don't request too much value.
 fewestChannelsCoveringValue :: ChannelMap -> BitcoinAmount -> STM [ReceiverPaymentChannel]
-fewestChannelsCoveringValue  (ChannelMap m _) minValue = undefined
+fewestChannelsCoveringValue  (ChannelMap m) minValue = undefined
 --     Util.accumulateWhile collectUntilEnoughValue .
 --         List.sortBy descendingValueReceived .
 --         fmap getOpenChanState <$> getFilteredItems m isOpen

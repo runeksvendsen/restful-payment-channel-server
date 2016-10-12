@@ -3,6 +3,7 @@ module PayChanServer.Handler.Pay where
 import           PayChanServer.Types
 import           PayChanServer.Util
 import qualified PayChanServer.Config.Types as Conf
+import qualified RBPCP.Types as RBPCP
 import qualified PayChanServer.DB as DB
 import           ChanStore.Interface  as DBConn
 import           PayChanServer.Callback.Interface as CB
@@ -14,9 +15,9 @@ chanPayHandler ::
     -> BitcoinLockTime
     -> TxHash
     -> Vout
-    -> FullPayment
+    -> RBPCP.Payment
     -> AppPC PaymentResult
-chanPayHandler sendPK lockTime fundTxId fundIdx payment = do
+chanPayHandler sendPK lockTime fundTxId fundIdx (RBPCP.Payment payment appData) = do
     -- TODO: verify resource/payment match
     dbConn <- view Conf.dbInterface
     (PaymentReceived valRecvd valLeft chanTotalValue) <-
