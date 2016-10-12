@@ -1,12 +1,11 @@
 resolver: lts-7.1
 
-nix:
-  enable: true
-  packages: [zlib]
+#nix:
+#  enable: true
+#  packages: [zlib]
 
 packages:
 - '.'
-#- '/Users/rune/IdeaProjects/bitcoin-payment-channel'
 - location:
     git: https://github.com/runeksvendsen/bitcoin-payment-channel.git
     commit: b6141d7d369b14aca6fcc3705aed34a68afa0001
