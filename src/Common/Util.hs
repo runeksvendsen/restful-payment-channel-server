@@ -24,6 +24,7 @@ import           Prelude hiding (userError)
 
 import           Common.Types
 import           Common.URLParam
+import qualified RBPCP.Types as RBPCP
 
 import           Data.String.Conversions (cs)
 import           Control.Monad.IO.Class (liftIO)
@@ -79,6 +80,22 @@ onLeftThrow500 :: Either String a -> AppM conf a
 onLeftThrow500   = either internalError return
 
 errorWithDescription :: Int -> String -> AppM conf a
-errorWithDescription code e = Except.throwError $
-    err400 { errReasonPhrase = cs e, errBody = cs e, errHTTPCode = code}
+errorWithDescription code e =
+    Except.throwError $
+        mkServantError RBPCP.PaymentError code (cs e)
 
+applicationError :: String -> AppM conf a
+applicationError msg =
+    Except.throwError $
+        mkServantError RBPCP.ApplicationError 410 (cs msg)
+        -- TODO: application error HTTP status code?
+
+mkServantError :: RBPCP.ErrorType -> Int -> String -> ServantErr
+mkServantError errType code msg =
+    ServantErr
+        {  errHTTPCode = code
+        ,  errReasonPhrase = cs msg
+        ,  errBody = cs responseBody
+        ,  errHeaders = []
+        }
+    where responseBody = JSON.encode $ RBPCP.Error errType (cs msg)

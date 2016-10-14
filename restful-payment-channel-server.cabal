@@ -140,7 +140,6 @@ Executable ChanStore
     spawn,
     stm,
     list-t
---    binary-serialise-cbor
 
   other-modules:    BlockchainAPI.Impl.Bitcoind.Interface
                     BlockchainAPI.Impl.Bitcoind.Types
@@ -183,6 +182,23 @@ Executable ChanStore
                     Test.GenData
                     Test.Profile
                     Util
+
+library
+  exposed-modules:      ChanStore.API
+
+  other-modules:        ChanStore.Lib.Types
+                        ChanStore.Orphans
+
+  ghc-options:          -W
+
+  build-depends:            base                >= 4.7  &&  < 5
+                        ,   servant             >= 0.7  &&  < 0.9
+                        ,   haskoin-core        == 0.4.0
+                        ,   time
+
+  hs-source-dirs:       src
+
+  default-language:     Haskell2010
 
 Executable SigningService
   hs-source-dirs: src

@@ -19,7 +19,7 @@ module Common.Types (
 ) where
 
 import           Data.Bitcoin.PaymentChannel.Types
-import           RBPCP.Types hiding (Payment)
+import           RBPCP.Types hiding (Payment, Error, ErrorType(PaymentError))
 
 import qualified Network.Haskoin.Transaction as HT
 import qualified Network.Haskoin.Crypto      as HC

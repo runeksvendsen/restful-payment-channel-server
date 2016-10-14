@@ -9,6 +9,7 @@ import           Prelude hiding (userError)
 
 import           Common.Types
 import           Common.Util
+import           Util.Config
 
 import qualified ChanStore.API as API
 import           ChanStore.Lib.Types
@@ -17,8 +18,7 @@ import           ChanStore.Lib.Store
 import           ChanStore.Lib.Settlement   (beginSettlingExpiringChannels, beginSettlingChannelsByValue,
                                             beginSettlingChannel, finishSettlingChannel)
 
-import           PayChanServer.Main         (wrapArg)
-import           PayChanServer.Config.Util  (configLookupOrFail, setBitcoinNetwork, getServerDBConf)
+import           PayChanServer.Config.Util  (setBitcoinNetwork, getServerDBConf)
 import           PayChanServer.Init (installHandlerKillThreadOnSig)
 
 

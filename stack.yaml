@@ -12,7 +12,7 @@ packages:
   extra-dep: true
 - location:
     git: https://github.com/runeksvendsen/haskell-rbpcp-api.git
-    commit: e35d828a7aa91e09648c843ae195294e7d729064
+    commit: 2194694c9f6d1641fec883fffc48700b128d5837
   extra-dep: true
 - location:
     git: https://github.com/runeksvendsen/haskell-bitcoin-api.git
