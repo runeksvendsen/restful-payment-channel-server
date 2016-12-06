@@ -1,8 +1,21 @@
 resolver: lts-7.1
 
-#nix:
-#  enable: true
-#  packages: [zlib]
+# Generate a Docker image
+image:
+  containers:
+    - name: runeks/paychan-test
+      # Base it on the stack-run images
+      base: fpco/stack-run
+      # Include some config and static files in the image
+      add:
+        config: /config
+        test:   /test
+#      entrypoints:
+#        - /test/docker-run.sh
+
+# Produce the right executables when using "stack image containers"
+docker:
+  enable: true
 
 packages:
 - '.'

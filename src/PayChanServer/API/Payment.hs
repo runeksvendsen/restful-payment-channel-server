@@ -1,5 +1,4 @@
 {-# LANGUAGE DataKinds, LambdaCase, TypeOperators, OverloadedStrings, FlexibleInstances, MultiParamTypeClasses #-}
-
 module PayChanServer.API.Payment
 (
     RBPCP

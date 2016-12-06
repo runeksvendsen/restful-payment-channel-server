@@ -18,7 +18,6 @@ sleep 1
 NUMPAYMENTS=$(echo "$2 * $3" | bc -l)
 echo "Executing $NUMPAYMENTS payments using $4 core(s)..." 1>&2
 
-cd test/
 time ./benchPayChanServer.sh $2 $3 localhost:8080 $4
 # RES=$(TIMEFORMAT='%lU';time ( ./benchPayChanServer.sh $2 $3 localhost:8080 $4 ) 2>&1 1>/dev/null)
 

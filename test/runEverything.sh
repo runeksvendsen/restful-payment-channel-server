@@ -5,6 +5,13 @@ pkill ChanStore
 
 set -e
 
+if [ -z $1 ]; then
+   echo "Usage: $0 <conf_prefix>"
+   echo "Example: $0 config/test"
+   exit 1
+fi
+
+# Multi-core debug
 NUMCORES=$2
 PROFILE=""    # "-p"
 RTSOPTS="+RTS -N$NUMCORES $PROFILE"

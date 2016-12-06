@@ -12,6 +12,9 @@ Category:            Bitcoin, Finance, Network
 Build-type:          Simple
 Cabal-version:       >= 1.6
 
+extra-source-files:  test/docker-run.sh
+                     test/runEverything.sh
+
 
 source-repository head
   type:     git
@@ -20,7 +23,7 @@ source-repository head
 Executable PayChanServer
   hs-source-dirs: src
   main-is: PayChanServer/Main.hs
-  ghc-options: -W -O2 -threaded -with-rtsopts=-N
+  ghc-options: -W -O0 -threaded -with-rtsopts=-N
                -main-is PayChanServer.Main
   default-extensions:   OverloadedStrings
   build-depends:
@@ -104,7 +107,7 @@ Executable PayChanServer
 Executable ChanStore
   hs-source-dirs: src
   main-is: ChanStore/Main.hs
-  ghc-options: -W -O2 -threaded -with-rtsopts=-N -main-is ChanStore.Main
+  ghc-options: -W -O0 -threaded -with-rtsopts=-N -main-is ChanStore.Main
   default-extensions: OverloadedStrings
   build-depends:
     base                      >= 4     && < 5,
@@ -195,8 +198,8 @@ library
                         ,   servant             >= 0.7  &&  < 0.9
                         ,   haskoin-core        == 0.4.0
                         ,   time
-
-  hs-source-dirs:       src
+  -- Docker test
+  hs-source-dirs: test, config, src
 
   default-language:     Haskell2010
 
@@ -267,7 +270,7 @@ Executable SigningService
 Executable GenTestData
     hs-source-dirs:       src
     main-is:              Test/GenDataExe.hs
-    ghc-options:          -W -O2 -main-is Test.GenDataExe
+    ghc-options:          -W -O0 -main-is Test.GenDataExe
     default-extensions:   OverloadedStrings
     default-language:     Haskell2010
 
@@ -313,7 +316,7 @@ Executable GenTestData
 Executable RunTestData
     hs-source-dirs:       src
     main-is:              Test/RunData.hs
-    ghc-options:          -W -O2 -main-is Test.RunData
+    ghc-options:          -W -O0 -main-is Test.RunData
     default-language:     Haskell2010
     default-extensions:   OverloadedStrings
     Build-depends:
