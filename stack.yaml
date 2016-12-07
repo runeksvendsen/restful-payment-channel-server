@@ -13,10 +13,6 @@ image:
 #      entrypoints:
 #        - /test/docker-run.sh
 
-# Produce the right executables when using "stack image containers"
-docker:
-  enable: true
-
 packages:
 - '.'
 - location:
