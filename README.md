@@ -67,7 +67,6 @@ So, first, set the `debug.enable` option to `true` for the target server. Then t
 ### Documentation
 See [http://paychandoc.runeks.me/](http://paychandoc.runeks.me/).
 
-
 ### Performance
 On my 2015 Macbook Pro I get ~900 payments per second running the `benchPayChanServer.sh` script:
 
@@ -83,7 +82,6 @@ On my 2015 Macbook Pro I get ~900 payments per second running the `benchPayChanS
 Running on a multi-core server, I get the following performance characteristics as a function of core count:
 <img src="/doc/multi-core.png?raw=true" width="600">
 
-
 ### Live test servers
 #### Bitcoin live net
 [https://paychan.runeks.me](https://paychan.runeks.me/v1/fundingInfo?client_pubkey=03a67afebe772b05fcdf2a1f337bdaaf52343d62049793768d866b06194042e0cf&exp_time=1466539800)
@@ -91,4 +89,4 @@ Running on a multi-core server, I get the following performance characteristics 
 [https://paychantest.runeks.me](https://paychantest.runeks.me/v1/fundingInfo?client_pubkey=03a67afebe772b05fcdf2a1f337bdaaf52343d62049793768d866b06194042e0cf&exp_time=1466539800)
 
 ### TODO
-* `ChanStore`: Properly handle out-of-memory errors
+* ~~`ChanStore`: Properly handle out-of-memory errors~~
