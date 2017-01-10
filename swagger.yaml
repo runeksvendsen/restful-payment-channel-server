@@ -1,7 +1,7 @@
 swagger: '2.0'
 
 info:
-  version: "2.0.0"
+  version: "2.1.0"
   title: RESTful Bitcoin Payment Channel Protocol (v2)
   description: |
     A Bitcoin payment channel enables sending bitcoins between two parties instantly, securely and without fees. The intended use is consumer-to-merchant payments, allowing a consumer to make many small payments to a merchant - with whom the consumer has an open payment channel - while only paying the Bitcoin transaction fee once, when the channel is closed. 
@@ -10,22 +10,9 @@ info:
     
     The payment server speaking this protocol is the recipient of value, and is operated on behalf of a content delivery server who wishes to receive multiple payments from the same customer/client. The content delivery server passes requests, supplied by the client (payer), to the payment channel server, and delivers content to the client based on the response from the server. 
     
-    * Server implementation (**v2** not fully implemented): https://github.com/runeksvendsen/restful-payment-channel-server
+    * Server implementation (in progress): https://github.com/runeksvendsen/restful-payment-channel-server
     
-    * JavaScript client library (**v2** not implemented at all): https://github.com/runeksvendsen/paychanjs-client
-    
-    **Changes from v1 to v2**:
-    
-    The main change is that the server is now able to free value it has received over a payment channel without closing it. **1** and **2** cover the changes required for this to work.
-    
-      1. The client change address (in the payment transaction) is now set to be the channel funding address. If the client wishes to close the channel early it will, at this point, provide a new payment (of zero value) with the desired change address. Reason: the client needs to contact the server in order to close the payment channel anyway. When doing this, it might as well supply a payment that uses the desired change address, hereby enabling the server to redeem the value it has received over the payment channel, without closing it (see **2**). It also gives the client the flexibility to decide which change address to use when it actually needs it, rather than when the channel is opened.
-      
-      2. The source of funding for the payment transaction is now no longer static. When the server needs to free the value it has received over the channel, it will publish the settlement transaction, and for a temporary period the client will need to make payment on two endpoints, in order to pay the server. In this interim period, the client will receive a 317 response code with the location of the second resource in the *Location* header, and will make a payment on that resource as well. When the Blockchain move is done, the client will then receive a 318 response code, pointing to the same *Location*, indicating that all future payments should be made on that resource. 317 and 318 are the same as the 307 and 308 response codes, respectively, except that the request body needs to be updated to fit the new resource.  
-      
-      3. A payment (**PaymentData**) now contains all the information over which the client signature is made (previous outpoint, redeem script, sighash flag, etc.). This makes the payment verifiable by itself, as long as the redeem script at the given outpoint in the UTXO set matches, and the channel hasn't expired yet.
-      
-      4. The client is no longer required to do Blockchain lookup, as long as it knows how much value was sent to the channel funding address. Querying the **/funding/:pubkey/:exp_time/begin_open** endpoint will direct the client to the proper resource, by the server doing the necessary Blockchain lookup. The rationale here is that, as long as the client doesn't have multiple open payment channel with the same public key, it loses nothing by trusting the server with regards to which funding outpoint to use. The worst thing that can happen, from the client's perspective, is that the payment is invalid and the client gets off not paying anything. This also greatly simplifies the case where the server needs to free received value - in which case the client needs to make two payments, using the old and new source of funding - by allowing the server to direct the client to the funding outpoint(s) it needs to use.
-    
+    * JavaScript client library (in progress): https://github.com/runeksvendsen/paychanjs-client
   
 basePath: /v2
 schemes:
@@ -52,13 +39,14 @@ paths:
             $ref: "#/definitions/FundingInfo"
         400:
           description: Invalid parameter
-  /funding/{client_pubkey}/{exp_time}/begin_open:
+  /funding/{client_pubkey}/{server_pubkey}/{exp_time}/begin_open:
     get:
       summary: Get payment channel resource URI
       description: After sending funds to the channel funding address, and waiting the specified number of confirmations, the client will retrieve the resource URI of not-yet-open payment channel here, and POST the first channel payment to **'channel_uri'** in order to open the channel.
       operationId: fundingBeginOpen
       parameters:
         - $ref: "#/parameters/clientPubKeyParam"
+        - $ref: "#/parameters/serverPubKeyParam"
         - $ref: "#/parameters/expTimeParam"
       responses:
         200:
@@ -83,6 +71,7 @@ paths:
         - $ref: "#/parameters/expTimeParam"
         - $ref: "#/parameters/fundingSourceTxIdParam"
         - $ref: "#/parameters/fundingSourceVoutParam"
+        - $ref: "#/parameters/clientServerSecret"
         - $ref: "#/parameters/paymentBodyParam"
       responses:
         201:
@@ -119,6 +108,7 @@ paths:
         - $ref: "#/parameters/expTimeParam"
         - $ref: "#/parameters/fundingSourceTxIdParam"
         - $ref: "#/parameters/fundingSourceVoutParam"
+        - $ref: "#/parameters/clientServerSecret"
         - $ref: "#/parameters/paymentBodyParam"
       responses:
         200:
@@ -154,6 +144,7 @@ paths:
         - $ref: "#/parameters/expTimeParam"
         - $ref: "#/parameters/fundingSourceTxIdParam"
         - $ref: "#/parameters/fundingSourceVoutParam"
+        - $ref: "#/parameters/clientServerSecret"
       consumes:
         - application/json
       produces:
@@ -180,6 +171,12 @@ parameters:
       description: Client/value sender public key. Hex-encoded, compressed Secp256k1 pubkey, 33 bytes.
       required: true
       type: string
+    serverPubKeyParam:
+      name: server_pubkey
+      in: path
+      description: Server/value receiver public key. Hex-encoded, compressed Secp256k1 pubkey, 33 bytes.
+      required: true
+      type: string
     fundingSourceTxIdParam:
       name: funding_txid
       in: path
@@ -192,6 +189,12 @@ parameters:
       description: The output index part of the outpoint in the Blockchain which holds the client's channel balance.
       type: integer
       required: true
+    clientServerSecret:
+      name: secret
+      in: query
+      description: A secret known only to the client and server, thereby preventing third parties from figuring out payment resource URLs by looking through the blockchain. This secret equals the SHA256 hash of the opening channel payment signature ('signature_data' in PaymentData), encoded as hex. 404 should be returned in case the server receives a request with an incorrect client secret.
+      type: string
+      required: true
     paymentBodyParam:
       name: payment_data
       in: body
@@ -199,13 +202,6 @@ parameters:
       required: true
       schema:
         $ref: "#/definitions/PaymentData"
-    channelCloseToken:
-      name: sig
-      in: query
-      description: |
-        The client signature of the channel payment that uses the client's desired change address. Used as a token to prevent strangers from closing channels. (DER-encoded ECDSA signature, hex-encoded). This is the signature in the 'signature_data' field in the *PaymentData* object of the payment with the updated change address. 
-      required: true
-      type: string
 definitions:
   ChannelLocation:
     type: object
