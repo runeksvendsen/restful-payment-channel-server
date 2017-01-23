@@ -25,9 +25,9 @@ paths:
       description: |
         Before opening a payment channel with the server, the client must first acquire the server public key, in order to calculate a funding address for the channel.
       
-        The client will first calculate the funding address, confirm that it matches the server's, then pay to the funding address, and wait until the funding transaction has the server-specified number of confirmations ("funding_tx_min_conf").
+        The client will first calculate the funding address, confirm that it matches the server's, then pay to the funding address, and wait until the funding transaction has the server-specified number of confirmations (**funding_tx_min_conf**).
         
-        After this, the client will create a new payment of value equal to the server-specified (**'open_price'**), and POST this to the channel URI (see **/begin_open**) in order to open the channel.
+        After this, the client will create a new payment of value equal to the server-specified (**open_price**), and POST this to the channel URI (see **/begin_open**) in order to open the channel.
       operationId: getFundingInfo
       parameters:
         - $ref: "#/parameters/clientPubKeyParam"
@@ -41,8 +41,8 @@ paths:
           description: Invalid parameter
   /funding/{client_pubkey}/{server_pubkey}/{exp_time}/begin_open:
     get:
-      summary: Get payment channel resource URI
-      description: After sending funds to the channel funding address, and waiting the specified number of confirmations, the client will retrieve the resource URI of not-yet-open payment channel here, and POST the first channel payment to **'channel_uri'** in order to open the channel.
+      summary: (Optional) Get payment channel resource URI
+      description: After sending funds to the channel funding address, and waiting the specified number of confirmations, the client can retrieve the resource URI of not-yet-open payment channel here, and POST the first channel payment to **channel_uri** in order to open the channel. Using this endpoint is optional, as the client can choose to retrieve **funding_txid** and **funding_vout** from elsewhere. Note that the client needs to know the amount sent to the funding output regardless of whether or not this endpoint is used, as it only fills in funding outpoint (txid+vout).
       operationId: fundingBeginOpen
       parameters:
         - $ref: "#/parameters/clientPubKeyParam"
@@ -97,7 +97,7 @@ paths:
       description: |
         Make payment over an existing payment channel.
         
-        To pay the server, the client will create a new **PaymentData** object with the source of funding set to the outpoint specified by the *'funding_txid'* and *'funding_vout'* parameters. The client change amount is decremented by the desired payment amount, and the change address is set to the channel funding address (in order to allow the server to free the received funds without involvement from the client). Only 'change_value' and 'signature_data' change for new payments. Except in case of the payment needed to prematurely close the channel, in which the client updates 'change_address' to its desired withdrawal address.
+        To pay the server, the client will create a new **PaymentData** object with the source of funding set to the outpoint specified by the *'funding_txid'* and **funding_vout** parameters. The client change amount is decremented by the desired payment amount, and the change address is set to the channel funding address (in order to allow the server to free the received funds without involvement from the client). Only 'change_value' and 'signature_data' change for new payments. 
       operationId: payPaymentChannel
       consumes:
         - application/json
@@ -115,15 +115,8 @@ paths:
           description: Value received
           schema:
             $ref: "#/definitions/PaymentResult"
-        317:
-          description: Payment 1/2 accepted. However, it is required that the client also perform a request on the payment resource pointed to (same as 307 but request data needs to be updated).
-          headers:
-            Location:
-              description: "Location of payment resource also requiring payment data"
-              type: string
-              format: uri
         318:
-          description: The payment resource has moved permanently. Perform this and all future requests on the specified resource (same as 308 but request data needs to be updated).
+          description: The payment resource has moved permanently. Perform this request, and all future requests, using the resource specified in the **Location** header (same as 308 but request body data needs to be updated to fit new resource).
           headers:
             Location:
               description: "New payment resource location"
@@ -136,7 +129,7 @@ paths:
   /channels/{client_pubkey}/{exp_time}/{funding_txid}/{funding_vout}/close:
     put:
       summary: Close payment channel
-      description: In order to enable the server to return change to the client, the client must provide a payment (of zero value) with the client change address set to the desired value. After a successful request, the settling transaction is published to the Bitcoin network, and the **PaymentResult** response will include its transaction ID. 
+      description: In order to enable the server to return unsent funds to the client, the client must provide a payment of zero value with the **change_address** field set according to the client's wish (as opposed to a payment where **change_address** always equals the channel funding address). After a successful request, the settling transaction is published to the Bitcoin network, and the **PaymentResult** response will include its transaction ID. 
       operationId: deletePaymentChannel
       parameters:
         # path
@@ -145,6 +138,7 @@ paths:
         - $ref: "#/parameters/fundingSourceTxIdParam"
         - $ref: "#/parameters/fundingSourceVoutParam"
         - $ref: "#/parameters/clientServerSecret"
+        - $ref: "#/parameters/paymentBodyParam"
       consumes:
         - application/json
       produces:
@@ -192,7 +186,7 @@ parameters:
     clientServerSecret:
       name: secret
       in: query
-      description: A secret known only to the client and server, thereby preventing third parties from figuring out payment resource URLs by looking through the blockchain. This secret equals the SHA256 hash of the opening channel payment signature ('signature_data' in PaymentData), encoded as hex. 404 should be returned in case the server receives a request with an incorrect client secret.
+      description: SHA256 hash of the opening channel payment ECDSA signature data (**signature_data** in **PaymentData**), hex-encoded. This acts as a secret known only to the client and server, thereby preventing third parties from figuring out payment resource URLs by looking through the blockchain, thus acting as denial-of-service protection for the server operator. A 404 response should be returned in case the server receives a request with an incorrect client secret.
       type: string
       required: true
     paymentBodyParam:
