@@ -8,7 +8,7 @@ info:
     
     An arbitrary number of payments can be made over the course of, say, one week, and at the end of this week the settlement transaction is published, thus reducing the Bitcoin transaction fee to something that has to be paid every week, rather every time a transaction is made.
     
-    The payment server speaking this protocol is the recipient of value, and is operated on behalf of a content delivery server who wishes to receive multiple payments from the same customer/client. The content delivery server passes requests, supplied by the client (payer), to the payment channel server, and delivers content to the client based on the response from the server. 
+    The payment server speaking this protocol is the recipient of value. Arbitrary application data can be included with the payment by the client, and returned in response to a payment by the server.
     
     * Server implementation (in progress): https://github.com/runeksvendsen/restful-payment-channel-server
     
@@ -39,24 +39,7 @@ paths:
             $ref: "#/definitions/FundingInfo"
         400:
           description: Invalid parameter
-  /funding/{client_pubkey}/{server_pubkey}/{exp_time}/begin_open:
-    get:
-      summary: (Optional) Get payment channel resource URI
-      description: After sending funds to the channel funding address, and waiting the specified number of confirmations, the client can retrieve the resource URI of not-yet-open payment channel here, and POST the first channel payment to **channel_uri** in order to open the channel. Using this endpoint is optional, as the client can choose to retrieve **funding_txid** and **funding_vout** from elsewhere. Note that the client needs to know the amount sent to the funding output regardless of whether or not this endpoint is used, as it only fills in funding outpoint (txid+vout).
-      operationId: fundingBeginOpen
-      parameters:
-        - $ref: "#/parameters/clientPubKeyParam"
-        - $ref: "#/parameters/serverPubKeyParam"
-        - $ref: "#/parameters/expTimeParam"
-      responses:
-        200:
-          description: Channel ready to open
-          schema:
-            $ref: "#/definitions/ChannelLocation"
-        400:
-          description: Invalid parameter
-        409:
-          description: Insufficient confirmation count for funding transaction
+  
   /channels/{client_pubkey}/{exp_time}/{funding_txid}/{funding_vout}:
     post:
       summary: Create a new payment channel
@@ -165,12 +148,6 @@ parameters:
       description: Client/value sender public key. Hex-encoded, compressed Secp256k1 pubkey, 33 bytes.
       required: true
       type: string
-    serverPubKeyParam:
-      name: server_pubkey
-      in: path
-      description: Server/value receiver public key. Hex-encoded, compressed Secp256k1 pubkey, 33 bytes.
-      required: true
-      type: string
     fundingSourceTxIdParam:
       name: funding_txid
       in: path
@@ -196,17 +173,8 @@ parameters:
       required: true
       schema:
         $ref: "#/definitions/PaymentData"
-definitions:
-  ChannelLocation:
-    type: object
-    required:
-      - channel_uri
-    properties:
-      channel_uri:
-        description: The URL of the resource which must the POSTed to in order to open a new payment channel, after which further payments can be PUT on this resource. Close the payment channel by issuing a DELETE request on the resource.
-        type: string
-        example: "https://paychan.runeks.me/v2/channels/03da3afe4f58992a8cc909522c2ec859ef218fd92fda0a67c23fb40e0303030405/1502183072/a615e0fa211f5644b0262489790151b5104c085ce84c80a265af4475b5c6c8da/2"
 
+definitions:
   FundingInfo:
     type: object
     required:
