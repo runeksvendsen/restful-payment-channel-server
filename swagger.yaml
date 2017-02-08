@@ -13,6 +13,17 @@ info:
     * Server implementation (in progress): https://github.com/runeksvendsen/restful-payment-channel-server
     
     * JavaScript client library (in progress): https://github.com/runeksvendsen/paychanjs-client
+    
+    Advantages over *bitcoinj* payment channel protocol:
+    * Communication via RESTful HTTP requests rather than a stateful TCP connection (consequently, it works from the browser)
+    * Safe from transaction ID malleability as it uses CLTV (BIP 65), rather than a chain of unconfirmed multisig transactions (the  *bitcoinj* CLTV implementation ("v2") is non-functional: https://github.com/bitcoinj/bitcoinj/issues/1250)
+    * Increased denial-of-service resistance, as the server doesn't need to sign a refund transaction before the client has proven that it has actually funded the channel and paid the server
+    * The client change address, in the payment transaction, is equal to the channel funding address, allowing the server to free received value while keeping the channel open (the server responds to a payment with an HTTP redirect pointing to the new in-blockchain resource, in case the funding output has moved)
+    * Variable, server-defined:
+      * Dust limit 
+      * Initial payment value (*open_price*)
+      * "Settlement period" (the server reserves the right to close the channel this many hours *before* the client refund transaction becomes valid)
+    
   
 basePath: /v2
 schemes:
