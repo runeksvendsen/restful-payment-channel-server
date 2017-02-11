@@ -15,14 +15,19 @@ info:
     * JavaScript client library (in progress): https://github.com/runeksvendsen/paychanjs-client
     
     Advantages over *bitcoinj* payment channel protocol:
-    * Communication via RESTful HTTP requests rather than a stateful TCP connection (consequently, it works from the browser)
+    * Communication via RESTful HTTP requests rather than a stateful TCP connection
+      * Works from the browser
+      * Easy-to-add encryption (HTTPS)
+      * Easier to implement (no connection state)
     * Safe from transaction ID malleability as it uses CLTV (BIP 65), rather than a chain of unconfirmed multisig transactions (the  *bitcoinj* CLTV implementation ("v2") is non-functional: https://github.com/bitcoinj/bitcoinj/issues/1250)
-    * Increased denial-of-service resistance, as the server doesn't need to sign a refund transaction before the client has proven that it has actually funded the channel and paid the server
-    * The client change address, in the payment transaction, is equal to the channel funding address, allowing the server to free received value while keeping the channel open (the server responds to a payment with an HTTP redirect pointing to the new in-blockchain resource, in case the funding output has moved)
+    * Increased denial-of-service resistance:
+      * The server doesn't need to sign a refund transaction before the client has proven that it has actually funded the channel and paid the server
+      * Only constant-size data is accepted until the client has made the initial payment (no Bitcoin transaction is sent over the wire, in-blockchain data is referenced by transaction ID)
+    * The client change address, in the payment transaction, is equal to the channel funding address, allowing the server to free received value while keeping the channel open (the server responds to a payment with an HTTP redirect pointing to the new in-blockchain resource, in case the funding output has moved) (NB: requires either transaction ID malleability fix or waiting for confirmations)
     * Variable, server-defined:
       * Dust limit 
       * Initial payment value (*open_price*)
-      * "Settlement period" (the server reserves the right to close the channel this many hours *before* the client refund transaction becomes valid)
+      * "Settlement period": the server reserves the right to close the channel this many hours *before* the client refund transaction becomes valid.
     
   
 basePath: /v2
@@ -30,7 +35,7 @@ schemes:
   - https
 
 paths:
-  /funding/{client_pubkey}/{exp_time}/info:
+  /funding/{exp_time}/{client_pubkey}/info:
     get:
       summary: Retrieve information about how to fund a new payment channel
       description: |
@@ -41,8 +46,8 @@ paths:
         After this, the client will create a new payment of value equal to the server-specified (**open_price**), and POST this payment to the channel URI to open the channel. Further payments are made though a PUT request on the same URI.
       operationId: getFundingInfo
       parameters:
-        - $ref: "#/parameters/clientPubKeyParam"
         - $ref: "#/parameters/expTimeParam"
+        - $ref: "#/parameters/clientPubKeyParam"
       responses:
         200:
           description: Proceed with funding
@@ -51,7 +56,7 @@ paths:
         400:
           description: Invalid parameter
   
-  /channels/{client_pubkey}/{exp_time}/{funding_txid}/{funding_vout}:
+  /channels/{server_pubkey}/{exp_time}/{client_pubkey}/{funding_txid}/{funding_vout}:
     post:
       summary: Create a new payment channel
       description: |
@@ -61,8 +66,9 @@ paths:
         
       operationId: createPaymentChannel
       parameters:
-        - $ref: "#/parameters/clientPubKeyParam"
+        - $ref: "#/parameters/serverPubKeyParam"
         - $ref: "#/parameters/expTimeParam"
+        - $ref: "#/parameters/clientPubKeyParam"
         - $ref: "#/parameters/fundingSourceTxIdParam"
         - $ref: "#/parameters/fundingSourceVoutParam"
         - $ref: "#/parameters/clientServerSecret"
@@ -98,8 +104,9 @@ paths:
       produces:
         - application/json
       parameters:
-        - $ref: "#/parameters/clientPubKeyParam"
+        - $ref: "#/parameters/serverPubKeyParam"
         - $ref: "#/parameters/expTimeParam"
+        - $ref: "#/parameters/clientPubKeyParam"
         - $ref: "#/parameters/fundingSourceTxIdParam"
         - $ref: "#/parameters/fundingSourceVoutParam"
         - $ref: "#/parameters/clientServerSecret"
@@ -120,15 +127,15 @@ paths:
           description: Invalid parameter
         410:
           description: The channel is in the process of being closed. Performing a DELETE request on the resource in a few seconds should return information about the closed channel.
-  /channels/{client_pubkey}/{exp_time}/{funding_txid}/{funding_vout}/close:
+  /channels/{server_pubkey}/{exp_time}/{client_pubkey}/{funding_txid}/{funding_vout}/close:
     put:
       summary: Close payment channel
       description: In order to enable the server to return unsent funds to the client, the client must provide a payment of zero value with the **change_address** field set according to the client's wish (as opposed to a payment where **change_address** always equals the channel funding address). After a successful request, the settling transaction is published to the Bitcoin network, and the **PaymentResult** response will include its transaction ID. 
       operationId: deletePaymentChannel
       parameters:
-        # path
-        - $ref: "#/parameters/clientPubKeyParam"
+        - $ref: "#/parameters/serverPubKeyParam"
         - $ref: "#/parameters/expTimeParam"
+        - $ref: "#/parameters/clientPubKeyParam"
         - $ref: "#/parameters/fundingSourceTxIdParam"
         - $ref: "#/parameters/fundingSourceVoutParam"
         - $ref: "#/parameters/clientServerSecret"
@@ -153,6 +160,12 @@ parameters:
       required: true
       type: integer
       format: uint32
+    serverPubKeyParam:
+      name: server_pubkey
+      in: path
+      description: Server/value receiver public key. Hex-encoded, compressed Secp256k1 pubkey, 33 bytes. As retrieved from the */funding/* endpoint.
+      required: true
+      type: string  
     clientPubKeyParam:
       name: client_pubkey
       in: path
@@ -174,7 +187,7 @@ parameters:
     clientServerSecret:
       name: secret
       in: query
-      description: SHA256 hash of the opening channel payment ECDSA signature data (**signature_data** in **PaymentData**), hex-encoded. This acts as a secret known only to the client and server, thereby preventing third parties from figuring out payment resource URLs by looking through the blockchain, thus acting as denial-of-service protection for the server operator. A 404 response should be returned in case the server receives a request with an incorrect client secret.
+      description: SHA256 hash of the opening channel payment's signature data (**signature_data** in **PaymentData**), hex-encoded. This acts as a secret known only to the client and server, hereby preventing third parties from figuring out payment resource URLs by looking through the blockchain. This acts as a denial-of-service protection for the server operator. A 404 response should be returned in case the server receives a request with an incorrect client secret, but with otherwise correct data. Also, the server software should be designed in such a way that no difference in response time can be measured between a "genuine" 404 response, and a 404 response that results only from an incorrect secret. 
       type: string
       required: true
     paymentBodyParam:
@@ -192,7 +205,6 @@ definitions:
       - server_pubkey
       - dust_limit
       - funding_address_copy
-      - redeem_script_copy
       - open_price
       - funding_tx_min_conf
       - settlement_period_hours
@@ -203,7 +215,7 @@ definitions:
         type: string
         example: "029b5549e8cac42d27051956925d8176408b2183ba357850f58320ad5876b9c13f"
       dust_limit:
-        description: (Satoshis) The server will not accept payments where the client change amount is less than this amount. This "dust limit" is necessary in order to avoid producing a settlement transaction that will not circulate in the Bitcoin P2P network because it contains an output of minuscule value. Consequently, the maximum amount, that can be sent over the payment channel, is the amount sent to the funding address minus this "dust limit".
+        description: (Satoshis) The server will not accept payments where the client change amount is less than this amount. This "dust limit" is necessary in order to avoid producing a settlement transaction that will not circulate in the Bitcoin P2P network because it contains an output of value below the so-called "dust limit".
         type: integer
         format: uint64
         example: 500
@@ -211,32 +223,63 @@ definitions:
         description: Server derived channel funding address. The client will confirm that its own derived funding address matches this one, before paying to it.
         type: string
         example: "2NCTirSGjFM8T7hUow3AcfyFaw1N1APnYuP"
-      redeem_script_copy:
-        description: Server derived channel redeem script. Defines sender, receiver and channel expiration date. Used to construct the input in the payment transaction. The client will verify, at the very least, that the expiration time is what it expects. Hex-encoded.
-        type: string
-        example: "63210225b3aaf58992a8cc909522c2ec859ef218fd29fda0a6723cfb4e0529f80cc8f3ad6704002f6859b175682103da3afe4f58992a8cc909522c2ec859ef218fd92fda0a67c23fb40e0303030405ac"
       open_price:
-        description: Price (in satoshis) for opening a channel with the given {exp_time}. This amount is paid in the initial channel payment when opening a new channel. May be zero, in which case a payment of zero value is used.
+        description: Price (in satoshis) for opening a channel with the given {exp_time}. This amount is paid in the initial channel payment when opening a new channel. The server should choose a price that is greater than or equal to the dust limit.
         type: integer
         format: uint64
         minimum: 0
         example: 25000
       funding_tx_min_conf:
-        description: Minimum confirmation count that the funding transaction must have before proceeding with opening a new channel.
+        description: The client must wait for the funding transaction to have this many confirmations before opening the channel.
         type: integer
         format: int32
         minimum: 0
         example: 6
       settlement_period_hours:
-        description: The server reserves the right to close the payment channel this many hours before the specified expiration date. The server hasn't received any actual value until it publishes a payment transaction to the Bitcoin network, so it needs a window of time in which the client can no longer send payments over the channel, and yet the channel refund transaction hasn't become valid. 
+        description: The server reserves the right to close the payment channel this many hours before the specified expiration date. The server hasn't received any actual value until it publishes a payment transaction to the Bitcoin network, so it needs a window of time in which the client can no longer send payments over the channel, while the channel refund transaction hasn't become valid yet. 
         type: integer
         minimum: 0
         example: 12
       min_duration_hours:
-        description: The minimum duration of newly opened payment channels. 
+        description: Payment channel minimum duration, in hours. The client-chosen channel expiration time must be at least this figure plus 'settlement_period_hours' hours into the future.
         type: integer
         minimum: 0
         example: 48
+  
+  Payment:
+    description: Payment data plus application data
+    type: object
+    required:
+      - payment_data
+      - application_data
+    properties:
+      payment_data:
+        description: Either a PaymentData or CompactPaymentData object
+        type: object
+        example:
+          $ref: "#/definitions/PaymentData"
+      application_data:
+        description: Arbitrary application data. Used by the application protocol that's using this payment channel protocol to transmit value. For the opening channel payment, this field MUST be equal to the empty string.
+        type: string
+        example: "{ order_ref : 19834938743 }"
+  
+  CompactPaymentData:
+    description: Same as *PaymentData*, but with everything but 'signature_data' and 'change_value' stripped away. This is the minimum amount of information needed for the server to receive value. 
+    type: object
+    required:
+      - signature_data
+      - change_value
+    properties:
+      signature_data:
+        description: |
+          DER-encoded ECDSA signature (in hex), including signature hash flag. This is a SIGHASH_SINGLE|ANYONECANPAY or SIGHASH_NONE|ANYONECANPAY signature over the the "payment transaction", which is a Bitcoin transaction that: redeems the outpoint specified by 'funding_txid' and 'funding_vout' using the redeem script defined in 'redeem_script', with an output which sends 'change_value' to 'change_address'. 
+        type: string
+        example: "3044022[...]4fd983 (~72 bytes in total)"
+      change_value:
+        description: The value sent back to the client in the payment transaction. The total amount transferred to the server is this amount subtracted from the value sent to the channel funding address.
+        type: integer
+        format: uint64
+        example: 1000000
   
   PaymentData:
     description: |
@@ -249,10 +292,9 @@ definitions:
       - change_value
       - change_address
       - redeem_script
-      - sighash_flag
     properties:
       redeem_script:
-        description: The funds sent to the funding address are bound by this contract (Bitcoin script). The data is needed to construct the payment signature. Hex-encoded data.
+        description: Hex-encoded data. The funds sent to the funding address are bound by this contract (Bitcoin script). Used to construct the payment transaction.
         type: string
         example: "63210225b3aaf58992a8cc909522c2ec859ef218fd29fda0a6723cfb4e0529f80cc8f3ad6704002f6859b175682103da3afe4f58992a8cc909522c2ec859ef218fd92fda0a67c23fb40e0303030405ac"
       funding_txid:
@@ -266,22 +308,18 @@ definitions:
         example: 1
       signature_data:
         description: |
-          DER-encoded ECDSA signature (in hex). This is a SIGHASH_SINGLE|ANYONECANPAY signature over the the "payment transaction", which is a Bitcoin transaction that: redeems the outpoint specified by 'funding_txid' and 'funding_vout' using the redeem script defined in 'redeem_script', with an output which sends 'change_value' to 'change_address'.
+          DER-encoded ECDSA signature (in hex), including signature hash flag. This is a SIGHASH_SINGLE|ANYONECANPAY or SIGHASH_NONE|ANYONECANPAY signature over the the "payment transaction", which is a Bitcoin transaction that: redeems the outpoint specified by 'funding_txid' and 'funding_vout' using the redeem script defined in 'redeem_script', with an output which sends 'change_value' to 'change_address'. 
         type: string
-        example: "304402202... (~72 bytes)"
+        example: "3044022[...]4fd983 (~72 bytes in total)"
       change_value:
         description: The value sent back to the client in the payment transaction. The total amount transferred to the server is this amount subtracted from the value sent to the channel funding address.
         type: integer
         format: uint64
         example: 1000000
       change_address:
-        description: The client change address as used in the only output of the payment transaction.
+        description: The client change address as used in the only output of the payment transaction (equal to the channel funding address, except for the payment required to close the channel, in which the client can specify its desired refund address).
         type: string
-        example: "19xUUsSomTCbS9Ar3m1e6j3zqGBANz6d6t"
-      sighash_flag:
-        description: Specifies which parts of the payment Bitcoin transaction are signed. Hex-encoded, single byte; in both v1 and v2 always equal to "83" (0x83), which is **SIGHASH_SINGLE|ANYONECANPAY**, meaning the client only signs its own output, and also allowing more to be added.
-        type: string
-        example: 83
+        example: "2NCTirSGjFM8T7hUow3AcfyFaw1N1APnYuP"
         
   PaymentResult:
     type: object
