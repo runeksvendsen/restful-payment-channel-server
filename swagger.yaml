@@ -48,6 +48,9 @@ paths:
       parameters:
         - $ref: "#/parameters/expTimeParam"
         - $ref: "#/parameters/clientPubKeyParam"
+      produces:
+        - application/json
+        - application/bitcoin-paymentrequest
       responses:
         200:
           description: Proceed with funding
@@ -196,7 +199,7 @@ parameters:
       description: Payment data
       required: true
       schema:
-        $ref: "#/definitions/PaymentData"
+        $ref: "#/definitions/Payment"
 
 definitions:
   FundingInfo:
