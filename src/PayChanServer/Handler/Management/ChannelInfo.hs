@@ -2,13 +2,13 @@
 
 module PayChanServer.Handler.Management.ChannelInfo where
 
-import           Common.Types
+import           AppPrelude.Types
 import           PayChanServer.Types
 import           PayChanServer.Util
 import qualified PayChanServer.Config.Types as Conf
 import qualified PayChanServer.DB as DB
 import           ChanStore.Interface  as DBConn
-import           ChanStore.Lib.Types (ChanInfoResult(..))
+import           AppPrelude.Man (ChanInfoResult(..))
 
 
 -- |

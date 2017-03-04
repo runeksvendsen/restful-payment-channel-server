@@ -1,11 +1,11 @@
 module ConnManager.Types where
 
 
-import           ChanStore.Lib.Types
-import           Common.URLParam (pathParamEncode)
+import           AppPrelude.Man
+import           AppPrelude.Util.URLParam (pathParamEncode)
 
-import           Data.Bitcoin.PaymentChannel.Types (ReceiverPaymentChannel, FullPayment)
-import           Data.Bitcoin.PaymentChannel.Util (deserEither)
+import           PaymentChannel.Types (ServerPayChanX, SignedPayment)
+import           PaymentChannel.Util (deserEither)
 import qualified Data.Aeson.Types as JSON (Parser, parseMaybe, parseEither)
 
 import           Network.HTTP.Client

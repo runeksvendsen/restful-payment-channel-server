@@ -2,7 +2,7 @@
 
 module  PayChanServer.Init where
 
-import qualified Types.Config as Conf
+import qualified AppPrelude.Types.Config as Conf
 import           Common.Util
 import           PayChanServer.Config.Types
 import           PayChanServer.Config.Util
@@ -21,7 +21,7 @@ import qualified Control.Exception as E
 import           System.IO                      (hFlush, stdout)
 
 
-appConfInit :: Config -> IO App
+appConfInit :: DB.DBConf db => Config -> IO (App db)
 appConfInit cfg = do
     -- Debug
     debug <- configDebugIsEnabled cfg
@@ -38,9 +38,9 @@ appConfInit cfg = do
     signingServiceConn <- getSigningServiceConn cfg
     btcIface <- getBlockchainIface cfg
 
-    dbIface <- getChanStoreIface =<< getDBConf cfg
+    dbConf  <- DB.init logLvl
     callbackIface <- Conf.fromConf cfg
-
+    -- maybePort <- maybe Nothing readMaybe <$> lookupEnv "PORT"
     putStr "Contacting SigningService for public key... "
     pubKey <- initWaitConnect "SigningService" $ getPubKey signingServiceConn
     putStrLn $ "success: " ++ cs (pathParamEncode pubKey)
@@ -56,7 +56,7 @@ appConfInit cfg = do
     (ServerSettleConfig settleFee _) <- getServerSettleConfig cfg
     let settleFunc = Settle.finishSettleChannel dbIface signingServiceConn btcIface settleFee
 
-    return $ App dbIface
+    return $ App dbConf
                  callbackIface
                  (BtcAPI.listUnspentOutputs btcIface) settleFunc
                  pubKey

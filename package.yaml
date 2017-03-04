@@ -1,0 +1,121 @@
+name:         restful-payment-channel-server
+version:      '0.2.0'
+synopsis:     RESTful Bitcoin payment channel server
+description:  TODO
+stability:    Experimental
+category:     Bitcoin Finance Network
+author:       Rune K. Svendsen
+maintainer:   runesvend@gmail.com
+license:      PublicDomain
+github:       runeksvendsen/restful-payment-channel-server
+
+extra-source-files:
+- test/docker-run.sh
+- test/runEverything.sh
+
+default-extensions:
+- TypeSynonymInstances
+- FlexibleInstances
+- MultiParamTypeClasses
+- OverloadedStrings
+
+dependencies:
+- base >=4 && <5
+- servant
+- haskoin-core ==0.4.0
+- time
+- text
+- rbpcp-api
+- transformers
+- errors
+- servant-client
+- blockchain-restful-address-index
+- cereal
+- bytestring
+- base16-bytestring
+- bitcoin-payment-channel
+- rbpcp-api
+- bytestring >=0.9.1 && <0.11
+- blockchain-restful-address-index
+- secp256k1
+- servant-server
+- servant-client
+- http-api-data
+- warp
+- http-client
+- http-client-tls
+- http-types
+- mtl >=2 && <3
+- transformers
+- aeson
+- vector
+- base16-bytestring
+- scientific
+- lens
+- containers
+- stm-containers
+- cereal
+- cereal-text
+- hashable
+- string-conversions
+- errors
+- hexstring
+- unix
+- exceptions
+- filepath
+- tagged
+- configurator
+- wai
+- entropy
+- monad-time
+- paychan-datastore
+
+ghc-options: -W
+
+library:
+  source-dirs:
+  - test
+  - config
+  - src
+  exposed-modules:
+  - BlockchainAPI.Types
+  - PayChanServer.API
+  - PayChanServer.App
+  - PayChanServer.Init
+  - PayChanServer.Settlement
+  - PayChanServer.Config.Types
+  - PayChanServer.Types
+  - PayChanServer.Config.Util
+
+executables:
+  PayChanServer:
+    main: PayChanServer.hs
+    source-dirs: driver
+    default-extensions:
+    ghc-options:
+    - -main-is
+    - PayChanServer.Main
+    dependencies:
+    - restful-payment-channel-server
+
+  GenTestData:
+    main: GenDataExe.hs
+    source-dirs: driver
+    ghc-options:
+    - -main-is
+    - GenDataExe
+    dependencies:
+    - entropy
+    - optparse-applicative
+
+  RunTestData:
+    main: RunData.hs
+    source-dirs: driver
+    ghc-options:
+    - -main-is
+    - RunData
+    dependencies:
+    - optparse-applicative
+    - wai
+    - wreq
+

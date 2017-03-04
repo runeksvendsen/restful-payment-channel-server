@@ -7,12 +7,29 @@ import qualified RBPCP.Types as RBPCP
 import qualified PayChanServer.DB as DB
 import           ChanStore.Interface  as DBConn
 import           PayChanServer.Callback.Interface as CB
-import           ChanStore.Lib.Types (PayRequest(..), PayResult(..), UpdateResult(..))
+import           AppPrelude.Man (PayBeginRequest(..), PayBeginResult(..), UpdateResult(..))
 
+
+{-
+
+data CallbackInfo = CallbackInfo
+  { amount              :: BtcAmount
+  , chan_value_left     :: BtcAmount
+  , chan_total_value    :: BtcAmount
+  , client_app_data     :: T.Text
+  , full_payment        :: SignedPayment
+  } deriving (Generic, FromJSON, ToJSON)
+
+data CallbackResponse = CallbackResponse
+  { resp_app_data       :: T.Text
+  , resp_app_error      :: Maybe T.Text
+  } deriving (Generic, FromJSON, ToJSON)
+
+-}
 
 chanPayHandler ::
     SendPubKey
-    -> BitcoinLockTime
+    -> LockTimeDate
     -> TxHash
     -> Vout
     -> RBPCP.Payment
@@ -20,18 +37,14 @@ chanPayHandler ::
 chanPayHandler sendPK lockTime fundTxId fundIdx (RBPCP.Payment payment appData) = do
     -- TODO: verify resource/payment match
     dbConn <- view Conf.dbInterface
-    (PaymentReceived valRecvd valLeft chanTotalValue) <-
-        DB.tryDBRequest (DBConn.chanPay dbConn sendPK payment) >>=
-            \res -> case res of
-                pr@PaymentReceived{} -> return pr
-                PaymentError err    -> userError' $ show err
-                PayUpdateError NoSuchChannel       -> errorWithDescription 404 "No such channel"
-                PayUpdateError (ChanClosed _ _)    -> errorWithDescription 410 "Channel closed or being closed"
-                PayUpdateError ChanBeingClosed     -> errorWithDescription 410 "Channel closed or being closed"
-    -- Contact the content delivery service for application data
+    -- TODO: Payment handle
+    let valRecvd = undefined
+        valLeft = undefined
+        chanTotalValue = undefined
+    -- Contact the content delivery service for application response data
     callbackConn <- view Conf.callbackIface
-    let payInfo = CB.PaymentInfo valRecvd sendPK valLeft chanTotalValue
-    (CB.PaymentResponse payData) <- DB.tryDBRequest (CB.valueReceived callbackConn payInfo)
+    let payInfo = CB.CallbackInfo valRecvd valLeft chanTotalValue appData payment
+    (CB.CallbackResponse payData errM) <- DB.tryDBRequest (CB.valueReceived callbackConn payInfo)
     return PaymentResult
                { paymentResult_channel_status     = ChannelOpen
                , paymentResult_channel_valueLeft  = valLeft

@@ -1,13 +1,11 @@
-FROM ubuntu:16.04
+FROM fpco/stack-build
 
-RUN mkdir -p /opt/build/
-COPY debian-build.sh /opt/build/
+RUN apt-get update && apt-get install -y libssl-dev autoconf autogen libtool xz-utils git-core
 
-RUN cd /opt/build/; ./debian-build.sh
+## Increase max open files limit
+RUN echo "*               soft    nofile            10240" >> /etc/security/limits.conf
+RUN echo "*               hard    nofile            10240" >> /etc/security/limits.conf
+RUN echo "fs.file-max = 100000"                            >> /etc/sysctl.conf
 
-COPY .stack-work/install/*/*/*/bin/* /usr/bin/
-COPY test/* /usr/bin/
-
-RUN mkdir -p /opt/paychan/state/test/
 
 # CMD PORT=8080 /usr/bin/runEverything.sh /config/test

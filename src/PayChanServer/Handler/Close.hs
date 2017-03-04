@@ -1,6 +1,6 @@
 module PayChanServer.Handler.Close where
 
-import           Common.Types
+import           AppPrelude.Types
 import           PayChanServer.Types
 import           PayChanServer.Util
 import qualified PayChanServer.Config.Types as Conf
@@ -8,12 +8,12 @@ import qualified RBPCP.Types as RBPCP
 
 import qualified PayChanServer.DB as DB
 import           ChanStore.Interface  as DBConn
-import           ChanStore.Lib.Types
+import           AppPrelude.Man
 
 
 chanSettleHandler ::
     SendPubKey
-    -> BitcoinLockTime
+    -> LockTimeDate
     -> TxHash
     -> Vout
     -> RBPCP.Payment
@@ -32,7 +32,7 @@ chanSettleHandler sendPK lockTime fundTxId fundIdx (RBPCP.Payment payment appDat
                 return (settleTxId, channelValueLeft rpc)
             ClosingPaymentError e                   ->
                 userError' $ show e
-            CloseUpdateError (ChanClosed settleTxId chanValLeft) ->
+            CloseUpdateError (UpdChanClosed settleTxId chanValLeft) ->
                 return (settleTxId, chanValLeft)
             CloseUpdateError ChanBeingClosed    ->
                 errorWithDescription 410 "Channel is being closed"

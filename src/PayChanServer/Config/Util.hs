@@ -9,7 +9,7 @@ getServerSettleConfig,
 getBlockchainIface,getSigningServiceConn,
 BitcoinNet,
 setBitcoinNetwork,
-getDBConf,getChanStoreIface,
+getDBConf,
 getServerDBConf,connFromDBConf,
 configDebugIsEnabled,
 -- re-exports
@@ -20,7 +20,7 @@ where
 
 import           PayChanServer.Config.Types
 import           ConnManager.Connection (newConnManager)
-import qualified ChanStore.Interface as Store
+--import qualified ChanStore.Interface as Store
 
 import qualified Network.Haskoin.Constants as HCC
 
@@ -76,8 +76,8 @@ getBlockchainIface cfg = do
 connFromDBConf :: DBConf -> IO ConnManager
 connFromDBConf (DBConf host port numConns) = newConnManager host port numConns
 
-getChanStoreIface :: DBConf -> IO Store.Interface
-getChanStoreIface dbConf = Store.mkChanStoreInterface . fromCM <$> connFromDBConf dbConf
+--getChanStoreIface :: DBConf -> IO Store.Interface
+--getChanStoreIface dbConf = Store.mkChanStoreInterface . fromCM <$> connFromDBConf dbConf
 
 getDBPath :: Config -> IO FilePath
 getDBPath cfg = configLookupOrFail cfg "storage.stateDir"
@@ -113,7 +113,7 @@ getChanConf cfg = ChanConf <$>
 -- | Roughly accurate (±10%-ish), because we know the two possible sizes (one/two outputs)
 --  of the settlement transaction. Could use refinement.
 -- Exampe testnet3 tx 348 bytes: 9aa6debbc30aadd839ddc403b05476b5436989881db2b35f1d1310b56cacd3ac
-calcSettlementFeeSPB :: BitcoinAmount -> BitcoinAmount
+calcSettlementFeeSPB :: BtcAmount -> BtcAmount
 calcSettlementFeeSPB satoshisPerByte = 348 * satoshisPerByte
 
 setBitcoinNetwork :: BitcoinNet -> IO ()

@@ -1,7 +1,8 @@
 module BlockchainAPI.Types where
 
-import           Data.Bitcoin.PaymentChannel.Types (FundingTxInfo(..), BitcoinAmount)
-import           Data.Bitcoin.PaymentChannel.Util (parseJSONInt)
+import           Data.Word (Word64)
+import           PaymentChannel.Types (FundingTxInfo(..), BtcAmount)
+import           PaymentChannel.Util (parseJSONWord)
 import           Data.Aeson   (withScientific, withText, Value)
 import           Data.Aeson.Types   (Parser)
 import           Data.String.Conversions (cs)
@@ -22,13 +23,13 @@ data TxInfo = TxInfo {
   , fundingInfo   ::  FundingTxInfo
 } deriving Show
 
-parseBitcoinAmount :: Value -> Parser BitcoinAmount
+parseBitcoinAmount :: Value -> Parser BtcAmount
 parseBitcoinAmount val = fmap fromIntegral (parseBTCAmount val)
 
-parseBTCAmount :: Value -> Parser Integer
+parseBTCAmount :: Value -> Parser Word64
 parseBTCAmount = withScientific "bitcoin amount" $
-    parseJSONInt . (* 1e8)
+    parseJSONWord . (* 1e8)
 
-parseStringBTCAmount :: Value -> Parser Integer
+parseStringBTCAmount :: Value -> Parser Word64
 parseStringBTCAmount = withText "string bitcoin amount" $
-    parseJSONInt . (* 1e8) . read . cs
+    parseJSONWord . (* 1e8) . read . cs

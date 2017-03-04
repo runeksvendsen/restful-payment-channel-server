@@ -8,7 +8,7 @@ import           PayChanServer.Util
 import qualified PayChanServer.Config.Types as Conf
 
 import qualified ChanStore.Interface as DBConn
-import qualified ChanStore.Lib.Types as DB
+import qualified AppPrelude.Man as DB
 
 import qualified Network.Haskoin.Transaction as HT
 import           Control.Exception (try, throwIO)

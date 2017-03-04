@@ -36,7 +36,7 @@ import           Network.HTTP.Client (Manager)
 import qualified APISpec.Blockchain as APISpec
 import           BlockchainAPI.Impl.Bitcoind.Types
 
-import           Data.Bitcoin.PaymentChannel.Types (FundingTxInfo(..))
+import           PaymentChannel         (FundingTxInfo(..), BtcAmount, mkNonDusty)
 
 import qualified Network.Haskoin.Transaction as HT
 import qualified Network.Haskoin.Crypto as HC
@@ -86,4 +86,6 @@ instance BlockchainAPI Interface where
 
 toTxInfo :: AddressFundingInfo -> TxInfo
 toTxInfo (AddressFundingInfo _ txid vout numConfs val) =
-    TxInfo numConfs $ CFundingTxInfo txid vout (fromIntegral val)
+    TxInfo numConfs $ CFundingTxInfo txid vout $
+        -- TODO
+        either (error "TODO: Dusty funding amount") id $ mkNonDusty (fromIntegral val :: BtcAmount)

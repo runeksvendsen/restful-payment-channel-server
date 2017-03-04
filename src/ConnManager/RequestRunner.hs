@@ -15,12 +15,12 @@ module ConnManager.RequestRunner
 import           ConnManager.Types
 import           ConnManager.Servant
 
-import           ChanStore.Lib.Types
+import           AppPrelude.Man
 import           ConnManager.Connection
-import           Common.URLParam (pathParamEncode)
+import           AppPrelude.Util.URLParam (pathParamEncode)
 
-import           Data.Bitcoin.PaymentChannel.Types (ReceiverPaymentChannel, FullPayment)
-import           Data.Bitcoin.PaymentChannel.Util (deserEither)
+import           PaymentChannel.Types (ServerPayChanX, SignedPayment)
+import           PaymentChannel.Util (deserEither)
 
 import qualified Data.Aeson as JSON   (FromJSON, eitherDecode)
 import qualified Network.Haskoin.Transaction as HT
@@ -97,7 +97,7 @@ notFoundMeansNothing s h c
 --         path = "/channels/" <> pathParamEncode key,
 --         method = "GET"
 --      } man (\res -> failOnLeft =<< decodeEither =<< brConsume . responseBody $ res)
---         where failOnLeft = either (fail "failed to parse ReceiverPaymentChannel") return
+--         where failOnLeft = either (fail "failed to parse ServerPayChanX") return
 --
 -- runRequest conn@(Conn _ _ man) (Update key payment) =
 --     getBaseRequest conn >>= \req -> withResponse req {

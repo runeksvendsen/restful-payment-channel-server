@@ -2,7 +2,7 @@ module ConnManager.Connection where --TODO: move
 
 import           ConnManager.Types
 
--- import           ChanStore.Lib.Types
+-- import           AppPrelude.Man
 -- import           ChanStore.Lib.ChanMap
 
 

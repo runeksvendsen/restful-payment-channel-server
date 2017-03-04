@@ -1,0 +1,98 @@
+resolver: lts-7.1
+
+packages:
+- '.'
+- location:
+    git: https://github.com/runeksvendsen/haskoin.git
+    commit: 9add83fd4aa8bc960a15a1d24e6e831981a9f8a4
+  extra-dep: true
+  subdirs:
+    - haskoin-core
+    - haskoin-node
+    - haskoin-wallet
+- location:
+    git: https://github.com/runeksvendsen/bitcoin-payment-channel.git
+    commit: d39ca379edb9797dea5eb9a519ccfd5812fd7ad7
+  extra-dep: true
+- location:
+    git: https://github.com/runeksvendsen/bitcoin-payment-protocol.git
+    commit: da60b36560ba48642f0c80f2944921d2ce7ef37d
+  extra-dep: true
+- location:
+    git: https://github.com/brendanhay/gogol.git
+    commit: 281fd577468a01238e33c5e6acfe78945129322d
+  extra-dep: true
+  subdirs:
+    - gogol
+    - core
+    - gogol-datastore
+- location:
+    git: https://github.com/runeksvendsen/haskell-bitcoin-api.git
+    commit: 41747640f0ee964db2ca2edefc3420a4cf201b33
+  extra-dep: true
+- location: ## APISpec.Blockchain
+    git: https://github.com/runeksvendsen/blockchain-restful-address-index.git
+    commit: 1aca098c0a26fe4c39d9901199696c648b2987c0
+  extra-dep: true
+- location:
+    git: https://github.com/runeksvendsen/paychan-datastore.git
+    commit: a1e69cb9cbeb46411313692b8fe04d12664064a2 #f859abc472b9af9340176e16282cd738271dcb34
+  extra-dep: true
+- location:
+    git: https://github.com/runeksvendsen/rbpcp-api.git
+    commit: f415b20e2797830b9bf08bd899f46f288244fa37
+  extra-dep: true
+
+
+extra-deps:
+# Haskoin
+- murmur3-1.0.3
+- pbkdf-1.1.1.1
+- secp256k1-0.4.6
+# Other stuff
+- proto-lens-0.1.0.5
+# Snap
+- snap-1.0.0.0
+- snap-core-1.0.0.0
+- snap-server-1.0.0.0
+- heist-1.0.0.0
+- xmlhtml-0.2.3.5
+- io-streams-haproxy-1.0.0.0
+# Also other stuff
+- spawn-0.3
+- map-syntax-0.2.0.1
+- cereal-text-0.1.0.2
+
+
+
+
+# Generate a Docker image
+image:
+  containers:
+    - name: runeks/paychan
+      # Base it on the stack-run images
+      base: fpco/haskell-scratch
+      # Include some config and static files in the image
+      add:
+        config: /config
+        static: /test
+
+docker:
+  # container-name: "example-name"
+  enable: false
+#  repo: "fpco/stack-build"
+  # Overrides "repo"
+  image: "d8f36708ed21"
+#  registry-login: false
+#  registry-username: "myuser"
+#  registry-password: "SETME"
+#  auto-pull: false
+#  detach: false
+#  persist: false
+#  mount:
+#    - "/foo/bar"
+#    - "/baz:/tmp/quux"
+#  env:
+#    - "FOO=BAR"
+#    - "BAR=BAZ QUUX"
+

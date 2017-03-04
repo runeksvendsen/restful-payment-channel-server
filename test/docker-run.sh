@@ -1,4 +1,4 @@
 #!/bin/bash
 
-PORT=8080 test/runEverything.sh config/test
+PORT=8080 ./runEverything.sh /config/test
 

@@ -18,7 +18,7 @@ import           PayChanServer.DB (tryHTTPRequestOfType)
 
 import           ChanStore.Interface  as DBConn
 
-import           Data.Bitcoin.PaymentChannel.Types (ReceiverPaymentChannel, BitcoinAmount,
+import           PaymentChannel.Types (ServerPayChanX, BtcAmount,
                                                     PaymentChannel(getSenderPubKey))
 import           SigningService.Interface (signSettlementTx)
 
@@ -39,8 +39,8 @@ logImportantErrorThenFail e = logImportantError e >> error e
 --     DBConn.Interface
 --     -> ConnManager
 --     -> Btc.Interface
---     -> BitcoinAmount
---     -> ReceiverPaymentChannel
+--     -> BtcAmount
+--     -> ServerPayChanX
 --     -> IO HT.TxHash
 -- settleChannel dbIface signConn rpcInfo txFee rpc =
 --     tryRequest "BeginSettle" (DBConn.settleByIdBegin dbIface (getSenderPubKey rpc))
@@ -67,7 +67,7 @@ settlementThread dbIface signConn settleConf btcIface delaySecs = do
         )
 
 
--- | After getting the channel state (ReceiverPaymentChannel) from the DB while
+-- | After getting the channel state (ServerPayChanX) from the DB while
 --   simultaneously marking it as being closed, this function is used
 --   to produce and publish the settlement tx.
 --  First the SettlementService creates and signs the tx, then we submit this to
@@ -77,8 +77,8 @@ finishSettleChannel ::
     DBConn.Interface
     -> ConnManager
     -> Btc.Interface
-    -> BitcoinAmount
-    -> ReceiverPaymentChannel
+    -> BtcAmount
+    -> ServerPayChanX
     -> IO HT.TxHash
 finishSettleChannel dbIface signConn btcIface txFee rpc = do
     settlementTx   <- tryRequest "Signing" (signSettlementTx signConn txFee rpc)

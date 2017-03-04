@@ -1,5 +1,6 @@
 {-# LANGUAGE TemplateHaskell #-}
 {-# LANGUAGE FlexibleInstances #-}
+{-# LANGUAGE RecordWildCards #-}
 {-# LANGUAGE OverloadedStrings, DataKinds, FlexibleContexts, LambdaCase, TypeOperators #-}
 
 module  PayChanServer.Config.Types
@@ -10,11 +11,12 @@ module  PayChanServer.Config.Types
 
 where
 
-import           Types.Orphans ()
-import           Common.Util
-import qualified ChanStore.Interface as Store
+import           AppPrelude.Types.Orphans ()
+import           AppPrelude.Util
+--import qualified ChanStore.Interface as Store
 import qualified PayChanServer.Callback.Interface as Callback
-import           Data.Bitcoin.PaymentChannel.Types (ReceiverPaymentChannel, BitcoinAmount)
+import           PaymentChannel.Types (ServerPayChanX, BtcAmount)
+import qualified PaymentChannel as BTC
 
 import qualified Network.Haskoin.Transaction as HT
 import qualified Network.Haskoin.Crypto as HC
@@ -44,8 +46,8 @@ data Callback  = Callback
 
 type BtcConf      = Tag.Tagged BTCConf Word
 type SettleHours  = Tag.Tagged SettleHrs Word
-type OpenPrice    = Tag.Tagged Charge BitcoinAmount
-type DustLimit    = Tag.Tagged Dust BitcoinAmount
+type OpenPrice    = Tag.Tagged Charge BtcAmount
+type DustLimit    = Tag.Tagged Dust BtcAmount
 type DurationHours= Tag.Tagged ChanDur Word
 
 data ChanConf = ChanConf
@@ -53,15 +55,19 @@ data ChanConf = ChanConf
   , openPrice       :: OpenPrice
   , dustLimit       :: DustLimit
   , settlePeriod'   :: SettleHours
-  , minDuration     :: DurationHours }
+  , minDuration     :: DurationHours
+  }
 
+--toBtcConf :: ChanConf -> BTCConf.Config
+--toBtcConf ChanConf{..} = BTCConf.Config
+--    { cDustLimit = BTC.getDustLimit
+--    , cSettlementPeriod = Tag.Tagged . fromIntegral $ Tag.unTagged settlePeriod'
+--    }
 
 data App = App
- { _dbInterface     :: Store.Interface
- , _callbackIface   :: Callback.Interface
+ { _callbackIface   :: Callback.Interface
  , _listUnspent     :: HC.Address  -> IO (Either String [BtcType.TxInfo])
- , _settleChannel   :: ReceiverPaymentChannel -> IO HT.TxHash    -- Dummy function if debug is enabled
- , _pubKey          :: RecvPubKey
+ , _settleChannel   :: ServerPayChanX -> IO HT.TxHash    -- Dummy function if debug is enabled
  , _chanConf        :: ChanConf
  , _settlePeriod    :: Word
  , _basePath        :: BS.ByteString
@@ -77,8 +83,9 @@ data DBConf       = DBConf       Host Word Int
 data ServerDBConf = ServerDBConf String Word
 type Host = BS.ByteString
 
-getWord r = if denominator r /= 1 then Nothing
-      else Just $ numerator r
+getWord r = if denominator r /= 1
+    then Nothing
+    else Just $ numerator r
 
 instance Configured BitcoinNet where
     convert (String "live") = return Mainnet
@@ -89,7 +96,7 @@ instance Configured HC.Address where
     convert (String text) = HC.base58ToAddr . cs $ text
     convert _ = Nothing
 
-instance Configured BitcoinAmount where
+instance Configured BtcAmount where
     convert (Number r) = fmap fromIntegral (getWord r)
     convert _ = Nothing
 
@@ -121,6 +128,6 @@ instance Configured DurationHours where
     convert _ = Nothing
 
 data ServerSettleConfig = ServerSettleConfig {
-    confSettleTxFee       :: BitcoinAmount,
+    confSettleTxFee       :: BtcAmount,
     confSettlePeriod      :: SettleHours
 }

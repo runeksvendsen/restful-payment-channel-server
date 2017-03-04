@@ -3,15 +3,16 @@ module PayChanServer.Handler.FundingInfo where
 import           PayChanServer.Types
 import           PayChanServer.Util
 import qualified PayChanServer.Config.Types as Conf
-import           Data.Bitcoin.PaymentChannel.Util   (getFundingAddress, getRedeemScript)
+import           PaymentChannel.Util   (getFundingAddress, getRedeemScript)
 
 
-fundingInfoHandler :: SendPubKey -> BitcoinLockTime -> AppPC FundingInfo
+fundingInfoHandler :: SendPubKey -> LockTimeDate -> AppPC FundingInfo
 fundingInfoHandler clientPK lockTime = do
+    -- TODO: Get pubkey from BitcoinSigner
     serverPK <- view Conf.pubKey
     (Conf.ChanConf btcMinConf openPrice dustLimitT settlePeriod minDuratn) <- view Conf.chanConf
     let dustLimit = getVal dustLimitT
-    let chanParams = CChannelParameters clientPK serverPK lockTime dustLimit
+    let chanParams = MkChanParams clientPK serverPK lockTime
     return $ FundingInfo serverPK dustLimit (getFundingAddress chanParams)
              (getRedeemScript chanParams)
              (getVal openPrice) (getVal btcMinConf) (getVal settlePeriod) (getVal minDuratn)
