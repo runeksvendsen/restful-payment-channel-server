@@ -1,7 +1,7 @@
 swagger: '2.0'
 
 info:
-  version: "2.1.0"
+  version: "2.3.0"
   title: RESTful Bitcoin Payment Channel Protocol (v2)
   description: |
   
@@ -29,14 +29,14 @@ paths:
   /funding/{exp_time}/{client_pubkey}/info:
     get:
       tags: 
-        - "Funding info"
-      summary: 1. Retrieve information about how to fund a new payment channel
+        - "Channel setup"
+      summary: Get funding info
       description: |
-        Before opening a payment channel with the server, the client must first acquire the server public key, in order to calculate a funding address for the channel.
+        Before opening a payment channel with the server, the client must first acquire the server public key, in order to derive a funding address for the channel.
       
-        The client will first calculate the funding address, confirm that it matches the server's, then pay to the funding address, and wait until the funding transaction has the server-specified number of confirmations (**funding_tx_min_conf**).
+        The client will first calculate the funding address, confirm that it matches the server's, then pay to the funding address, and wait until the funding transaction has the server-specified number of confirmations (*funding_tx_min_conf*).
         
-        After this, the client will create a new payment of value equal to the server-specified (**open_price**), and POST this payment to the channel URI to open the channel. Further payments are made though a PUT request on the same URI.
+        After this, the client will create a new payment of value equal to the server-specified (*open_price*), and POST this payment to the channel URI to open the channel. Further payments are made though a PUT request on the same URI.
       operationId: getFundingInfo
       parameters:
         - $ref: "#/parameters/expTimeParam"
@@ -55,8 +55,8 @@ paths:
   /channels/{funding_txid}/{funding_vout}:
     post:
       tags: 
-        - open_channel
-      summary: 2. Create a new payment channel
+        - "Channel setup"
+      summary: Create new channel
       description: |
         After publishing the funding Bitcoin transaction, and waiting for the specified number of confirmations, the client will POST a payment, paying the server's specified channel open price, to this URL. Subsequent channel payments will be PUT on this same URL.
         
@@ -93,8 +93,8 @@ paths:
           description: Invalid parameter
     put:
       tags: 
-        - send_value
-      summary: 3. Send value
+        - "Channel operation"
+      summary: Send value
       description: |
         Make payment over an existing payment channel.
         
@@ -128,8 +128,8 @@ paths:
   /channels/{funding_txid}/{funding_vout}/close:
     put:
       tags: 
-        - close_channel
-      summary: 4. Close payment channel
+        - "Channel operation"
+      summary: Close channel
       description: In order to enable the server to return unsent funds to the client, the client must provide a payment of zero value with the **change_address** field set according to the client's wish (as opposed to a payment where **change_address** always equals the channel funding address). After a successful request, the settling transaction is published to the Bitcoin network, and the **PaymentResult** response will include its transaction ID. 
       operationId: deletePaymentChannel
       parameters:
@@ -150,51 +150,51 @@ paths:
           description: Invalid parameter
           
 parameters:
-    expTimeParam:
-      name: exp_time
-      in: path
-      description: Expiration date/time for the channel (Unix timestamp)
-      required: true
-      type: integer
-      format: uint32
-    clientPubKeyParam:
-      name: client_pubkey
-      in: path
-      description: Client/value sender public key. Hex-encoded, compressed Secp256k1 pubkey, 33 bytes.
-      required: true
-      type: string
-    fundingSourceTxIdParam:
-      name: funding_txid
-      in: path
-      description: The Bitcoin transaction ID part of the outpoint in the Blockchain which holds the client's channel balance.
-      type: string
-      required: true
-    fundingSourceVoutParam:
-      name: funding_vout
-      in: path
-      description: The output index part of the outpoint in the Blockchain which holds the client's channel balance.
-      type: integer
-      required: true
-    clientServerSecret:
-      name: secret
-      in: query
-      description: SHA256 hash of the opening channel payment's signature data (**signature_data** in **PaymentData**), hex-encoded. This acts as a secret known only to the client and server, hereby preventing third parties from figuring out payment resource URLs by looking through the blockchain. This acts as a denial-of-service protection for the server operator. A 404 response should be returned in case the server receives a request with an incorrect client secret, but with otherwise correct data. Also, the server software should be designed in such a way that no difference in response time can be measured between a "genuine" 404 response, and a 404 response that results only from an incorrect secret. 
-      type: string
-      required: true
-    paymentBodyOpenParam:
-      name: payment_data
-      in: body
-      description: Opening payment data
-      required: true
-      schema:
-        $ref: "#/definitions/PaymentData"
-    paymentBodyParam:
-      name: payment_data
-      in: body
-      description: Payment data
-      required: true
-      schema:
-        $ref: "#/definitions/Payment"
+  expTimeParam:
+    name: exp_time
+    in: path
+    description: Expiration date/time for the channel (Unix timestamp)
+    required: true
+    type: integer
+    format: uint32
+  clientPubKeyParam:
+    name: client_pubkey
+    in: path
+    description: Client/value sender public key. Hex-encoded, compressed Secp256k1 pubkey, 33 bytes.
+    required: true
+    type: string
+  fundingSourceTxIdParam:
+    name: funding_txid
+    in: path
+    description: The Bitcoin transaction ID part of the outpoint in the Blockchain which holds the client's channel balance.
+    type: string
+    required: true
+  fundingSourceVoutParam:
+    name: funding_vout
+    in: path
+    description: The output index part of the outpoint in the Blockchain which holds the client's channel balance.
+    type: integer
+    required: true
+  clientServerSecret:
+    name: secret
+    in: query
+    description: SHA256 hash of the opening channel payment's signature data (**signature_data** in **PaymentData**), hex-encoded. This acts as a secret known only to the client and server, hereby preventing third parties from figuring out payment resource URLs by looking through the blockchain. This acts as a denial-of-service protection for the server operator. A 404 response should be returned in case the server receives a request with an incorrect client secret, but with otherwise correct data. Also, the server software should be designed in such a way that no difference in response time can be measured between a "genuine" 404 response, and a 404 response that results only from an incorrect secret. 
+    type: string
+    required: true
+  paymentBodyOpenParam:
+    name: payment_data
+    in: body
+    description: Opening payment data
+    required: true
+    schema:
+      $ref: "#/definitions/PaymentData"
+  paymentBodyParam:
+    name: payment_data
+    in: body
+    description: Payment data
+    required: true
+    schema:
+      $ref: "#/definitions/Payment"
 
 definitions:
   FundingInfo:
