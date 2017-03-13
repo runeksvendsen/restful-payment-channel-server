@@ -4,32 +4,23 @@ info:
   version: "2.1.0"
   title: RESTful Bitcoin Payment Channel Protocol (v2)
   description: |
-    A Bitcoin payment channel enables sending bitcoins between two parties instantly, securely and without fees. The intended use is consumer-to-merchant payments, allowing a consumer to make many small payments to a merchant - with whom the consumer has an open payment channel - while only paying the Bitcoin transaction fee once, when the channel is closed. 
+  
+    A Bitcoin payment channel enables sending bitcoins between two parties instantly, securely and without fees. The intended use is consumer-to-merchant payments, allowing a consumer to make many small payments to a merchant - with whom the consumer has an open payment channel - while only paying the Bitcoin transaction fee once, when the channel is closed.
     
     An arbitrary number of payments can be made over the course of, say, one week, and at the end of this week the settlement transaction is published, thus reducing the Bitcoin transaction fee to something that has to be paid every week, rather every time a transaction is made.
-    
+
     The payment server speaking this protocol is the recipient of value. Arbitrary application data can be included with the payment by the client, and returned in response to a payment by the server.
     
-    * Server implementation (in progress): https://github.com/runeksvendsen/restful-payment-channel-server
+    To start out, the client fetches the server's *FundingInfo*, using the "*/funding/[...]/info*" endpoint. The client then constructs a CLTV (BIP65) redeemScript, as defined in the section *Two-factor wallets* in *BIP-65*[1] , using 'server_pubkey' (from *FundingInfo*) plus the client's supplied public key and expiration time. From this redeemScript a P2SH channel funding address is derived, and the client will confirm that this agrees with the server-derived 'funding_address_copy' (in *FundingInfo*), before publishing a Bitcoin transaction that pays to it. This transaction we call the "funding transaction", and the output in this transaction, that pays to the channel funding address, we call the "funding output".
     
-    * JavaScript client library (in progress): https://github.com/runeksvendsen/paychanjs-client
+    In order to begin paying the server, the client then constructs a Bitcoin transaction which spends the funding output. We call this the "payment transaction". This Bitcoin transaction redeems the outpoint specified by 'funding_txid' and 'funding_vout' (the funding output), and has a single output that pays 'change_value' to 'change_address'. By decrementing the 'change_value' for this transaction, signing it, and transmitting (at least) the new signature and change value to the server, the client can send payments to the server.
     
-    Advantages over *bitcoinj* payment channel protocol:
-    * Communication via RESTful HTTP requests rather than a stateful TCP connection
-      * Works from the browser
-      * Easy-to-add encryption (HTTPS)
-      * Easier to implement (no connection state)
-    * Safe from transaction ID malleability as it uses CLTV (BIP 65), rather than a chain of unconfirmed multisig transactions (the  *bitcoinj* CLTV implementation ("v2") is non-functional: https://github.com/bitcoinj/bitcoinj/issues/1250)
-    * Increased denial-of-service resistance:
-      * The server doesn't need to sign a refund transaction before the client has proven that it has actually funded the channel and paid the server
-      * A secret, known only to the client and server, is used in order to prevent attackers from mimicking legimitate client requests
-    * The client change address, in the payment transaction, is equal to the channel funding address, allowing the server to free received value while keeping the channel open (the server responds to a payment with an HTTP redirect pointing to the new in-blockchain resource, in case the funding output has moved) (NB: requires either transaction ID malleability fix or waiting for confirmations)
-    * Variable, server-defined:
-      * Dust limit 
-      * Initial payment value (*open_price*)
-      * "Settlement period": the server reserves the right to close the channel this many hours *before* the client refund transaction becomes valid.
+    The *PaymentData* object contains all the information necessary to construct the payment transaction. Importantly, the client must sign the payment transaction using the SIG_SINGLE|ANYONECANPAY sighash flag, thus allowing the server to add its own output to the client-signed transaction afterwards.
     
-  
+    A detailed explanation, of how the payment transaction is constructed, can be found in the JavaScript client library for this protocol, by looking at the *createPayment* function: https://github.com/runeksvendsen/paychanjs-client/blob/master/paychan-core.js#L100
+    
+    [1] https://github.com/bitcoin/bips/blob/master/bip-0065.mediawiki#Twofactor_wallets
+      
 basePath: /v2
 schemes:
   - https
@@ -59,7 +50,7 @@ paths:
         400:
           description: Invalid parameter
   
-  /channels/{server_pubkey}/{exp_time}/{client_pubkey}/{funding_txid}/{funding_vout}:
+  /channels/{funding_txid}/{funding_vout}:
     post:
       summary: Create a new payment channel
       description: |
@@ -69,13 +60,14 @@ paths:
         
       operationId: createPaymentChannel
       parameters:
-        - $ref: "#/parameters/serverPubKeyParam"
-        - $ref: "#/parameters/expTimeParam"
-        - $ref: "#/parameters/clientPubKeyParam"
         - $ref: "#/parameters/fundingSourceTxIdParam"
         - $ref: "#/parameters/fundingSourceVoutParam"
         - $ref: "#/parameters/clientServerSecret"
-        - $ref: "#/parameters/paymentBodyParam"
+        - $ref: "#/parameters/paymentBodyOpenParam"
+      consumes:
+        - application/json
+      produces:
+        - application/json
       responses:
         201:
           description: Channel created
@@ -107,9 +99,6 @@ paths:
       produces:
         - application/json
       parameters:
-        - $ref: "#/parameters/serverPubKeyParam"
-        - $ref: "#/parameters/expTimeParam"
-        - $ref: "#/parameters/clientPubKeyParam"
         - $ref: "#/parameters/fundingSourceTxIdParam"
         - $ref: "#/parameters/fundingSourceVoutParam"
         - $ref: "#/parameters/clientServerSecret"
@@ -130,15 +119,12 @@ paths:
           description: Invalid parameter
         410:
           description: The channel is in the process of being closed. Performing a DELETE request on the resource in a few seconds should return information about the closed channel.
-  /channels/{server_pubkey}/{exp_time}/{client_pubkey}/{funding_txid}/{funding_vout}/close:
+  /channels/{funding_txid}/{funding_vout}/close:
     put:
       summary: Close payment channel
       description: In order to enable the server to return unsent funds to the client, the client must provide a payment of zero value with the **change_address** field set according to the client's wish (as opposed to a payment where **change_address** always equals the channel funding address). After a successful request, the settling transaction is published to the Bitcoin network, and the **PaymentResult** response will include its transaction ID. 
       operationId: deletePaymentChannel
       parameters:
-        - $ref: "#/parameters/serverPubKeyParam"
-        - $ref: "#/parameters/expTimeParam"
-        - $ref: "#/parameters/clientPubKeyParam"
         - $ref: "#/parameters/fundingSourceTxIdParam"
         - $ref: "#/parameters/fundingSourceVoutParam"
         - $ref: "#/parameters/clientServerSecret"
@@ -163,12 +149,6 @@ parameters:
       required: true
       type: integer
       format: uint32
-    serverPubKeyParam:
-      name: server_pubkey
-      in: path
-      description: Server/value receiver public key. Hex-encoded, compressed Secp256k1 pubkey, 33 bytes. As retrieved from the */funding/* endpoint.
-      required: true
-      type: string  
     clientPubKeyParam:
       name: client_pubkey
       in: path
@@ -193,6 +173,13 @@ parameters:
       description: SHA256 hash of the opening channel payment's signature data (**signature_data** in **PaymentData**), hex-encoded. This acts as a secret known only to the client and server, hereby preventing third parties from figuring out payment resource URLs by looking through the blockchain. This acts as a denial-of-service protection for the server operator. A 404 response should be returned in case the server receives a request with an incorrect client secret, but with otherwise correct data. Also, the server software should be designed in such a way that no difference in response time can be measured between a "genuine" 404 response, and a 404 response that results only from an incorrect secret. 
       type: string
       required: true
+    paymentBodyOpenParam:
+      name: payment_data
+      in: body
+      description: Opening payment data
+      required: true
+      schema:
+        $ref: "#/definitions/PaymentData"
     paymentBodyParam:
       name: payment_data
       in: body
@@ -257,10 +244,10 @@ definitions:
       - application_data
     properties:
       payment_data:
-        description: Either a PaymentData or CompactPaymentData object
+        description: A wrapper around *CompactPaymentData* that includes application data.
         type: object
         example:
-          $ref: "#/definitions/PaymentData"
+          $ref: "#/definitions/CompactPaymentData"
       application_data:
         description: Arbitrary application data. Used by the application protocol that's using this payment channel protocol to transmit value. For the opening channel payment, this field MUST be equal to the empty string.
         type: string
