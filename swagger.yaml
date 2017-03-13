@@ -29,7 +29,7 @@ paths:
   /funding/{exp_time}/{client_pubkey}/info:
     get:
       tags: 
-        - funding_info
+        - "Funding info"
       summary: 1. Retrieve information about how to fund a new payment channel
       description: |
         Before opening a payment channel with the server, the client must first acquire the server public key, in order to calculate a funding address for the channel.
