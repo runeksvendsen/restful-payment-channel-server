@@ -28,7 +28,7 @@ schemes:
 paths:
   /funding/{exp_time}/{client_pubkey}/info:
     get:
-      summary: Retrieve information about how to fund a new payment channel
+      summary: 1. Retrieve information about how to fund a new payment channel
       description: |
         Before opening a payment channel with the server, the client must first acquire the server public key, in order to calculate a funding address for the channel.
       
@@ -52,7 +52,7 @@ paths:
   
   /channels/{funding_txid}/{funding_vout}:
     post:
-      summary: Create a new payment channel
+      summary: 2. Create a new payment channel
       description: |
         After publishing the funding Bitcoin transaction, and waiting for the specified number of confirmations, the client will POST a payment, paying the server's specified channel open price, to this URL. Subsequent channel payments will be PUT on this same URL.
         
@@ -88,7 +88,7 @@ paths:
         400:
           description: Invalid parameter
     put:
-      summary: Send value
+      summary: 3. Send value
       description: |
         Make payment over an existing payment channel.
         
@@ -121,7 +121,7 @@ paths:
           description: The channel is in the process of being closed. Performing a DELETE request on the resource in a few seconds should return information about the closed channel.
   /channels/{funding_txid}/{funding_vout}/close:
     put:
-      summary: Close payment channel
+      summary: 4. Close payment channel
       description: In order to enable the server to return unsent funds to the client, the client must provide a payment of zero value with the **change_address** field set according to the client's wish (as opposed to a payment where **change_address** always equals the channel funding address). After a successful request, the settling transaction is published to the Bitcoin network, and the **PaymentResult** response will include its transaction ID. 
       operationId: deletePaymentChannel
       parameters:
