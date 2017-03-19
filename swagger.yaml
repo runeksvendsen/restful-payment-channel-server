@@ -67,7 +67,7 @@ paths:
         - $ref: "#/parameters/fundingSourceTxIdParam"
         - $ref: "#/parameters/fundingSourceVoutParam"
         - $ref: "#/parameters/clientServerSecret"
-        - $ref: "#/parameters/paymentBodyOpenParam"
+        - $ref: "#/parameters/chanOpenBody"
       consumes:
         - application/json
       produces:
@@ -108,7 +108,7 @@ paths:
         - $ref: "#/parameters/fundingSourceTxIdParam"
         - $ref: "#/parameters/fundingSourceVoutParam"
         - $ref: "#/parameters/clientServerSecret"
-        - $ref: "#/parameters/paymentBodyParam"
+        - $ref: "#/parameters/chanPayBody"
       responses:
         200:
           description: Value received
@@ -130,13 +130,13 @@ paths:
       tags: 
         - "Channel operation"
       summary: Close channel
-      description: In order to enable the server to return unsent funds to the client, the client must provide a payment of zero value with the **change_address** field set according to the client's wish (as opposed to a payment where **change_address** always equals the channel funding address). After a successful request, the settling transaction is published to the Bitcoin network, and the **PaymentResult** response will include its transaction ID. 
+      description: In order to enable the server to return unsent funds to the client, the client must provide a payment of value equal to the desired fee of the settlement transaction, and with the **change_address** field set according to the client's wish (as opposed to a payment where **change_address** always equals the channel funding address). After a successful request, the settling transaction is published to the Bitcoin network, and the **PaymentResult** response will include its transaction ID. 
       operationId: deletePaymentChannel
       parameters:
         - $ref: "#/parameters/fundingSourceTxIdParam"
         - $ref: "#/parameters/fundingSourceVoutParam"
         - $ref: "#/parameters/clientServerSecret"
-        - $ref: "#/parameters/paymentBodyParam"
+        - $ref: "#/parameters/chanPayBody"
       consumes:
         - application/json
       produces:
@@ -181,17 +181,17 @@ parameters:
     description: SHA256 hash of the opening channel payment's signature data (**signature_data** in **PaymentData**), hex-encoded. This acts as a secret known only to the client and server, hereby preventing third parties from figuring out payment resource URLs by looking through the blockchain. This acts as a denial-of-service protection for the server operator. A 404 response should be returned in case the server receives a request with an incorrect client secret, but with otherwise correct data. Also, the server software should be designed in such a way that no difference in response time can be measured between a "genuine" 404 response, and a 404 response that results only from an incorrect secret. 
     type: string
     required: true
-  paymentBodyOpenParam:
-    name: payment_data
+  chanOpenBody:
+    name: chan_open_body
     in: body
-    description: Opening payment data
+    description: Channel-open payment data
     required: true
     schema:
       $ref: "#/definitions/PaymentData"
-  paymentBodyParam:
-    name: payment_data
+  chanPayBody:
+    name: chan_pay_body
     in: body
-    description: Payment data
+    description: Value-send payment data
     required: true
     schema:
       $ref: "#/definitions/Payment"
@@ -245,14 +245,14 @@ definitions:
         example: 48
   
   Payment:
-    description: Payment data plus application data
+    description: Used when sending value over an open payment channel. Contains *CompactPaymentData* plus application data.
     type: object
     required:
       - payment_data
       - application_data
     properties:
       payment_data:
-        description: A wrapper around *CompactPaymentData* that includes application data.
+        description: Payment data for an already-open channel
         type: object
         example:
           $ref: "#/definitions/CompactPaymentData"
@@ -281,7 +281,8 @@ definitions:
   
   PaymentData:
     description: |
-      A payment comprises a signature over a Bitcoin transaction with a decremented client change value. The Bitcoin transaction redeems the outpoint specified by 'funding_txid' and 'funding_vout' (a P2SH output governed by 'redeem_script'), and pays 'change_value' to 'change_address'.
+      Used when creating a new payment channel. Contains all information necessary for the server to construct the channel payment transaction.
+      A payment comprises a signature over the payment transaction with a decremented client change value. The payment Bitcoin transaction redeems the outpoint specified by 'funding_txid' and 'funding_vout' (a P2SH output governed by 'redeem_script'), and pays 'change_value' to 'change_address'.
     type: object
     required:
       - funding_txid
@@ -292,7 +293,7 @@ definitions:
       - redeem_script
     properties:
       redeem_script:
-        description: Hex-encoded data. The funds sent to the funding address are bound by this contract (Bitcoin script). Used to construct the payment transaction.
+        description: Hex-encoded data. The funds sent to the funding address are bound by this contract (Bitcoin script). Used to construct the payment transaction. A hash of this script is the channel funding address (a P2SH address).
         type: string
         example: "63210225b3aaf58992a8cc909522c2ec859ef218fd29fda0a6723cfb4e0529f80cc8f3ad6704002f6859b175682103da3afe4f58992a8cc909522c2ec859ef218fd92fda0a67c23fb40e0303030405ac"
       funding_txid:
