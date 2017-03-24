@@ -171,7 +171,7 @@ parameters:
     description: Expiration date/time for the channel (Unix timestamp)
     required: true
     type: integer
-    format: uint32
+    # format: uint32
   clientPubKeyParam:
     name: client_pubkey
     in: path
@@ -304,7 +304,7 @@ definitions:
       funding_vout:
         description: The output index/"vout" of the output (in the transaction) payingto the channel funding address.
         type: integer
-        format: uint32
+        # format: uint32
         example: 1
       signature_data:
         description: |
