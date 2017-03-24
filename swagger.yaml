@@ -67,7 +67,12 @@ paths:
         - $ref: "#/parameters/fundingSourceTxIdParam"
         - $ref: "#/parameters/fundingSourceVoutParam"
         - $ref: "#/parameters/clientServerSecret"
-        - $ref: "#/parameters/chanOpenBody"
+        - in: body
+          name: chan_open_body
+          description: Channel-open payment data
+          required: true
+          schema:
+            $ref: "#/definitions/PaymentData"
       consumes:
         - application/json
       produces:
@@ -108,7 +113,12 @@ paths:
         - $ref: "#/parameters/fundingSourceTxIdParam"
         - $ref: "#/parameters/fundingSourceVoutParam"
         - $ref: "#/parameters/clientServerSecret"
-        - $ref: "#/parameters/chanPayBody"
+        - in: body
+          name: chan_pay_body
+          description: Value-send payment data
+          required: true
+          schema:
+            $ref: "#/definitions/Payment"
       responses:
         200:
           description: Value received
@@ -136,7 +146,12 @@ paths:
         - $ref: "#/parameters/fundingSourceTxIdParam"
         - $ref: "#/parameters/fundingSourceVoutParam"
         - $ref: "#/parameters/clientServerSecret"
-        - $ref: "#/parameters/chanPayBody"
+        - in: body
+          name: chan_close_body
+          description: Closing channel payment (value equals Bitcoin tx fee)
+          required: true
+          schema:
+            $ref: "#/definitions/Payment"
       consumes:
         - application/json
       produces:
@@ -181,20 +196,6 @@ parameters:
     description: SHA256 hash of the opening channel payment's signature data (**signature_data** in **PaymentData**), hex-encoded. This acts as a secret known only to the client and server, hereby preventing third parties from figuring out payment resource URLs by looking through the blockchain. This acts as a denial-of-service protection for the server operator. A 404 response should be returned in case the server receives a request with an incorrect client secret, but with otherwise correct data. Also, the server software should be designed in such a way that no difference in response time can be measured between a "genuine" 404 response, and a 404 response that results only from an incorrect secret. 
     type: string
     required: true
-  chanOpenBody:
-    name: chan_open_body
-    in: body
-    description: Channel-open payment data
-    required: true
-    schema:
-      $ref: "#/definitions/PaymentData"
-  chanPayBody:
-    name: chan_pay_body
-    in: body
-    description: Value-send payment data
-    required: true
-    schema:
-      $ref: "#/definitions/Payment"
 
 definitions:
   FundingInfo:
