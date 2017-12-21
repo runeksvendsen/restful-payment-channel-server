@@ -1,3 +1,5 @@
+# DEPRECATED in favor of: [rbpcp-handler](https://github.com/runeksvendsen/rbpcp-handler).
+
 # RESTful Bitcoin payment channel server
 [![Build Status](https://api.travis-ci.org/runeksvendsen/restful-payment-channel-server.svg?branch=master)](https://travis-ci.org/runeksvendsen/restful-payment-channel-server)
 #### Server implementation of the [RESTful Bitcoin Payment Channel Protocol](http://paychandoc.runeks.me/)
